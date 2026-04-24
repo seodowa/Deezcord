@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../config/supabaseClient'); // Import the DB
+const verifyUser = require('../middleware/authMiddleware'); // Import the bouncer
 
-// GET /rooms/:roomId/messages - Fetch message history
-router.get('/:roomId/messages', async (req, res) => {
+// GET /rooms/:roomId/messages - Fetch message history (PROTECTED)
+router.get('/:roomId/messages', verifyUser, async (req, res) => {
   const { roomId } = req.params;
   
   const { data, error } = await supabase
@@ -16,8 +17,8 @@ router.get('/:roomId/messages', async (req, res) => {
   res.json(data);
 });
 
-// POST /rooms/create - Create a new chat room
-router.post('/create', async (req, res) => {
+// POST /rooms/create - Create a new chat room (PROTECTED)
+router.post('/create', verifyUser, async (req, res) => {
   const { name } = req.body;
 
   if (!name) {
@@ -41,8 +42,8 @@ router.post('/create', async (req, res) => {
   res.status(201).json(data[0]); 
 });
 
-// GET /rooms - Fetch all available rooms for the sidebar
-router.get('/', async (req, res) => {
+// GET /rooms - Fetch all available rooms for the sidebar (PROTECTED)
+router.get('/', verifyUser, async (req, res) => {
   const { data, error } = await supabase
     .from('rooms')
     .select('*')
