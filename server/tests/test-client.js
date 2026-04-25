@@ -1,17 +1,11 @@
 const { io } = require("socket.io-client");
 const supabase = require('../config/supabaseClient');
+const signIn = require("../utils/auth");
 
 
 async function main() {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: process.env.email,
-      password: process.env.password
-    });
-
-    if (error) throw error;
-
-    const token = data.session.access_token;
+    const token = await signIn(process.env.email, process.env.password);
 
     const socket = io("http://localhost:3001", {
       auth: { token }
