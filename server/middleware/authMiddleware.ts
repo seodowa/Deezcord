@@ -1,10 +1,17 @@
-const supabase = require('../config/supabaseClient');
+import { Request, Response, NextFunction } from 'express';
+import supabase from '../config/supabaseClient';
 
-const verifyUser = async (req, res, next) => {
+// Extend Express Request type
+export interface AuthenticatedRequest extends Request {
+  user?: any;
+}
+
+const verifyUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   // Check if the request has an Authorization header
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    return;
   }
 
   // Extract the token
@@ -14,7 +21,8 @@ const verifyUser = async (req, res, next) => {
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
-    return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    res.status(401).json({ error: "Unauthorized: Invalid token" });
+    return;
   }
 
   // Token is valid! Attach the user info to the request so the next function can use it
@@ -22,4 +30,4 @@ const verifyUser = async (req, res, next) => {
   next(); // Proceed to the actual route (e.g., creating a room)
 };
 
-module.exports = verifyUser;
+export default verifyUser;

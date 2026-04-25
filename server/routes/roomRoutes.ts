@@ -1,20 +1,19 @@
-const express = require('express');
-const router = express.Router();
-const supabase = require('../config/supabaseClient'); // Import the DB
-const verifyUser = require('../middleware/authMiddleware'); // Import the bouncer
+import express, { Response } from 'express';
+import supabase from '../config/supabaseClient';
+import verifyUser, { AuthenticatedRequest } from '../middleware/authMiddleware';
 
+const router = express.Router();
 
 // Add input validation helper
-const validateRoomName = (name) => {
+const validateRoomName = (name: any): boolean => {
   if (typeof name !== 'string') return false;
   if (name.trim().length === 0) return false;
   if (name.length > 100) return false;
   return true;
 };
 
-
 // GET /rooms/:roomId/messages - Fetch message history (PROTECTED)
-router.get('/:roomId/messages', verifyUser, async (req, res) => {
+router.get('/:roomId/messages', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
   
   const { data, error } = await supabase
@@ -23,18 +22,23 @@ router.get('/:roomId/messages', verifyUser, async (req, res) => {
     .eq('room_id', roomId)
     .order('created_at', { ascending: true });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+  }
   res.json(data);
 });
 
 // POST /rooms/create - Create a new chat room (PROTECTED)
-router.post('/', verifyUser, async (req, res) => {
+router.post('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { name } = req.body;
 
   if (!name) {
-    return res.status(400).json({ error: "Room name is required" });
+    res.status(400).json({ error: "Room name is required" });
+    return;
   } else if (!validateRoomName(name)) {
-    return res.status(400).json({ error: "Room name must be 1-100 characters" });
+    res.status(400).json({ error: "Room name must be 1-100 characters" });
+    return;
   }
 
   const { data, error } = await supabase
@@ -45,24 +49,29 @@ router.post('/', verifyUser, async (req, res) => {
   if (error) {
     // If the room name already exists (since we set it to UNIQUE in the schema)
     if (error.code === '23505') {
-      return res.status(409).json({ error: "A room with this name already exists" });
+      res.status(409).json({ error: "A room with this name already exists" });
+      return;
     }
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
+    return;
   }
 
   // Return the newly created room so the frontend can immediately route the user to it
-  res.status(201).json(data[0]); 
+  res.status(201).json(data && data.length > 0 ? data[0] : null); 
 });
 
 // GET /rooms - Fetch all available rooms for the sidebar (PROTECTED)
-router.get('/', verifyUser, async (req, res) => {
+router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { data, error } = await supabase
     .from('rooms')
     .select('*')
     .order('created_at', { ascending: true });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+  }
   res.json(data);
 });
 
-module.exports = router;
+export default router;

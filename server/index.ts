@@ -1,14 +1,16 @@
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
+import dotenv from 'dotenv';
+dotenv.config();
+import express, { Request, Response } from 'express';
+import http from 'http';
+import cors from 'cors';
+import { Server, Socket } from 'socket.io';
 
 // 1. Import our separated modules
-const supabase = require('./config/supabaseClient');
-const roomRoutes = require('./routes/roomRoutes');
-const healthRoutes = require('./routes/healthRoutes');
-const authRoutes = require('./routes/authRoutes');
+import supabase from './config/supabaseClient';
+import roomRoutes from './routes/roomRoutes';
+import healthRoutes from './routes/healthRoutes';
+import authRoutes from './routes/authRoutes';
+import { ReceiveMessagePayload } from './types/socket';
 
 const app = express();
 app.use(cors());
@@ -20,7 +22,7 @@ app.use('/health', healthRoutes);
 app.use('/rooms', roomRoutes);
 
 // Redirect root to /rooms
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.redirect('/rooms');
 });
 
@@ -33,11 +35,16 @@ const io = new Server(server, {
   },
 });
 
+// Create custom socket interface extending standard Socket
+interface AuthenticatedSocket extends Socket {
+  user?: any;
+}
+
 // 3. Socket.io Authentication Middleware (The Bouncer)
-io.use(async (socket, next) => {
+io.use(async (socket: AuthenticatedSocket, next) => {
   try {
     // The frontend must pass the token when initializing the socket connection
-    const token = socket.handshake.auth.token;
+    const token = socket.handshake.auth?.token;
 
     if (!token) {
       return next(new Error("Unauthorized: No token provided"));
@@ -62,11 +69,11 @@ io.use(async (socket, next) => {
 
 
 // 4. Socket logic stays here (now fully protected)
-io.on('connection', (socket) => {
+io.on('connection', (socket: AuthenticatedSocket) => {
   // We now know exactly who this is!
-  console.log(`Verified User Connected: ${socket.user.email} (Socket ID: ${socket.id})`);
+  console.log(`Verified User Connected: ${socket.user?.email} (Socket ID: ${socket.id})`);
 
-  socket.on('join_room', async (room_id) => {
+  socket.on('join_room', async (room_id: any) => {
     try {
       // check if room_id is a string
       if (typeof room_id !== 'string') {
@@ -85,16 +92,16 @@ io.on('connection', (socket) => {
       }
 
       socket.join(room_id);
-      console.log(`User ${socket.user.email} joined room: ${room_id}`);
+      console.log(`User ${socket.user?.email} joined room: ${room_id}`);
     } catch (error) {
       console.error("Error joining room:", error);
     }
     
   });
 
-  socket.on('send_message', async (data) => {
+  socket.on('send_message', async (data: any) => {
     try {
-      const email = socket.user.email;
+      const email = socket.user?.email;
       const senderName = email ? email.split('@')[0] : "Unknown User"; 
 
       // type check for data.room_id
@@ -113,7 +120,7 @@ io.on('connection', (socket) => {
       if (error) throw error;
 
       // Broadcast the message with the verified sender name attached
-      const broadcastData = {
+      const broadcastData: ReceiveMessagePayload = {
           ...data,
           username: senderName 
       };
@@ -126,7 +133,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`User Disconnected: ${socket.user.email}`);
+    console.log(`User Disconnected: ${socket.user?.email}`);
   });
 });
 

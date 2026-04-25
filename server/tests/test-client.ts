@@ -1,25 +1,13 @@
-const { io } = require("socket.io-client");
-const supabase = require('../config/supabaseClient');
-const signIn = require("../utils/auth");
-const readline = require('readline'); // FIXED: 'requite' typo
+import { io } from "socket.io-client";
+import supabase from '../config/supabaseClient';
+import signIn from "../utils/auth";
+import readline from 'readline';
+import { SendMessagePayload, ReceiveMessagePayload } from '../types/socket';
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-
-/**
- * @typedef {Object} SendMessagePayload
- * @property {string} room_id - The ID of the room to send the message to
- * @property {string} content - The actual message content
- */
-
-/**
- * @typedef {Object} ReceiveMessagePayload
- * @property {string} room_id - The ID of the room
- * @property {string} content - The actual message content
- * @property {string} username - The user who sent the message
- */
 
 async function main() {
   try {
@@ -50,7 +38,7 @@ async function main() {
       rl.setPrompt('> ');
       rl.prompt();
 
-      rl.on('line', (input) => {
+      rl.on('line', (input: string) => {
         const message = input.trim();
 
         if (message.toLowerCase() === "/exit") {
@@ -60,8 +48,7 @@ async function main() {
         }
 
         if (message) {
-          /** @type {SendMessagePayload} */
-          const payload = {
+          const payload: SendMessagePayload = {
             room_id: TEST_ROOM,
             content: message
           };
@@ -74,7 +61,7 @@ async function main() {
     });
 
     // Listen for incoming messages
-    socket.on("receive_message", (data) => {
+    socket.on("receive_message", (data: ReceiveMessagePayload) => {
       // Clear the current line so incoming text doesn't mess up what the user is currently typing
       process.stdout.write('\r\x1b[K');
       
@@ -89,7 +76,7 @@ async function main() {
       process.exit(0);
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Authentication failed:", error.message);
     process.exit(1);
   }
