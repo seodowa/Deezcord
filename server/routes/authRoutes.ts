@@ -1,13 +1,32 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import verifyUser, { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { signUp } from '../utils/auth';
 
 const router = express.Router();
 
+// POST /auth/register - Create a new user
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      res.status(400).json({ error: "Username, email, and password are required." });
+      return;
+    }
+
+    const data = await signUp(email, password, username);
+    
+    res.status(201).json({
+      message: "Registration successful",
+      user: data.user
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to register" });
+  }
+});
+
 // GET /auth/me - Checks if the token is valid and returns user info
 router.get('/me', verifyUser, (req: AuthenticatedRequest, res: Response) => {
-  // If the code reaches here, the verifyUser middleware successfully passed!
-  // req.user was securely attached by the middleware.
-  
   if (!req.user) {
     res.status(401).json({ error: "Unauthorized" });
     return;
