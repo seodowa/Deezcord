@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate} from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
 import { useToast } from '../hooks/useToast';
 import { registerUser } from '../services/authService';
@@ -45,7 +45,7 @@ export default function RegisterPage() {
     }
   };
 
-  const navigate = useNavigate();
+ 
   const { addToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,15 +61,15 @@ export default function RegisterPage() {
     
     try {
       await registerUser(username, email, password);
-      // Registration successful, redirect to login
+      // Success logic belongs here!
+      addToast("Account created successfully!", "success");
       navigate('/login', { state: { message: "Account created successfully. Please sign in." }});
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration.');
     } finally {
+      // Finally should ONLY handle cleanup like removing the loading state
       setIsLoading(false);
-      addToast("Account created successfully!", "success");
-      navigate('/login');
-    }, 1500);
+    }
   };
 
   return (

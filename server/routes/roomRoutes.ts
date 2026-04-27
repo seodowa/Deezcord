@@ -12,21 +12,37 @@ const validateRoomName = (name: any): boolean => {
   return true;
 };
 
-// GET /rooms/:roomId/messages - Fetch message history (PROTECTED)
+// server/routes/roomRoutes.ts
+
 router.get('/:roomId/messages', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
   
-  const { data, error } = await supabase
+  // 1. Get pagination parameters from query string (e.g., ?page=0&limit=50)
+  const page = parseInt(req.query.page as string) || 0;
+  const limit = parseInt(req.query.limit as string) || 50;
+
+  // 2. Calculate the range
+  const from = page * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from('messages')
-    .select('*')
+    .select('*', { count: 'exact' }) // 'exact' returns total count of messages
     .eq('room_id', roomId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false }) // Get newest messages first for chat
+    .range(from, to);
 
   if (error) {
       res.status(500).json({ error: error.message });
       return;
   }
-  res.json(data);
+
+  // 3. Return data along with metadata so the frontend knows if there's more to load
+  res.json({
+    messages: data.reverse(), // Reverse back to chronological order for the UI
+    nextPage: data.length === limit ? page + 1 : null,
+    totalCount: count
+  });
 });
 
 // POST /rooms/create - Create a new chat room (PROTECTED)
