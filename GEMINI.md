@@ -75,3 +75,4 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [ ] Complete the integration of the Login/Register pages with the backend.
 - [ ] Add real-time room creation updates to the sidebar.
 - [ ] Implement user profiles and avatars.
+- [ ] Implement room ownership and membership
