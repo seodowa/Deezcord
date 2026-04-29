@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import supabase from '../config/supabaseClient';
-import verifyUser, { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { verifyUser, verifyRoomMember, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -14,7 +14,7 @@ const validateRoomName = (name: any): boolean => {
 
 // server/routes/roomRoutes.ts
 
-router.get('/:roomId/messages', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
   
   // 1. Get pagination parameters from query string (e.g., ?page=0&limit=50)

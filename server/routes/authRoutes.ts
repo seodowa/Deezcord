@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import verifyUser, { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { signUp } from '../utils/auth';
 
 const router = express.Router();
