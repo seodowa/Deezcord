@@ -22,6 +22,25 @@ export const getRooms = async (): Promise<Room[]> => {
   return data;
 };
 
+export const getDiscoverRooms = async (): Promise<Room[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/discover`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch discovery rooms');
+  }
+
+  return data;
+};
+
 export const createRoom = async (name: string): Promise<Room> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
@@ -39,6 +58,42 @@ export const createRoom = async (name: string): Promise<Room> => {
 
   if (!response.ok) {
     throw new Error(data.error || 'Failed to create room');
+  }
+
+  return data;
+};
+
+export const joinRoom = async (roomId: string): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/join`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to join room');
+  }
+};
+
+export const getRoomMembers = async (roomId: string): Promise<any[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/members`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch members');
   }
 
   return data;
