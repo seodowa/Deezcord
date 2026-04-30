@@ -26,10 +26,17 @@ export async function signIn(identifier: string, password: string) {
 
         if (error) throw error;
 
-        return {
-            token: data.session.access_token,
-            user: data.user
-        };
+        // Extract what we need before clearing the session
+        const token = data.session.access_token;
+        const user = data.user;
+
+        // IMPORTANT: Clear the in-memory user session so the Supabase client
+        // reverts to using the service role key for all subsequent DB queries.
+        // Without this, the client stays "logged in" as this user and RLS
+        // blocks the profiles lookup on the next login attempt.
+        await supabase.auth.signOut();
+
+        return { token, user };
     } catch (error: any) {
         console.error("Authentication failed:", error.message);
         throw error;

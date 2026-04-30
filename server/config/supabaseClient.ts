@@ -10,6 +10,14 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 // Use the Service Role Key to bypass RLS securely from your trusted backend
-const supabase = createClient(supabaseUrl, supabaseKey);
+// persistSession: false prevents signInWithPassword from storing user sessions
+// on this client, which would cause subsequent queries to use the user's JWT
+// instead of the service role key (breaking RLS bypass).
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 export default supabase;
