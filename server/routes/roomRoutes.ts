@@ -45,9 +45,10 @@ router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: Authen
   });
 });
 
-// POST /rooms/create - Create a new chat room (PROTECTED)
+// POST /rooms - Create a new chat room (PROTECTED)
 router.post('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { name } = req.body;
+  const userId = req.user?.id;
 
   if (!name) {
     res.status(400).json({ error: "Room name is required" });
@@ -57,37 +58,153 @@ router.post('/', verifyUser, async (req: AuthenticatedRequest, res: Response) =>
     return;
   }
 
-  const { data, error } = await supabase
+  // Use a transaction-like approach (though Supabase doesn't support them easily via JS, we can do sequential)
+  const { data: roomData, error: roomError } = await supabase
     .from('rooms')
     .insert([{ name: name }])
-    .select(); // .select() ensures Supabase returns the newly created row (including its new UUID)
+    .select()
+    .single();
 
-  if (error) {
-    // If the room name already exists (since we set it to UNIQUE in the schema)
-    if (error.code === '23505') {
+  if (roomError) {
+    if (roomError.code === '23505') {
       res.status(409).json({ error: "A room with this name already exists" });
       return;
     }
+    res.status(500).json({ error: roomError.message });
+    return;
+  }
+
+  // Add the creator as the owner in room_members
+  const { error: memberError } = await supabase
+    .from('room_members')
+    .insert([{ 
+      room_id: roomData.id, 
+      user_id: userId,
+      role: 'owner' 
+    }]);
+
+  if (memberError) {
+    res.status(500).json({ error: "Room created but failed to add you as a member: " + memberError.message });
+    return;
+  }
+
+  res.status(201).json(roomData); 
+});
+
+// POST /rooms/:roomId/join - Join a room (PROTECTED)
+router.post('/:roomId/join', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const { roomId } = req.params;
+  const userId = req.user?.id;
+
+  // Check if already a member
+  const { data: existingMember } = await supabase
+    .from('room_members')
+    .select('*')
+    .eq('room_id', roomId)
+    .eq('user_id', userId)
+    .single();
+
+  if (existingMember) {
+    res.status(400).json({ error: "You are already a member of this room" });
+    return;
+  }
+
+  const { error } = await supabase
+    .from('room_members')
+    .insert([{ 
+      room_id: roomId, 
+      user_id: userId,
+      role: 'member' 
+    }]);
+
+  if (error) {
     res.status(500).json({ error: error.message });
     return;
   }
 
-  // Return the newly created room so the frontend can immediately route the user to it
-  res.status(201).json(data && data.length > 0 ? data[0] : null); 
+  res.status(200).json({ message: "Successfully joined the room" });
 });
 
-// GET /rooms - Fetch all available rooms for the sidebar (PROTECTED)
-router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// GET /rooms/:roomId/members - Fetch members of a room (PROTECTED)
+router.get('/:roomId/members', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
+  const { roomId } = req.params;
+
   const { data, error } = await supabase
-    .from('rooms')
-    .select('*')
-    .order('created_at', { ascending: true });
+    .from('room_members')
+    .select(`
+      role,
+      user_id,
+      profiles:user_id (
+        username,
+        email
+      )
+    `)
+    .eq('room_id', roomId);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json(data);
+});
+
+// GET /rooms/discover - Fetch rooms the user is NOT a member of (PROTECTED)
+router.get('/discover', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+
+  // Get IDs of rooms the user is already in
+  const { data: memberships } = await supabase
+    .from('room_members')
+    .select('room_id')
+    .eq('user_id', userId);
+
+  const joinedRoomIds = memberships?.map(m => m.room_id) || [];
+
+  // Fetch rooms not in that list
+  let query = supabase.from('rooms').select('*');
+  
+  if (joinedRoomIds.length > 0) {
+    query = query.not('id', 'in', `(${joinedRoomIds.join(',')})`);
+  }
+
+  const { data: rooms, error } = await query.order('created_at', { ascending: true });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json(rooms);
+});
+
+// GET /rooms - Fetch only rooms the user is a member of (PROTECTED)
+router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+
+  // Fetch only rooms where the user has a membership record
+  const { data: memberships, error } = await supabase
+    .from('room_members')
+    .select(`
+      role,
+      rooms (*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { referencedTable: 'rooms', ascending: true });
 
   if (error) {
       res.status(500).json({ error: error.message });
       return;
   }
-  res.json(data);
+
+  // Format the response to match the expected Room interface on the frontend
+  const processedRooms = memberships.map((m: any) => ({
+    ...m.rooms,
+    isMember: true,
+    role: m.role
+  }));
+
+  res.json(processedRooms);
 });
 
 export default router;

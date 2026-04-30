@@ -11,7 +11,7 @@ const rl = readline.createInterface({
 
 async function main() {
   try {
-    const token = await signIn(process.env.email, process.env.password);
+    const token = await signIn(process.env.email || '', process.env.password || '');
     console.log(token);
     const socket = io("http://localhost:3001", {
       auth: { token }
