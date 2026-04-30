@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { getToken, setToken as setTokenUtil, removeToken as removeTokenUtil } from '../utils/auth';
 
 interface AuthContextType {
