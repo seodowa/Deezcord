@@ -67,6 +67,7 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [x] Setup protected routes
 - [ ] Create email verification page
 - [ ] Create MFA modal
-- [ ] Create rooms page (For example: Discord Servers)
-- [ ] Create chat page (For example: Discord Chat)
-- [ ] Turn current sidebar into sidebar component 
+- [x] Integrate Sidebar with backend `GET /rooms` & `POST /rooms`
+- [ ] Create chat page / Real-time messaging
+- [x] Turn current sidebar into sidebar component
+- [x] Implement modern "Tray" design with collapsible desktop sidebar 
