@@ -1,4 +1,8 @@
+import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 
 export async function signIn(identifier: string, password: string) {
     try {
@@ -19,24 +23,27 @@ export async function signIn(identifier: string, password: string) {
             email = profileData.email;
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // Create a fresh, temporary client for this specific login request.
+        // This avoids modifying the shared singleton's auth state and
+        // ensures we don't need to call signOut() which would revoke the session.
+        const authClient = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+            },
+        });
+
+        const { data, error } = await authClient.auth.signInWithPassword({
             email,
             password
         });
 
         if (error) throw error;
 
-        // Extract what we need before clearing the session
-        const token = data.session.access_token;
-        const user = data.user;
-
-        // IMPORTANT: Clear the in-memory user session so the Supabase client
-        // reverts to using the service role key for all subsequent DB queries.
-        // Without this, the client stays "logged in" as this user and RLS
-        // blocks the profiles lookup on the next login attempt.
-        await supabase.auth.signOut();
-
-        return { token, user };
+        return { 
+            token: data.session.access_token, 
+            user: data.user 
+        };
     } catch (error: any) {
         console.error("Authentication failed:", error.message);
         throw error;
