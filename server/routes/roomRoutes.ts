@@ -21,7 +21,23 @@ const validateRoomName = (name: any): boolean => {
   return true;
 };
 
-// ... (GET messages remains same)
+// GET /rooms/:roomId/messages - Fetch message history for a room (PROTECTED)
+router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
+  const { roomId } = req.params;
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json(data);
+});
 
 // POST /rooms - Create a new chat room (PROTECTED)
 router.post('/', verifyUser, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {

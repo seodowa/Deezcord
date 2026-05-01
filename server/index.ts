@@ -99,6 +99,13 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     
   });
 
+  socket.on('leave_room', (room_id: any) => {
+    if (typeof room_id === 'string') {
+      socket.leave(room_id);
+      console.log(`User ${socket.user?.email} left room: ${room_id}`);
+    }
+  });
+
   socket.on('send_message', async (data: any) => {
     try {
       const email = socket.user?.email;
@@ -109,23 +116,28 @@ io.on('connection', (socket: AuthenticatedSocket) => {
         throw new Error("Invalid room_id or content: Must be of type string");
       }
 
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('messages')
         .insert([{ 
           room_id: data.room_id, 
           username: senderName, // Securely assigned
           content: data.content 
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Broadcast the message with the verified sender name attached
+      // Broadcast the message to EVERYONE in the room including the sender
       const broadcastData: ReceiveMessagePayload = {
-          ...data,
-          username: senderName 
+          id: insertedData.id,
+          room_id: data.room_id,
+          content: data.content,
+          username: senderName,
+          created_at: insertedData.created_at
       };
 
-      socket.to(data.room_id).emit('receive_message', broadcastData);
+      io.to(data.room_id).emit('receive_message', broadcastData);
     } catch (error) {
       console.error("Error sending message:", error);
     }
