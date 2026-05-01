@@ -153,24 +153,52 @@ router.post('/:roomId/join', verifyUser, async (req: AuthenticatedRequest, res: 
 router.get('/:roomId/members', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
 
-  const { data, error } = await supabase
+  // 1. Fetch room members first
+  const { data: members, error: membersError } = await supabase
     .from('room_members')
-    .select(`
-      role,
-      user_id,
-      profiles:user_id (
-        username,
-        email
-      )
-    `)
+    .select('role, user_id')
     .eq('room_id', roomId);
 
-  if (error) {
-    res.status(500).json({ error: error.message });
+  if (membersError) {
+    res.status(500).json({ error: membersError.message });
     return;
   }
 
-  res.json(data);
+  if (!members || members.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // 2. Extract user IDs and fetch their profiles from public.profiles
+  const userIds = members.map(m => m.user_id);
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username, email')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError);
+    // Return members with fallback profile info if profile fetch fails
+    const fallback = members.map(m => ({
+      ...m,
+      profiles: { username: 'Unknown User', email: 'Unknown' }
+    }));
+    res.json(fallback);
+    return;
+  }
+
+  // 3. Manually merge the profiles into the member records
+  // This bypasses the need for a database-level join relationship
+  const combined = members.map(member => {
+    const profile = profiles.find(p => p.id === member.user_id);
+    return {
+      role: member.role,
+      user_id: member.user_id,
+      profiles: profile || { username: 'Unknown User', email: 'Unknown' }
+    };
+  });
+
+  res.json(combined);
 });
 
 // GET /rooms/discover - Fetch rooms the user is NOT a member of (PROTECTED)
