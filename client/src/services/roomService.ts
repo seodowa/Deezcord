@@ -98,3 +98,22 @@ export const getRoomMembers = async (roomId: string): Promise<any[]> => {
 
   return data;
 };
+
+export const getMessages = async (roomId: string): Promise<any> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/messages`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch messages');
+  }
+
+  return data;
+};
