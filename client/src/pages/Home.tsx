@@ -223,7 +223,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
       
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
@@ -301,9 +301,10 @@ export default function HomePage() {
             </div>
           )}
         </header>
+{/* Content Area */}
+<div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0">
+  <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-        <div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden">
             {isDiscoveryMode ? (
               <div className="flex-1 p-6 md:p-8 overflow-y-auto">
                 <div className="max-w-4xl mx-auto animate-fade-in w-full">
