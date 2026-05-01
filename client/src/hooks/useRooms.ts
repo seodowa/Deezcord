@@ -37,10 +37,10 @@ export const useRooms = () => {
     }
   }, []);
 
-  const createNewRoom = async (name: string) => {
+  const createNewRoom = async (name: string, file: File | null) => {
     setIsCreatingRoom(true);
     try {
-      const newRoom = await apiCreateRoom(name);
+      const newRoom = await apiCreateRoom(name, file);
       const roomWithMembership: Room = { ...newRoom, isMember: true, role: 'owner' };
       setRooms(prev => [...prev, roomWithMembership]);
       addToast(`Room "${name}" created successfully!`, 'success');

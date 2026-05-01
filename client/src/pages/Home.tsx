@@ -56,9 +56,9 @@ export default function HomePage() {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreateRoom = async (name: string) => {
+  const handleCreateRoom = async (name: string, file: File | null) => {
     try {
-      const newRoom = await createNewRoom(name);
+      const newRoom = await createNewRoom(name, file);
       setCurrentRoom(newRoom);
       setIsCreateModalOpen(false);
     } catch (err) {
@@ -127,14 +127,40 @@ export default function HomePage() {
                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
              </button>
-             <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">Deezcord</h2>
+             
+             {currentRoom && !isDiscoveryMode ? (
+               <div className="flex items-center gap-2 overflow-hidden">
+                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 ${
+                   currentRoom.room_profile ? '' : 'bg-blue-500'
+                 }`}>
+                   {currentRoom.room_profile ? (
+                     <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
+                   ) : (
+                     <span>#</span>
+                   )}
+                 </div>
+                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
+                   {currentRoom.name}
+                 </h2>
+               </div>
+             ) : (
+               <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">
+                 {isDiscoveryMode ? 'Discovery' : 'Deezcord'}
+               </h2>
+             )}
           </div>
         </header>
 
         <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20">
-              #
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
+              currentRoom?.room_profile ? '' : 'bg-blue-500'
+            }`}>
+              {currentRoom?.room_profile ? (
+                <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
+              ) : (
+                <span>#</span>
+              )}
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
@@ -188,7 +214,15 @@ export default function HomePage() {
                       {discoverRooms.map(room => (
                         <div key={room.id} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
                           <div>
-                            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-4 shadow-sm">#</div>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-4 shadow-sm overflow-hidden ${
+                              room.room_profile ? '' : 'bg-blue-500'
+                            }`}>
+                              {room.room_profile ? (
+                                <img src={room.room_profile} alt={`${room.name} profile`} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>#</span>
+                              )}
+                            </div>
                             <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-slate-50">{room.name}</h3>
                             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Join this room to start chatting with its members.</p>
                           </div>

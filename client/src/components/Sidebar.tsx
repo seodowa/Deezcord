@@ -148,16 +148,16 @@ export default function Sidebar({
                   title={isCollapsed ? room.name : undefined}
                 >
                   <div className={`w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center font-bold transition-colors duration-200 overflow-hidden ${
-                currentRoomId === room.id
-                ? 'bg-white/20 text-white'
-                : 'bg-blue-500/10 dark:bg-blue-400/10 text-blue-500 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white dark:group-hover:bg-blue-500 dark:group-hover:text-white'
-              }`}>
-                {room.room_profile ? (
-                  <img src={room.room_profile} alt={`${room.name} profile`} className="w-full h-full object-cover" />
-                ) : (
-                  <span>{room.name.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
+                    currentRoomId === room.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-blue-500/10 dark:bg-blue-400/10 text-blue-500 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white dark:group-hover:bg-blue-500 dark:group-hover:text-white'
+                  }`}>
+                    {room.room_profile ? (
+                      <img src={room.room_profile} alt={`${room.name} profile`} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{room.name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
                   <div className={`flex-1 min-w-0 ${isCollapsed ? 'md:hidden' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className={`font-medium transition-colors duration-200 truncate ${currentRoomId === room.id ? 'text-white' : ''}`}>

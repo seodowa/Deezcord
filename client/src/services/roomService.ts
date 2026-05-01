@@ -41,17 +41,24 @@ export const getDiscoverRooms = async (): Promise<Room[]> => {
   return data;
 };
 
-export const createRoom = async (name: string): Promise<Room> => {
+export const createRoom = async (name: string, file: File | null): Promise<Room> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
+
+  const formData = new FormData();
+  formData.append('name', name);
+  if (file) {
+    formData.append('file', file);
+  }
 
   const response = await fetch(`${API_URL}/rooms`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      // Note: Don't set Content-Type header when using FormData; 
+      // the browser will set it automatically with the boundary.
     },
-    body: JSON.stringify({ name }),
+    body: formData,
   });
 
   const data = await response.json();
