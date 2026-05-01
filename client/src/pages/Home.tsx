@@ -4,6 +4,7 @@ import CreateRoomModal from '../components/CreateRoomModal';
 import AsyncButton from '../components/AsyncButton';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
+import RoomSettings from '../components/RoomSettings';
 import type { Room } from '../types/room';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [isDiscoveryMode, setIsDiscoveryMode] = useState(false);
+  const [isSettingsView, setIsSettingsView] = useState(false);
   
   const { addToast } = useToast();
   const { logout, user } = useAuth();
@@ -23,6 +25,7 @@ export default function HomePage() {
   
   const { 
     rooms, 
+    setRooms,
     discoverRooms, 
     isLoadingRooms, 
     isLoadingDiscover, 
@@ -36,18 +39,21 @@ export default function HomePage() {
   const {
     messages,
     members,
-    sendMessage
+    sendMessage,
+    fetchMembers
   } = useChat(currentRoom?.id, currentRoom?.isMember);
 
   const handleSelectRoom = (room: Room) => {
     setCurrentRoom(room);
     setIsDiscoveryMode(false);
+    setIsSettingsView(false);
     setIsMobileMenuOpen(false);
   };
 
   const handleDiscoverRoom = () => {
     setIsDiscoveryMode(true);
     setCurrentRoom(null);
+    setIsSettingsView(false);
     setIsMobileMenuOpen(false);
     fetchDiscoverRooms();
   };
@@ -60,6 +66,7 @@ export default function HomePage() {
     try {
       const newRoom = await createNewRoom(name, file);
       setCurrentRoom(newRoom);
+      setIsSettingsView(false);
       setIsCreateModalOpen(false);
     } catch (err) {
       // Error is handled in useRooms
@@ -74,8 +81,22 @@ export default function HomePage() {
       const updatedRoom = await joinExistingRoom(room);
       setCurrentRoom(updatedRoom);
       setIsDiscoveryMode(false);
+      setIsSettingsView(false);
     } catch (err) {
       // Error is handled in useRooms
+    }
+  };
+
+  const handleRoomUpdate = (updatedRoom: Room) => {
+    setCurrentRoom(prev => prev ? { ...prev, ...updatedRoom, isMember: true, role: prev.role } : null);
+    setRooms(prev => prev.map(r => r.id === updatedRoom.id ? { ...r, ...updatedRoom } : r));
+  };
+
+  const handleLeaveRoom = () => {
+    if (currentRoom) {
+      setRooms(prev => prev.filter(r => r.id !== currentRoom.id));
+      setCurrentRoom(null);
+      setIsSettingsView(false);
     }
   };
 
@@ -149,6 +170,22 @@ export default function HomePage() {
                </h2>
              )}
           </div>
+
+          {currentRoom?.isMember && !isDiscoveryMode && (
+            <button
+              onClick={() => setIsSettingsView(!isSettingsView)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                isSettingsView 
+                  ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
+                  : 'bg-white/50 dark:bg-slate-700/50 border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:scale-105'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
         </header>
 
         <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
@@ -172,24 +209,43 @@ export default function HomePage() {
             </div>
           </div>
           
-          {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && (
-            <div className="flex -space-x-2 overflow-hidden">
-              {members.slice(0, 5).map((member) => (
-                <div 
-                  key={member.user_id} 
-                  className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold"
-                  title={member.profiles.username}
-                >
-                  {member.profiles.username.substring(0, 2).toUpperCase()}
-                </div>
-              ))}
-              {members.length > 5 && (
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-xs font-bold">
-                  +{members.length - 5}
-                </div>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-6">
+            {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && (
+              <div className="flex -space-x-2 overflow-hidden">
+                {members.slice(0, 5).map((member) => (
+                  <div 
+                    key={member.user_id} 
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold"
+                    title={member.profiles.username}
+                  >
+                    {member.profiles.username.substring(0, 2).toUpperCase()}
+                  </div>
+                ))}
+                {members.length > 5 && (
+                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-xs font-bold">
+                    +{members.length - 5}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentRoom?.isMember && !isDiscoveryMode && (
+              <button
+                onClick={() => setIsSettingsView(!isSettingsView)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 font-bold text-sm ${
+                  isSettingsView 
+                    ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                    : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md'
+                }`}
+              >
+                <svg className={`w-4 h-4 transition-transform duration-500 ${isSettingsView ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {isSettingsView ? 'Back to Chat' : 'Settings'}
+              </button>
+            )}
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0">
@@ -246,10 +302,20 @@ export default function HomePage() {
               </div>
             ) : currentRoom ? (
                currentRoom.isMember ? (
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    <MessageList messages={messages} currentUserEmail={user?.email} />
-                    <MessageInput onSendMessage={sendMessage} />
-                  </div>
+                  isSettingsView ? (
+                    <RoomSettings 
+                      room={currentRoom} 
+                      members={members} 
+                      onRoomUpdate={handleRoomUpdate}
+                      onMemberChange={() => fetchMembers(currentRoom.id)}
+                      onLeave={handleLeaveRoom}
+                    />
+                  ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      <MessageList messages={messages} currentUserEmail={user?.email} />
+                      <MessageInput onSendMessage={sendMessage} />
+                    </div>
+                  )
                ) : (
                   <div className="flex-1 overflow-y-auto p-6 md:p-8">
                     <div className="min-h-full flex items-center justify-center">

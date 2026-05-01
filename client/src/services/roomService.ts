@@ -124,3 +124,81 @@ export const getMessages = async (roomId: string): Promise<any> => {
 
   return data;
 };
+
+export const updateRoom = async (roomId: string, name?: string, file?: File | null): Promise<Room> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const formData = new FormData();
+  if (name) formData.append('name', name);
+  if (file) formData.append('file', file);
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update room');
+  }
+
+  return data;
+};
+
+export const addMember = async (roomId: string, email: string): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/members`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to add member');
+  }
+};
+
+export const kickMember = async (roomId: string, userId: string): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/members/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to remove member');
+  }
+};
+
+export const leaveRoom = async (roomId: string): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/leave`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to leave room');
+  }
+};
