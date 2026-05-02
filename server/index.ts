@@ -144,6 +144,16 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     
   });
 
+  socket.on('typing_start', (room_id: string) => {
+    const username = socket.user?.email?.split('@')[0] || "Unknown User";
+    socket.to(room_id).emit('user_typing', { room_id, username, isTyping: true });
+  });
+
+  socket.on('typing_stop', (room_id: string) => {
+    const username = socket.user?.email?.split('@')[0] || "Unknown User";
+    socket.to(room_id).emit('user_typing', { room_id, username, isTyping: false });
+  });
+
   socket.on('disconnect', () => {
     console.log(`User Disconnected: ${socket.user?.email}`);
   });
