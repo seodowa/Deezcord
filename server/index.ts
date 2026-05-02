@@ -119,6 +119,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
   socket.on('send_message', async (data: any) => {
     try {
       const email = socket.user?.email;
+      const userId = socket.user?.id;
       const senderName = email ? email.split('@')[0] : "Unknown User"; 
 
       // type check for data.room_id
@@ -126,11 +127,19 @@ io.on('connection', (socket: AuthenticatedSocket) => {
         throw new Error("Invalid room_id or content: Must be of type string");
       }
 
+      // Fetch user profile to get avatar
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', userId)
+        .single();
+
       const { data: insertedData, error } = await supabase
         .from('messages')
         .insert([{ 
           room_id: data.room_id, 
-          username: senderName, // Securely assigned
+          user_id: userId, // Persistent UUID
+          username: profile?.username || senderName, // Still store username for legacy/snapshot purposes
           content: data.content 
         }])
         .select()
@@ -141,10 +150,12 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       // Broadcast the message to EVERYONE in the room including the sender
       const broadcastData: ReceiveMessagePayload = {
           id: insertedData.id,
+          user_id: userId,
           room_id: data.room_id,
           content: data.content,
-          username: senderName,
-          created_at: insertedData.created_at
+          username: profile?.username || senderName,
+          created_at: insertedData.created_at,
+          avatar_url: profile?.avatar_url
       };
 
       io.to(data.room_id).emit('receive_message', broadcastData);
@@ -156,12 +167,12 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
   socket.on('typing_start', (room_id: string) => {
     const username = socket.user?.email?.split('@')[0] || "Unknown User";
-    socket.to(room_id).emit('user_typing', { room_id, username, isTyping: true });
+    socket.to(room_id).emit('user_typing', { room_id, userId, username, isTyping: true });
   });
 
   socket.on('typing_stop', (room_id: string) => {
     const username = socket.user?.email?.split('@')[0] || "Unknown User";
-    socket.to(room_id).emit('user_typing', { room_id, username, isTyping: false });
+    socket.to(room_id).emit('user_typing', { room_id, userId, username, isTyping: false });
   });
 
   socket.on('disconnect', () => {

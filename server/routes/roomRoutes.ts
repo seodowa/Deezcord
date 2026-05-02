@@ -26,7 +26,7 @@ const validateRoomName = (name: any): boolean => {
 router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
 
-  const { data, error } = await supabase
+  const { data: messages, error } = await supabase
     .from('messages')
     .select('*')
     .eq('room_id', roomId)
@@ -37,7 +37,43 @@ router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: Authen
     return;
   }
 
-  res.json(data);
+  if (!messages || messages.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // Fetch profiles for these users to get their latest avatars and usernames
+  // We prioritize user_id if available, otherwise fallback to username (for legacy)
+  const userIds = Array.from(new Set(messages.map(m => m.user_id).filter(id => id !== null)));
+  const usernames = Array.from(new Set(messages.map(m => m.username).filter(u => u !== null)));
+
+  const { data: profilesById } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .in('id', userIds);
+
+  const { data: profilesByUsername } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .in('username', usernames);
+
+  const messagesWithAvatars = messages.map(msg => {
+    // 1. Try to find by user_id first (most reliable)
+    let profile = profilesById?.find(p => p.id === msg.user_id);
+    
+    // 2. If not found (legacy message), try to find by username
+    if (!profile) {
+      profile = profilesByUsername?.find(p => p.username.toLowerCase() === msg.username.toLowerCase());
+    }
+
+    return {
+      ...msg,
+      username: profile?.username || msg.username, // Update username to current if profile found
+      avatar_url: profile?.avatar_url || null
+    };
+  });
+
+  res.json(messagesWithAvatars);
 });
 
 // POST /rooms - Create a new chat room (PROTECTED)
@@ -60,7 +96,7 @@ router.post('/', verifyUser, upload.single('file'), async (req: AuthenticatedReq
   if (file) {
     const fileExt = file.originalname.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-    const filePath = `room_profiles/${fileName}`;
+    const filePath = fileName;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('room_profiles')
@@ -174,7 +210,7 @@ router.get('/:roomId/members', verifyUser, verifyRoomMember, async (req: Authent
   const userIds = members.map(m => m.user_id);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, email')
+    .select('id, username, email, avatar_url')
     .in('id', userIds);
 
   if (profilesError) {
