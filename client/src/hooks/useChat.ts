@@ -8,13 +8,17 @@ import { useAuth } from './useAuth';
 export const useChat = (roomId: string | undefined, isMember: boolean | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const { user } = useAuth();
   const { 
     joinRoom: socketJoinRoom, 
     leaveRoom: socketLeaveRoom,
     sendMessage: socketSendMessage, 
-    onMessage 
+    startTyping: socketStartTyping,
+    stopTyping: socketStopTyping,
+    onMessage,
+    onTyping
   } = useSocket();
 
   const fetchMembers = useCallback(async (id: string) => {
@@ -44,6 +48,7 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
       fetchMembers(roomId);
       fetchMessages(roomId);
       socketJoinRoom(roomId);
+      setTypingUsers([]);
       
       return () => {
         socketLeaveRoom(roomId);
@@ -51,6 +56,7 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     } else {
       setMembers([]);
       setMessages([]);
+      setTypingUsers([]);
     }
   }, [roomId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
 
@@ -79,6 +85,22 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     return unsubscribe;
   }, [onMessage, roomId]);
 
+  useEffect(() => {
+    const unsubscribe = onTyping((data) => {
+      if (data.room_id === roomId) {
+        setTypingUsers(prev => {
+          if (data.isTyping) {
+            if (prev.includes(data.username)) return prev;
+            return [...prev, data.username];
+          } else {
+            return prev.filter(u => u !== data.username);
+          }
+        });
+      }
+    });
+    return unsubscribe;
+  }, [onTyping, roomId]);
+
   const sendMessage = useCallback((content: string) => {
     if (roomId && isMember) {
       socketSendMessage({ room_id: roomId, content });
@@ -93,14 +115,30 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, newMessage]);
+      socketStopTyping(roomId);
     }
-  }, [roomId, isMember, socketSendMessage, user]);
+  }, [roomId, isMember, socketSendMessage, user, socketStopTyping]);
+
+  const startTyping = useCallback(() => {
+    if (roomId && isMember) {
+      socketStartTyping(roomId);
+    }
+  }, [roomId, isMember, socketStartTyping]);
+
+  const stopTyping = useCallback(() => {
+    if (roomId && isMember) {
+      socketStopTyping(roomId);
+    }
+  }, [roomId, isMember, socketStopTyping]);
 
   return {
     messages,
     members,
+    typingUsers,
     isLoadingMessages,
     sendMessage,
+    startTyping,
+    stopTyping,
     fetchMembers,
     fetchMessages
   };

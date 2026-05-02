@@ -52,6 +52,18 @@ export const useSocket = () => {
     }
   }, []);
 
+  const startTyping = useCallback((roomId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('typing_start', roomId);
+    }
+  }, []);
+
+  const stopTyping = useCallback((roomId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('typing_stop', roomId);
+    }
+  }, []);
+
   const onMessage = useCallback((callback: (data: any) => void) => {
     if (socketRef.current) {
       socketRef.current.on('receive_message', callback);
@@ -63,5 +75,16 @@ export const useSocket = () => {
     };
   }, []);
 
-  return { isConnected, joinRoom, leaveRoom, sendMessage, onMessage };
+  const onTyping = useCallback((callback: (data: { room_id: string; username: string; isTyping: boolean }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('user_typing', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('user_typing', callback);
+      }
+    };
+  }, []);
+
+  return { isConnected, joinRoom, leaveRoom, sendMessage, startTyping, stopTyping, onMessage, onTyping };
 };

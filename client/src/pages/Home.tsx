@@ -39,7 +39,10 @@ export default function HomePage() {
   const {
     messages,
     members,
+    typingUsers,
     sendMessage,
+    startTyping,
+    stopTyping,
     fetchMembers
   } = useChat(currentRoom?.id, currentRoom?.isMember);
 
@@ -312,8 +315,12 @@ export default function HomePage() {
                     />
                   ) : (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                      <MessageList messages={messages} currentUserEmail={user?.email} />
-                      <MessageInput onSendMessage={sendMessage} />
+                      <MessageList messages={messages} currentUserEmail={user?.email} typingUsers={typingUsers} />
+                      <MessageInput 
+                        onSendMessage={sendMessage} 
+                        onStartTyping={startTyping}
+                        onStopTyping={stopTyping}
+                      />
                     </div>
                   )
                ) : (
