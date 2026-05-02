@@ -2,6 +2,7 @@ import express, { Response } from 'express';
 import multer from 'multer';
 import supabase from '../config/supabaseClient';
 import { verifyUser, verifyRoomMember, verifyRoomOwner, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { isUserOnline } from '../utils/presence';
 
 const router = express.Router();
 
@@ -179,22 +180,24 @@ router.get('/:roomId/members', verifyUser, verifyRoomMember, async (req: Authent
   if (profilesError) {
     console.error('Error fetching profiles:', profilesError);
     // Return members with fallback profile info if profile fetch fails
-    const fallback = members.map(m => ({
-      ...m,
-      profiles: { username: 'Unknown User', email: 'Unknown' }
+    const fallback = members.map(member => ({
+      role: member.role,
+      user_id: member.user_id,
+      profiles: { username: 'Unknown User', email: 'Unknown' },
+      isOnline: isUserOnline(member.user_id)
     }));
     res.json(fallback);
     return;
   }
 
   // 3. Manually merge the profiles into the member records
-  // This bypasses the need for a database-level join relationship
   const combined = members.map(member => {
     const profile = profiles.find(p => p.id === member.user_id);
     return {
       role: member.role,
       user_id: member.user_id,
-      profiles: profile || { username: 'Unknown User', email: 'Unknown' }
+      profiles: profile || { username: 'Unknown User', email: 'Unknown' },
+      isOnline: isUserOnline(member.user_id)
     };
   });
 

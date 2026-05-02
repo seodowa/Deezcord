@@ -217,8 +217,16 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                   return (
                     <div key={member.user_id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/50 dark:border-white/5 transition-all hover:shadow-sm">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
-                          {(profile.username || 'U').substring(0, 2).toUpperCase()}
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
+                            {(profile.username || 'U').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div 
+                            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-950 ${
+                              member.isOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                            title={member.isOnline ? 'Online' : 'Offline'}
+                          />
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900 dark:text-slate-50 truncate">{profile.username || 'Unknown User'}</p>

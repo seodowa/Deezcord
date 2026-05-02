@@ -52,6 +52,7 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 
 ## Development Conventions
 
+- **Workflow:** After every major success or completed task, always provide clear and concise proposed commit messages following the project's established style. If the changes affect both the `client/` and `server/` directories, provide separate commit messages for each.
 - **TypeScript:** Strictly typed codebase. Use interfaces/types for socket payloads and API responses.
 - **UI Components:** Always use the `client/src/components/AsyncButton.tsx` component whenever a button is going to be sending or requesting data from the server. This prevents spam clicking and manages asynchronous loading states. Use the `useToast` hook (`client/src/hooks/useToast.ts`) for all user-facing notifications, warnings, and success messages instead of native `alert()` or `console.log()`.
 - **Authentication:** 
