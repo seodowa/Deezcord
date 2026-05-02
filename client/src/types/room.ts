@@ -1,3 +1,11 @@
+export interface Channel {
+  id: string;
+  room_id: string;
+  name: string;
+  type: string;
+  created_at: string;
+}
+
 export interface Room {
   id: string;
   name: string;

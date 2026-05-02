@@ -106,11 +106,52 @@ export const getRoomMembers = async (roomId: string): Promise<any[]> => {
   return data;
 };
 
-export const getMessages = async (roomId: string): Promise<any> => {
+export const getChannels = async (roomId: string): Promise<any[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/messages`, {
+  const response = await fetch(`${API_URL}/rooms/${roomId}/channels`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch channels');
+  }
+
+  return data;
+};
+
+export const createChannel = async (roomId: string, name: string, type: string = 'text'): Promise<any> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/channels`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, type }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to create channel');
+  }
+
+  return data;
+};
+
+export const getMessages = async (roomId: string, channelId: string): Promise<any> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/rooms/${roomId}/channels/${channelId}/messages`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },

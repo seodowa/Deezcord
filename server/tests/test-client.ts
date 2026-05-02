@@ -26,12 +26,23 @@ async function main() {
     if (roomError) throw roomError;
     const TEST_ROOM = roomData.id;
 
+    const { data: channelData, error: channelError } = await supabase
+      .from("channels")
+      .select("id")
+      .eq("room_id", TEST_ROOM)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (channelError) throw channelError;
+    const TEST_CHANNEL = channelData.id;
+
     socket.on("connect", () => {
       console.log(`[+] Connected to server with ID: ${socket.id}`);
         
       // Join the room
-      socket.emit("join_room", TEST_ROOM);
-      console.log(`[+] Joined room: ${TEST_ROOM}`);
+      socket.emit("join_room", { room_id: TEST_ROOM, channel_id: TEST_CHANNEL });
+      console.log(`[+] Joined room: ${TEST_ROOM} and channel: ${TEST_CHANNEL}`);
       console.log(`[!] Type your message and press Enter to send. Type /exit to quit.\n`);
 
       // Set a prompt indicator for the user
@@ -50,6 +61,7 @@ async function main() {
         if (message) {
           const payload: SendMessagePayload = {
             room_id: TEST_ROOM,
+            channel_id: TEST_CHANNEL,
             content: message
           };
           socket.emit("send_message", payload);

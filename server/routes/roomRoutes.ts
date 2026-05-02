@@ -22,14 +22,60 @@ const validateRoomName = (name: any): boolean => {
   return true;
 };
 
-// GET /rooms/:roomId/messages - Fetch message history for a room (PROTECTED)
-router.get('/:roomId/messages', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
+// GET /rooms/:roomId/channels - Fetch channels for a room
+router.get('/:roomId/channels', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
+
+  const { data: channels, error } = await supabase
+    .from('channels')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.json(channels || []);
+});
+
+// POST /rooms/:roomId/channels - Create a new channel (OWNER ONLY)
+router.post('/:roomId/channels', verifyUser, verifyRoomOwner, async (req: AuthenticatedRequest, res: Response) => {
+  const { roomId } = req.params;
+  const { name, type } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    res.status(400).json({ error: "Valid channel name is required" });
+    return;
+  }
+
+  const { data: channel, error } = await supabase
+    .from('channels')
+    .insert([{ 
+      room_id: roomId,
+      name: name.trim().toLowerCase().replace(/\s+/g, '-'),
+      type: type || 'text'
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.status(201).json(channel);
+});
+
+// GET /rooms/:roomId/channels/:channelId/messages - Fetch message history for a channel (PROTECTED)
+router.get('/:roomId/channels/:channelId/messages', verifyUser, verifyRoomMember, async (req: AuthenticatedRequest, res: Response) => {
+  const { channelId } = req.params;
 
   const { data: messages, error } = await supabase
     .from('messages')
     .select('*')
-    .eq('room_id', roomId)
+    .eq('channel_id', channelId)
     .order('created_at', { ascending: true });
 
   if (error) {

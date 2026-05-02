@@ -5,7 +5,7 @@ import type { Member } from '../types/room';
 interface MessageListProps {
   messages: Message[];
   members?: Member[];
-  currentUser?: { username?: string; email?: string } | null;
+  currentUser?: { id?: string; username?: string; email?: string } | null;
   typingUsers?: string[];
 }
 

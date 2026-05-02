@@ -83,8 +83,12 @@ io.on('connection', (socket: AuthenticatedSocket) => {
   // We now know exactly who this is!
   console.log(`Verified User Connected: ${socket.user?.email} (Socket ID: ${socket.id})`);
 
-  socket.on('join_room', async (room_id: any) => {
+  socket.on('join_room', async (data: any) => {
     try {
+      // support legacy room string or new object { room_id, channel_id }
+      const room_id = typeof data === 'string' ? data : data?.room_id;
+      const channel_id = typeof data === 'object' ? data?.channel_id : null;
+
       // check if room_id is a string
       if (typeof room_id !== 'string') {
         throw new Error("Invalid room_id: Must be of type string");
@@ -103,16 +107,29 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       socket.join(room_id);
       console.log(`User ${socket.user?.email} joined room: ${room_id}`);
+
+      if (channel_id && typeof channel_id === 'string') {
+        socket.join(`channel:${channel_id}`);
+        console.log(`User ${socket.user?.email} joined channel: ${channel_id}`);
+      }
     } catch (error) {
-      console.error("Error joining room:", error);
+      console.error("Error joining room/channel:", error);
     }
     
   });
 
-  socket.on('leave_room', (room_id: any) => {
+  socket.on('leave_room', (data: any) => {
+    const room_id = typeof data === 'string' ? data : data?.room_id;
+    const channel_id = typeof data === 'object' ? data?.channel_id : null;
+
     if (typeof room_id === 'string') {
       socket.leave(room_id);
       console.log(`User ${socket.user?.email} left room: ${room_id}`);
+    }
+
+    if (typeof channel_id === 'string') {
+      socket.leave(`channel:${channel_id}`);
+      console.log(`User ${socket.user?.email} left channel: ${channel_id}`);
     }
   });
 
@@ -123,8 +140,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const senderName = email ? email.split('@')[0] : "Unknown User"; 
 
       // type check for data.room_id
-      if (typeof data.room_id !== 'string' || typeof data.content !== 'string') {
-        throw new Error("Invalid room_id or content: Must be of type string");
+      if (typeof data.room_id !== 'string' || typeof data.content !== 'string' || typeof data.channel_id !== 'string') {
+        throw new Error("Invalid payload: Must be strings");
       }
 
       // Fetch user profile to get avatar
@@ -137,7 +154,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const { data: insertedData, error } = await supabase
         .from('messages')
         .insert([{ 
-          room_id: data.room_id, 
+          room_id: data.room_id,
+          channel_id: data.channel_id,
           user_id: userId, // Persistent UUID
           username: profile?.username || senderName, // Still store username for legacy/snapshot purposes
           content: data.content 
@@ -147,32 +165,39 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       if (error) throw error;
 
-      // Broadcast the message to EVERYONE in the room including the sender
+      // Broadcast the message to EVERYONE in the channel including the sender
       const broadcastData: ReceiveMessagePayload = {
           id: insertedData.id,
           user_id: userId,
           room_id: data.room_id,
+          channel_id: data.channel_id,
           content: data.content,
           username: profile?.username || senderName,
           created_at: insertedData.created_at,
           avatar_url: profile?.avatar_url
       };
 
-      io.to(data.room_id).emit('receive_message', broadcastData);
+      io.to(`channel:${data.channel_id}`).emit('receive_message', broadcastData);
     } catch (error) {
       console.error("Error sending message:", error);
     }
     
   });
 
-  socket.on('typing_start', (room_id: string) => {
+  socket.on('typing_start', (data: any) => {
+    const room_id = typeof data === 'string' ? data : data?.room_id;
+    const channel_id = typeof data === 'object' ? data?.channel_id : null;
+    const target = channel_id ? `channel:${channel_id}` : room_id;
     const username = socket.user?.email?.split('@')[0] || "Unknown User";
-    socket.to(room_id).emit('user_typing', { room_id, userId, username, isTyping: true });
+    socket.to(target).emit('user_typing', { room_id, channel_id, userId, username, isTyping: true });
   });
 
-  socket.on('typing_stop', (room_id: string) => {
+  socket.on('typing_stop', (data: any) => {
+    const room_id = typeof data === 'string' ? data : data?.room_id;
+    const channel_id = typeof data === 'object' ? data?.channel_id : null;
+    const target = channel_id ? `channel:${channel_id}` : room_id;
     const username = socket.user?.email?.split('@')[0] || "Unknown User";
-    socket.to(room_id).emit('user_typing', { room_id, userId, username, isTyping: false });
+    socket.to(target).emit('user_typing', { room_id, channel_id, userId, username, isTyping: false });
   });
 
   socket.on('disconnect', () => {

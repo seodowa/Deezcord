@@ -5,7 +5,7 @@ import { getRoomMembers, getMessages } from '../services/roomService';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
 
-export const useChat = (roomId: string | undefined, isMember: boolean | undefined) => {
+export const useChat = (roomId: string | undefined, channelId: string | undefined, isMember: boolean | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -31,12 +31,11 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     }
   }, []);
 
-  const fetchMessages = useCallback(async (id: string) => {
+  const fetchMessages = useCallback(async (rId: string, cId: string) => {
     setIsLoadingMessages(true);
     try {
-      const data = await getMessages(id);
+      const data = await getMessages(rId, cId);
       console.log(`[Debug] Fetched ${data.length} messages. Messages with avatars:`, data.filter((m: any) => m.avatar_url).length);
-      // getMessages now returns the array directly
       setMessages(data);
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -48,30 +47,35 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
   useEffect(() => {
     if (roomId && isMember) {
       fetchMembers(roomId);
-      fetchMessages(roomId);
-      socketJoinRoom(roomId);
+      if (channelId) {
+        fetchMessages(roomId, channelId);
+        socketJoinRoom({ room_id: roomId, channel_id: channelId });
+      } else {
+        socketJoinRoom({ room_id: roomId });
+      }
       setTypingUsers([]);
       
       return () => {
-        socketLeaveRoom(roomId);
+        if (channelId) {
+          socketLeaveRoom({ room_id: roomId, channel_id: channelId });
+        } else {
+          socketLeaveRoom({ room_id: roomId });
+        }
       };
     } else {
       setMembers([]);
       setMessages([]);
       setTypingUsers([]);
     }
-  }, [roomId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
+  }, [roomId, channelId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
 
   useEffect(() => {
     const unsubscribe = onMessage((newMessage) => {
-      if (newMessage.room_id === roomId) {
+      if (newMessage.room_id === roomId && newMessage.channel_id === channelId) {
         setMessages(prev => {
-          // Check for existing message by ID (handles both normal sync and deduplicating optimistic updates)
           const exists = prev.some(m => m.id === newMessage.id);
           if (exists) return prev;
           
-          // Remove any temporary optimistic messages that match the content and user
-          // This ensures that when the server broadcast arrives, it "replaces" the temporary one
           const filtered = prev.filter(m => 
             !(m.id.startsWith('temp-') && m.content === newMessage.content && m.username === newMessage.username)
           );
@@ -85,11 +89,11 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
       }
     });
     return unsubscribe;
-  }, [onMessage, roomId]);
+  }, [onMessage, roomId, channelId]);
 
   useEffect(() => {
     const unsubscribe = onTyping((data) => {
-      if (data.room_id === roomId) {
+      if (data.room_id === roomId && data.channel_id === channelId) {
         setTypingUsers(prev => {
           if (data.isTyping) {
             if (prev.includes(data.username)) return prev;
@@ -101,7 +105,7 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
       }
     });
     return unsubscribe;
-  }, [onTyping, roomId]);
+  }, [onTyping, roomId, channelId]);
 
   useEffect(() => {
     const unsubscribe = onPresenceUpdate((data) => {
@@ -116,36 +120,36 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
   }, [onPresenceUpdate]);
 
   const sendMessage = useCallback((content: string) => {
-    if (roomId && isMember) {
-      socketSendMessage({ room_id: roomId, content });
+    if (roomId && channelId && isMember) {
+      socketSendMessage({ room_id: roomId, channel_id: channelId, content });
       
-      // Optimistic update
       const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
         id: tempId,
         user_id: user?.id || null,
         room_id: roomId,
+        channel_id: channelId,
         username: user?.username || user?.email.split('@')[0] || 'Me',
         content,
         created_at: new Date().toISOString(),
         avatar_url: user?.avatar_url
       };
       setMessages(prev => [...prev, newMessage]);
-      socketStopTyping(roomId);
+      socketStopTyping({ room_id: roomId, channel_id: channelId });
     }
-  }, [roomId, isMember, socketSendMessage, user, socketStopTyping]);
+  }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping]);
 
   const startTyping = useCallback(() => {
-    if (roomId && isMember) {
-      socketStartTyping(roomId);
+    if (roomId && channelId && isMember) {
+      socketStartTyping({ room_id: roomId, channel_id: channelId });
     }
-  }, [roomId, isMember, socketStartTyping]);
+  }, [roomId, channelId, isMember, socketStartTyping]);
 
   const stopTyping = useCallback(() => {
-    if (roomId && isMember) {
-      socketStopTyping(roomId);
+    if (roomId && channelId && isMember) {
+      socketStopTyping({ room_id: roomId, channel_id: channelId });
     }
-  }, [roomId, isMember, socketStopTyping]);
+  }, [roomId, channelId, isMember, socketStopTyping]);
 
   return {
     messages,
@@ -155,7 +159,6 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     sendMessage,
     startTyping,
     stopTyping,
-    fetchMembers,
-    fetchMessages
+    fetchMembers
   };
 };

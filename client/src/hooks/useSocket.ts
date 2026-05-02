@@ -34,33 +34,33 @@ export const useSocket = () => {
     };
   }, []);
 
-  const joinRoom = useCallback((roomId: string) => {
+  const joinRoom = useCallback((data: { room_id: string; channel_id?: string } | string) => {
     if (socketRef.current) {
-      socketRef.current.emit('join_room', roomId);
+      socketRef.current.emit('join_room', data);
     }
   }, []);
 
-  const leaveRoom = useCallback((roomId: string) => {
+  const leaveRoom = useCallback((data: { room_id: string; channel_id?: string } | string) => {
     if (socketRef.current) {
-      socketRef.current.emit('leave_room', roomId);
+      socketRef.current.emit('leave_room', data);
     }
   }, []);
 
-  const sendMessage = useCallback((data: { room_id: string; content: string }) => {
+  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string }) => {
     if (socketRef.current) {
       socketRef.current.emit('send_message', data);
     }
   }, []);
 
-  const startTyping = useCallback((roomId: string) => {
+  const startTyping = useCallback((data: { room_id: string; channel_id?: string } | string) => {
     if (socketRef.current) {
-      socketRef.current.emit('typing_start', roomId);
+      socketRef.current.emit('typing_start', data);
     }
   }, []);
 
-  const stopTyping = useCallback((roomId: string) => {
+  const stopTyping = useCallback((data: { room_id: string; channel_id?: string } | string) => {
     if (socketRef.current) {
-      socketRef.current.emit('typing_stop', roomId);
+      socketRef.current.emit('typing_stop', data);
     }
   }, []);
 
@@ -75,7 +75,7 @@ export const useSocket = () => {
     };
   }, []);
 
-  const onTyping = useCallback((callback: (data: { room_id: string; username: string; isTyping: boolean }) => void) => {
+  const onTyping = useCallback((callback: (data: { room_id: string; channel_id?: string; username: string; isTyping: boolean }) => void) => {
     if (socketRef.current) {
       socketRef.current.on('user_typing', callback);
     }
