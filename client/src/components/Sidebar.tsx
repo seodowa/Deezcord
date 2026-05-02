@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import AsyncButton from './AsyncButton';
 import type { Room } from '../types/room';
+import UserProfileModal from './UserProfileModal';
+import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
   rooms: Room[];
@@ -34,6 +36,8 @@ export default function Sidebar({
   isCreatingRoom
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <>
@@ -199,8 +203,36 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Footer Section (Sign Out) */}
-        <div className={`p-4 border-t border-slate-200/50 dark:border-white/10 flex ${isCollapsed ? 'md:justify-center md:px-2' : ''}`}>
+        {/* Footer Section (User Profile & Sign Out) */}
+        <div className={`p-4 border-t border-slate-200/50 dark:border-white/10 space-y-2 ${isCollapsed ? 'md:flex md:flex-col md:items-center md:px-2' : ''}`}>
+          {/* Profile Button */}
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
+            className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-200 hover:bg-white/50 dark:hover:bg-slate-700/50 border border-transparent hover:border-slate-200/50 dark:hover:border-white/10 w-full text-left ${isCollapsed ? 'md:justify-center md:p-0 md:w-12 md:h-12' : ''}`}
+            title={isCollapsed ? "Account Settings" : undefined}
+          >
+            <div className="relative flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(user?.username || user?.email || 'U').substring(0, 1).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {user?.username || user?.email?.split('@')[0]}
+                </p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  Settings
+                </p>
+              </div>
+            )}
+          </button>
+
           <AsyncButton
             onClick={onLogout}
             className={`bg-white/50 dark:bg-slate-700/50 hover:bg-red-500/90 dark:hover:bg-red-500/90 text-red-500 dark:text-red-400 hover:text-white dark:hover:text-white rounded-xl font-semibold border border-red-100 dark:border-red-900/30 hover:border-transparent transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500/50 flex items-center justify-center w-full px-4 py-2.5 gap-2 ${isCollapsed ? 'md:w-12 md:h-12 md:px-0 md:py-0 md:shrink-0' : ''}`}
@@ -213,6 +245,11 @@ export default function Sidebar({
           </AsyncButton>
         </div>
       </aside>
+
+      <UserProfileModal 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+      />
     </>
   );
 }

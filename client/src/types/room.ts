@@ -13,5 +13,6 @@ export interface Member {
   profiles: {
     username: string;
     email: string;
+    avatar_url?: string | null;
   };
 }

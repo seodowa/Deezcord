@@ -35,6 +35,7 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     setIsLoadingMessages(true);
     try {
       const data = await getMessages(id);
+      console.log(`[Debug] Fetched ${data.length} messages. Messages with avatars:`, data.filter((m: any) => m.avatar_url).length);
       // getMessages now returns the array directly
       setMessages(data);
     } catch (err) {
@@ -122,10 +123,12 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
       const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
         id: tempId,
+        user_id: user?.id || null,
         room_id: roomId,
-        username: user?.email.split('@')[0] || 'Me',
+        username: user?.username || user?.email.split('@')[0] || 'Me',
         content,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        avatar_url: user?.avatar_url
       };
       setMessages(prev => [...prev, newMessage]);
       socketStopTyping(roomId);

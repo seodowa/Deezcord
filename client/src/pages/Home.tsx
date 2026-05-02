@@ -320,7 +320,12 @@ export default function HomePage() {
                     />
                   ) : (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                      <MessageList messages={messages} currentUserEmail={user?.email} typingUsers={typingUsers} />
+                      <MessageList 
+                        messages={messages} 
+                        members={members}
+                        currentUser={user} 
+                        typingUsers={typingUsers} 
+                      />
                       <MessageInput 
                         onSendMessage={sendMessage} 
                         onStartTyping={startTyping}

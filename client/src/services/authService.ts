@@ -39,6 +39,53 @@ export const getCurrentUser = async () => {
   return data.user;
 };
 
+export const updateProfile = async (username?: string, file?: File | null) => {
+  const token = getToken();
+  if (!token) throw new Error('No token found');
+
+  const formData = new FormData();
+  if (username) formData.append('username', username);
+  if (file) formData.append('file', file);
+
+  const response = await fetch(`${API_URL}/auth/profile`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update profile');
+  }
+
+  return data;
+};
+
+export const updatePassword = async (password: string) => {
+  const token = getToken();
+  if (!token) throw new Error('No token found');
+
+  const response = await fetch(`${API_URL}/auth/password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update password');
+  }
+
+  return data;
+};
+
 export const loginUser = async (identifier: string, password: string) => {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
