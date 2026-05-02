@@ -86,5 +86,16 @@ export const useSocket = () => {
     };
   }, []);
 
-  return { isConnected, joinRoom, leaveRoom, sendMessage, startTyping, stopTyping, onMessage, onTyping };
+  const onPresenceUpdate = useCallback((callback: (data: { userId: string; status: 'online' | 'offline' }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('presence_update', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('presence_update', callback);
+      }
+    };
+  }, []);
+
+  return { isConnected, joinRoom, leaveRoom, sendMessage, startTyping, stopTyping, onMessage, onTyping, onPresenceUpdate };
 };

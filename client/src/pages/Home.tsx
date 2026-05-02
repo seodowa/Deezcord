@@ -218,10 +218,15 @@ export default function HomePage() {
                 {members.slice(0, 5).map((member) => (
                   <div 
                     key={member.user_id} 
-                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold"
-                    title={member.profiles.username}
+                    className="relative inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold"
+                    title={`${member.profiles.username} (${member.isOnline ? 'Online' : 'Offline'})`}
                   >
                     {member.profiles.username.substring(0, 2).toUpperCase()}
+                    <div 
+                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-800 ${
+                        member.isOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                      }`}
+                    />
                   </div>
                 ))}
                 {members.length > 5 && (

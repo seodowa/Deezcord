@@ -18,7 +18,8 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     startTyping: socketStartTyping,
     stopTyping: socketStopTyping,
     onMessage,
-    onTyping
+    onTyping,
+    onPresenceUpdate
   } = useSocket();
 
   const fetchMembers = useCallback(async (id: string) => {
@@ -100,6 +101,18 @@ export const useChat = (roomId: string | undefined, isMember: boolean | undefine
     });
     return unsubscribe;
   }, [onTyping, roomId]);
+
+  useEffect(() => {
+    const unsubscribe = onPresenceUpdate((data) => {
+      setMembers(prev => prev.map(member => {
+        if (member.user_id === data.userId) {
+          return { ...member, isOnline: data.status === 'online' };
+        }
+        return member;
+      }));
+    });
+    return unsubscribe;
+  }, [onPresenceUpdate]);
 
   const sendMessage = useCallback((content: string) => {
     if (roomId && isMember) {

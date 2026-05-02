@@ -9,6 +9,7 @@ export interface Room {
 export interface Member {
   role: string;
   user_id: string;
+  isOnline?: boolean;
   profiles: {
     username: string;
     email: string;

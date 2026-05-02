@@ -11,6 +11,7 @@ import roomRoutes from './routes/roomRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
 import { ReceiveMessagePayload } from './types/socket';
+import { addUser, removeUser } from './utils/presence';
 
 const app = express();
 app.use(cors());
@@ -70,6 +71,15 @@ io.use(async (socket: AuthenticatedSocket, next) => {
 
 // 4. Socket logic stays here (now fully protected)
 io.on('connection', (socket: AuthenticatedSocket) => {
+  const userId = socket.user?.id;
+  
+  if (userId) {
+    const isFirstConnection = addUser(userId);
+    if (isFirstConnection) {
+      io.emit('presence_update', { userId, status: 'online' });
+    }
+  }
+
   // We now know exactly who this is!
   console.log(`Verified User Connected: ${socket.user?.email} (Socket ID: ${socket.id})`);
 
@@ -155,6 +165,12 @@ io.on('connection', (socket: AuthenticatedSocket) => {
   });
 
   socket.on('disconnect', () => {
+    if (userId) {
+      const isLastDisconnect = removeUser(userId);
+      if (isLastDisconnect) {
+        io.emit('presence_update', { userId, status: 'offline' });
+      }
+    }
     console.log(`User Disconnected: ${socket.user?.email}`);
   });
 });
