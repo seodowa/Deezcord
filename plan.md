@@ -1,58 +1,71 @@
-# Impeccable Design Brief: Reusable Modal Component
+# Impeccable Design Brief: Route-Driven Home Architecture Refactor
 
 `IMPECCABLE_PREFLIGHT: context=pass product=pass command_reference=pass shape=pass image_gate=skipped:plan-mode mutation=open`
 
-## 1. Feature Summary
-A highly reusable, modular Modal component that serves as the foundation for all overlays in Deezcord (e.g., confirmations, forms, settings). It consolidates disparate modal logic into a single, robust, and accessible "Unified Glass" surface.
+## 1. Architectural Summary
+Refactor the monolithic `Home.tsx` into a modular, route-driven architecture using React Router. This transitions Deezcord from "state-driven rendering" (where a single massive component manages all views via local state) to a robust "layout-first" paradigm.
 
 ## 2. Primary User Action
-Focus entirely on the presented task (e.g., confirming an action, filling a form) without losing the context of the underlying application, and either complete or dismiss it effortlessly.
+Navigate seamlessly between distinct contexts (Discovery, Chat, Settings) utilizing native browser navigation (back/forward buttons) while maintaining a persistent, stable application shell (Sidebar and Headers) without full-page re-renders.
 
-## 3. Design Direction
-- **Color Strategy:** Restrained. Neutral glass backgrounds with the brand's Electric Blue (`#3b82f6`) reserved strictly for primary actions.
-- **Theme via Scene:** A user focused on a critical interruption, viewing a sharp, elevated glass panel that softly blurs out the chat behind it, maintaining spatial awareness while enforcing focus.
-- **Anchor References:** Apple visionOS glass overlays, Linear's command menus.
+## 3. Design Direction & Register
+- **Register:** Product. This is a highly interactive communication tool.
+- **Theme via Scene:** A user managing multiple active conversations, clicking from a general discovery view directly deep-linking into a specific `#general` channel without losing their place or experiencing a flash of unstyled content. The "Unified Glass" shell remains anchored while the core view slides in.
+- **Color Strategy:** Restrained. The navigation shell utilizes tinted glass (`bg-white/40 dark:bg-slate-800/40`), reserving the primary Electric Blue only for active states and critical calls to action within the routed views.
 
 ## 4. Scope
-- **Fidelity:** Production-ready shipped component.
-- **Breadth:** A core UI primitive replacing `CreateRoomModal` and `UserProfileModal`, and acting as the base for future alerts.
-- **Interactivity:** Smooth entry/exit animations, keyboard accessibility (Escape to close, focus trapping), and async loading states.
+- **Fidelity:** Production-ready structural refactor.
+- **Breadth:** Complete overhaul of `client/src/pages/Home.tsx`, extraction of view sub-components into `client/src/pages/home/`, creation of `HomeLayout.tsx`, and updates to `App.tsx` routing.
+- **Interactivity:** Smooth transitions between `<Outlet />` pages, stable sidebar context.
 
-## 5. Layout Strategy
-- **Container:** Centered on screen, constrained max-width (`max-w-md` to `max-w-2xl` depending on variant), large border radius (`rounded-[2.5rem]` or `rounded-3xl` matching DESIGN.md).
-- **Structure:** 
-  - **Header:** Sticky top, contains title, optional subtitle, and a circular close button.
-  - **Body:** Scrollable (`overflow-y-auto`) area for dynamic content.
-  - **Footer:** Sticky bottom, right-aligned action buttons (Cancel, Confirm) with a subtle contrasting background (`bg-slate-50/30 dark:bg-black/10`).
+## 5. Structural Strategy
 
-## 6. Key States
-- **Entry:** Backdrop fades in (`animate-fade-in`), modal slides up and scales in (`animate-fade-in-up`).
-- **Loading:** Action buttons disable, primary button shows an animated spinner; backdrop clicks and Escape key are ignored.
-- **Edge Cases:** Content exceeding viewport height triggers internal scrolling without moving the header or footer.
+### The Persistent Shell (Layout)
+- **`client/src/layouts/HomeLayout.tsx`**
+  - Manages the overarching `div.h-screen.flex`.
+  - Renders the background gradient and decorative glowing orbs.
+  - Hosts the `Sidebar` and the mobile/desktop Headers.
+  - Contains the `react-router-dom` `<Outlet />` for rendering dynamic nested routes within the main content area.
+  - Hoists essential state (`rooms`, `channels`, user status) via context or props to ensure the Sidebar remains populated regardless of the current sub-route.
 
-## 7. Interaction Model
-- Click outside the modal container to dismiss (if not loading/dirty).
-- Press `Escape` to dismiss.
-- Focus is trapped within the modal while open.
-- Primary button provides hover scale and shadow (`hover:-translate-y-[2px] hover:shadow-[...]`) as defined in DESIGN.md.
+### The Dynamic Routes (Pages)
+- **`client/src/pages/home/WelcomePage.tsx` (`/home`)**
+  - The initial landing screen with branding and feature highlights.
+- **`client/src/pages/home/DiscoveryPage.tsx` (`/home/discovery`)**
+  - The grid of available communities to join.
+- **`client/src/pages/home/RoomPage.tsx` (`/home/rooms/:roomId`)**
+  - Handles the "Private Room" gate (join prompt) if the user is not a member. If they are a member, redirects to their last active channel or the first available channel.
+- **`client/src/pages/home/ChatPage.tsx` (`/home/rooms/:roomId/channels/:channelId`)**
+  - The core messaging interface. Instantiates `useChat` specific to the URL parameters.
+- **`client/src/pages/home/SettingsPage.tsx` (`/home/rooms/:roomId/settings`)**
+  - Room management interface for owners/members.
 
-## 8. Content Requirements (Props API)
-- `isOpen` (boolean): Controls visibility.
-- `onClose` (function): Dismiss handler.
-- `title` (string): Primary heading.
-- `description` (string, optional): Secondary context.
-- `children` (ReactNode): The main content payload.
-- `footer` (ReactNode, optional): Custom actions, defaults to none if omitted.
-- `maxWidth` (string, optional): Tailwind max-width class (e.g., `max-w-md`, `max-w-lg`).
-- `isLoading` (boolean, optional): Disables closing mechanisms during async operations.
+## 6. Migration Plan
 
-## 9. Recommended References
-- `reference/spatial-design.md` (for z-index and elevation).
-- `reference/motion-design.md` (for the entry/exit easing curves).
+### Phase 1: Foundation
+1. Create `client/src/layouts/HomeLayout.tsx`. Extract the background, Sidebar, and Headers from the current `Home.tsx` into this layout.
+2. Replace the main content area in the layout with an `<Outlet />`.
+3. Set up a lightweight context (e.g., `HomeContext.tsx` or expand `useRooms`) if necessary to pass Sidebar-driving state down without prop-drilling through the layout.
 
-## 10. Migration Plan
-0. Copy this design brief to overwrite the `plan.md` in the root of the project directory.
-1. Implement `src/components/Modal.tsx`.
-2. Refactor `CreateRoomModal.tsx` to use the new `<Modal>` wrapper.
-3. Refactor `UserProfileModal.tsx` to use the new `<Modal>` wrapper.
-4. Verify all animations, scroll behaviors, and responsive constraints across both refactored modals.
+### Phase 2: Page Extraction
+1. Create `WelcomePage.tsx` containing the branding hero UI.
+2. Create `DiscoveryPage.tsx` containing the `discoverRooms` fetching and rendering logic.
+3. Create `ChatPage.tsx` moving `MessageList` and `MessageInput` and the `useChat` instantiation here.
+4. Create `RoomPage.tsx` (the "Join" gate) and `SettingsPage.tsx`.
+
+### Phase 3: Routing Integration
+1. Modify `client/src/App.tsx` to implement nested routes under `/home`:
+   ```tsx
+   <Route path="/home" element={<HomeLayout />}>
+     <Route index element={<WelcomePage />} />
+     <Route path="discovery" element={<DiscoveryPage />} />
+     <Route path="rooms/:roomId" element={<RoomPage />} />
+     <Route path="rooms/:roomId/channels/:channelId" element={<ChatPage />} />
+     <Route path="rooms/:roomId/settings" element={<SettingsPage />} />
+   </Route>
+   ```
+
+### Phase 4: Clean up & Validation
+1. Update `Sidebar` navigation links to use `react-router-dom`'s `<Link>` or `useNavigate` instead of state setters.
+2. Delete the old `Home.tsx` monolith.
+3. Audit for broken styles, test deep linking to a specific channel, and verify mobile responsive behavior.

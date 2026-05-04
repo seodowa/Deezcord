@@ -5,7 +5,12 @@ import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
-import HomePage from './pages/Home';
+import HomeLayout from './layouts/HomeLayout';
+import WelcomePage from './pages/home/WelcomePage';
+import DiscoveryPage from './pages/home/DiscoveryPage';
+import RoomPage from './pages/home/RoomPage';
+import ChatPage from './pages/home/ChatPage';
+import SettingsPage from './pages/home/SettingsPage';
 import NotFoundPage from './pages/NotFound';
 import './index.css';
 
@@ -39,7 +44,13 @@ const AppRoutes = () => {
       <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} replace />} />
       
       <Route element={<ProtectedRoute />}>
-        <Route path="/home" element={<HomePage />} />
+        <Route path="/home" element={<HomeLayout />}>
+          <Route index element={<WelcomePage />} />
+          <Route path="discovery" element={<DiscoveryPage />} />
+          <Route path="rooms/:roomSlug" element={<RoomPage />} />
+          <Route path="rooms/:roomSlug/channels/:channelSlug" element={<ChatPage />} />
+          <Route path="rooms/:roomSlug/settings" element={<SettingsPage />} />
+        </Route>
       </Route>
 
       <Route path="/login" element={<LoginPage />} />
