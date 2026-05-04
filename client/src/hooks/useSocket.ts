@@ -52,6 +52,12 @@ export const useSocket = () => {
     }
   }, []);
 
+  const unsendMessage = useCallback((data: { message_id: string; channel_id: string }) => {
+    if (socketRef.current) {
+      socketRef.current.emit('unsend_message', data);
+    }
+  }, []);
+
   const startTyping = useCallback((data: { room_id: string; channel_id?: string } | string) => {
     if (socketRef.current) {
       socketRef.current.emit('typing_start', data);
@@ -83,6 +89,17 @@ export const useSocket = () => {
     return () => {
       if (socketRef.current) {
         socketRef.current.off('receive_message', callback);
+      }
+    };
+  }, []);
+
+  const onMessageDeleted = useCallback((callback: (data: { message_id: string; channel_id: string }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('message_deleted', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('message_deleted', callback);
       }
     };
   }, []);
@@ -157,12 +174,14 @@ export const useSocket = () => {
     isConnected, 
     joinRoom, 
     leaveRoom, 
-    sendMessage, 
+    sendMessage,
+    unsendMessage,
     startTyping, 
     stopTyping, 
     addReaction,
     removeReaction,
-    onMessage, 
+    onMessage,
+    onMessageDeleted,
     onReactionUpdate,
     onTyping, 
     onPresenceUpdate, 

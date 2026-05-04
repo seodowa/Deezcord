@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Message } from '../types/message';
 import type { Member } from '../types/room';
 import ReactionList from './ReactionList';
+import Modal from './Modal';
+import AsyncButton from './AsyncButton';
 
 interface MessageListProps {
   messages: Message[];
@@ -10,6 +12,7 @@ interface MessageListProps {
   typingUsers?: string[];
   isLoadingMessages?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '💯'];
@@ -20,10 +23,19 @@ export default function MessageList({
   currentUser, 
   typingUsers = [],
   isLoadingMessages,
-  onToggleReaction
+  onToggleReaction,
+  onDeleteMessage
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePickerId, setActivePickerId] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (messageToDelete && onDeleteMessage) {
+      onDeleteMessage(messageToDelete);
+      setMessageToDelete(null);
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -180,29 +192,46 @@ export default function MessageList({
                       )}
                     </div>
 
-                    {/* Reaction Trigger Button - Only visible on hover */}
-                    {onToggleReaction && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActivePickerId(isPickerOpen ? null : msg.id);
-                        }}
-                        className={`absolute top-0 w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 ${
-                          isOwn ? '-left-10' : '-right-10'
-                        }`}
-                        title="Add reaction"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
-                    )}
+                    {/* Hover Actions Container */}
+                    <div className={`absolute top-0.75 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
+                      isOwn ? (onDeleteMessage ? '-left-[4.75rem]' : '-left-10') : '-right-10'
+                    }`}>
+                      {onToggleReaction && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActivePickerId(isPickerOpen ? null : msg.id);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                          title="Add reaction"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      )}
+                      
+                      {isOwn && onDeleteMessage && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMessageToDelete(msg.id);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 hover:text-red-600 transition-colors"
+                          title="Delete message"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
 
                     {/* Reaction Picker Popover */}
                     {onToggleReaction && isPickerOpen && (
                       <div 
                         onClick={(e) => e.stopPropagation()}
-                        className={`absolute -top-12 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-full p-1 shadow-xl animate-fade-in-up ${
+                        className={`absolute -top-12 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-full p-1 shadow-xl animate-fade-in-up flex items-center gap-1 ${
                           isOwn ? 'right-0' : 'left-0'
                         }`}
                       >
@@ -255,6 +284,34 @@ export default function MessageList({
           )}
         </>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!messageToDelete}
+        onClose={() => setMessageToDelete(null)}
+        title="Delete Message"
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <button
+              onClick={() => setMessageToDelete(null)}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <AsyncButton
+              onClick={handleConfirmDelete}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all hover:scale-105 active:scale-95"
+            >
+              Delete
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex items-center justify-center p-4 rounded-2xl d-600">
+          Are you sure you want to delete this message? This action cannot be undone.
+        </div>
+      </Modal>
     </div>
   );
 }

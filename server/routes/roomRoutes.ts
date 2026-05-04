@@ -137,6 +137,40 @@ router.get('/:roomId/channels/:channelId/messages', verifyUser, verifyRoomMember
   res.json(messagesWithReactions);
 });
 
+// POST /rooms/:roomId/channels/:channelId/messages/upload - Upload a file for a message (PROTECTED)
+router.post('/:roomId/channels/:channelId/messages/upload', verifyUser, verifyRoomMember, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({ error: "No file provided" });
+    return;
+  }
+
+  try {
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = `attachments/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('message_attachments')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('message_attachments')
+      .getPublicUrl(filePath);
+    
+    res.status(200).json({ file_url: publicUrl });
+  } catch (error: any) {
+    console.error('File upload error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload file' });
+  }
+});
+
 // POST /rooms - Create a new chat room (PROTECTED)
 router.post('/', verifyUser, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
   const { name } = req.body;

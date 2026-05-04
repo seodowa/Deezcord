@@ -20,6 +20,7 @@ export default function ChatPage() {
     isLoadingMessages,
     toggleReaction,
     sendMessage,
+    unsendMessage,
     startTyping,
     stopTyping
   } = useOutletContext<any>();
@@ -91,6 +92,7 @@ export default function ChatPage() {
         typingUsers={typingUsers} 
         isLoadingMessages={isLoadingMessages}
         onToggleReaction={toggleReaction}
+        onDeleteMessage={unsendMessage}
       />
       <MessageInput 
         onSendMessage={(content, fileUrl, fileName) => sendMessage(content, fileUrl, fileName)} 

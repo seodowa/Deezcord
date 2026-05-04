@@ -161,7 +161,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           channel_id: data.channel_id,
           user_id: userId, // Persistent UUID
           username: profile?.username || senderName, // Still store username for legacy/snapshot purposes
-          content: data.content 
+          content: data.content,
+          file_url: data.file_url, // Store optional file URL
+          file_name: data.file_name // Store optional file name
         }])
         .select()
         .single();
@@ -177,7 +179,9 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           content: data.content,
           username: profile?.username || senderName,
           created_at: insertedData.created_at,
-          avatar_url: profile?.avatar_url
+          avatar_url: profile?.avatar_url,
+          file_url: data.file_url,
+          file_name: data.file_name
       };
 
       io.to(`channel:${data.channel_id}`).emit('receive_message', broadcastData);
@@ -185,6 +189,67 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       console.error("Error sending message:", error);
     }
     
+  });
+
+  socket.on('unsend_message', async (data: { message_id: string; channel_id: string }) => {
+    try {
+      const userId = socket.user?.id;
+      if (!userId || !data.message_id || !data.channel_id) return;
+
+      // Security Check: Only allow the sender to delete the message
+      const { data: message, error: fetchError } = await supabase
+        .from('messages')
+        .select('user_id, file_url, file_name')
+        .eq('id', data.message_id)
+        .single();
+
+      if (fetchError || !message) {
+        console.error("Message not found or error fetching message:", fetchError);
+        return;
+      }
+
+      if (message.user_id !== userId) {
+        console.warn(`User ${userId} attempted to delete message ${data.message_id} owned by ${message.user_id}`);
+        return;
+      }
+
+      // 1. Delete associated file if it exists
+      if (message.file_url) {
+        try {
+          const urlParts = message.file_url.split('/message_attachments/');
+          if (urlParts.length > 1) {
+            const filePath = urlParts[1];
+            await supabase.storage.from('message_attachments').remove([filePath]);
+          }
+        } catch (fileError) {
+          console.error("Error deleting file attachment:", fileError);
+        }
+      }
+
+      // 2. Delete associated reactions first (due to ON DELETE NO ACTION constraint)
+      await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', data.message_id);
+
+      // 3. Delete the message from database
+      const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', data.message_id);
+
+      if (deleteError) throw deleteError;
+
+      // Broadcast deletion to everyone in the channel
+      io.to(`channel:${data.channel_id}`).emit('message_deleted', {
+        message_id: data.message_id,
+        channel_id: data.channel_id
+      });
+      
+      console.log(`User ${socket.user?.email} unsent message: ${data.message_id}`);
+    } catch (error) {
+      console.error("Error unsending message:", error);
+    }
   });
 
   socket.on('add_reaction', async (data: any) => {

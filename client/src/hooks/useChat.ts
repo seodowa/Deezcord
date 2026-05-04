@@ -14,12 +14,14 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   const { 
     joinRoom: socketJoinRoom, 
     leaveRoom: socketLeaveRoom,
-    sendMessage: socketSendMessage, 
+    sendMessage: socketSendMessage,
+    unsendMessage: socketUnsendMessage,
     startTyping: socketStartTyping,
     stopTyping: socketStopTyping,
     addReaction: socketAddReaction,
     removeReaction: socketRemoveReaction,
     onMessage,
+    onMessageDeleted,
     onReactionUpdate,
     onTyping,
     onPresenceUpdate,
@@ -102,6 +104,15 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   }, [onMessage, roomId, channelId]);
 
   useEffect(() => {
+    const unsubscribe = onMessageDeleted((data) => {
+      if (data.channel_id === channelId) {
+        setMessages(prev => prev.filter(m => m.id !== data.message_id));
+      }
+    });
+    return unsubscribe;
+  }, [onMessageDeleted, channelId]);
+
+  useEffect(() => {
     const unsubscribe = onReactionUpdate((data: any) => {
       setMessages(prev => prev.map(msg => {
         if (msg.id === data.message_id) {
@@ -163,6 +174,14 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     }
   }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping]);
 
+  const unsendMessage = useCallback((messageId: string) => {
+    if (roomId && channelId && isMember) {
+      socketUnsendMessage({ message_id: messageId, channel_id: channelId });
+      // Optimistic update
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    }
+  }, [roomId, channelId, isMember, socketUnsendMessage]);
+
   const startTyping = useCallback(() => {
     if (roomId && channelId && isMember) {
       socketStartTyping({ room_id: roomId, channel_id: channelId });
@@ -194,6 +213,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     typingUsers,
     isLoadingMessages,
     sendMessage,
+    unsendMessage,
     startTyping,
     stopTyping,
     toggleReaction,
