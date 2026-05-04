@@ -170,6 +170,39 @@ export const useSocket = () => {
     };
   }, []);
 
+  const onFriendRequestReceived = useCallback((callback: (data: { requesterId: string }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('friend_request_received', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('friend_request_received', callback);
+      }
+    };
+  }, []);
+
+  const onFriendRequestAccepted = useCallback((callback: (data: { addresseeId: string }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('friend_request_accepted', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('friend_request_accepted', callback);
+      }
+    };
+  }, []);
+
+  const onFriendRemoved = useCallback((callback: (data: { removedBy: string }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('friend_removed', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('friend_removed', callback);
+      }
+    };
+  }, []);
+
   return { 
     isConnected, 
     joinRoom, 
@@ -187,6 +220,9 @@ export const useSocket = () => {
     onPresenceUpdate, 
     onRoomCreated, 
     onRoomDeleted, 
-    onChannelCreated 
+    onChannelCreated,
+    onFriendRequestReceived,
+    onFriendRequestAccepted,
+    onFriendRemoved
   };
 };

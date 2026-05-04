@@ -81,6 +81,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     if (isFirstConnection) {
       io.emit('presence_update', { userId, status: 'online' });
     }
+    // Join a personal room to receive direct events (like friend requests)
+    socket.join(userId);
   }
 
   // We now know exactly who this is!

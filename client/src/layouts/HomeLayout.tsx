@@ -228,6 +228,10 @@ export default function HomeLayout() {
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
+        onHomeClick={() => {
+          setIsMobileMenuOpen(false);
+          navigate('/');
+        }}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
         onCreateRoom={() => setIsCreateModalOpen(true)}

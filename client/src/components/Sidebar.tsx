@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import AsyncButton from './AsyncButton';
 import type { Room, Channel } from '../types/room';
 import UserProfileModal from './UserProfileModal';
+import MemberProfileModal from './MemberProfileModal';
 import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
@@ -16,6 +17,7 @@ export interface SidebarProps {
   onToggleTheme: () => void;
   onLogout: () => void;
   onClose: () => void;
+  onHomeClick: () => void;
   onSelectRoom: (room: Room) => void;
   onSelectChannel: (channel: Channel) => void;
   onCreateRoom: () => void;
@@ -99,6 +101,7 @@ export default function Sidebar({
   onToggleTheme,
   onLogout,
   onClose,
+  onHomeClick,
   onSelectRoom,
   onSelectChannel,
   onCreateRoom,
@@ -112,6 +115,12 @@ export default function Sidebar({
   const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [isChannelsCategoryOpen, setIsChannelsCategoryOpen] = useState(true);
+  const [activeFriendsTab, setActiveFriendsTab] = useState<'friends' | 'pending'>('friends');
+  const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [pendingList, setPendingList] = useState<any[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [selectedFriendProfile, setSelectedFriendProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
+  const [isFriendProfileOpen, setIsFriendProfileOpen] = useState(false);
   const { user } = useAuth();
 
   const createBtnRef = useRef<HTMLButtonElement>(null);
@@ -128,12 +137,63 @@ export default function Sidebar({
     setPrevRoomId(currentRoomId);
   }
 
+  // Fetch friends list if we are on the welcome page
+  useEffect(() => {
+    if (!currentRoomId) {
+      const fetchFriends = async () => {
+        setIsLoadingFriends(true);
+        try {
+          const { getFriendsList, getPendingFriends } = await import('../services/roomService');
+          const [friendsData, pendingData] = await Promise.all([
+            getFriendsList(),
+            getPendingFriends()
+          ]);
+          setFriendsList(friendsData);
+          setPendingList(pendingData);
+        } catch (error) {
+          console.error("Failed to load friends", error);
+        } finally {
+          setIsLoadingFriends(false);
+        }
+      };
+      fetchFriends();
+    }
+  }, [currentRoomId]);
+
   const handleCreateChannelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
     await onCreateChannel(newChannelName);
     setIsCreatingChannelMode(false);
     setNewChannelName('');
+  };
+
+  const handleAcceptRequest = async (requesterId: string) => {
+    try {
+      const { acceptFriend } = await import('../services/roomService');
+      await acceptFriend(requesterId);
+      
+      // Move from pending to friends
+      const acceptedFriend = pendingList.find(p => p.id === requesterId);
+      if (acceptedFriend) {
+        setPendingList(prev => prev.filter(p => p.id !== requesterId));
+        setFriendsList(prev => [...prev, { ...acceptedFriend, status: 'accepted' }]);
+      }
+    } catch (err) {
+      console.error('Failed to accept friend request', err);
+    }
+  };
+
+  const handleDeclineRequest = async (requesterId: string) => {
+    try {
+      const { removeFriend } = await import('../services/roomService');
+      await removeFriend(requesterId);
+      
+      // Remove from pending
+      setPendingList(prev => prev.filter(p => p.id !== requesterId));
+    } catch (err) {
+      console.error('Failed to decline friend request', err);
+    }
   };
 
   return (
@@ -155,7 +215,12 @@ export default function Sidebar({
         {/* ── UNIFIED RAIL (Utility Area) ── */}
         <div className="w-[68px] flex flex-col items-center py-4 flex-shrink-0 bg-slate-900/5 dark:bg-white/5 h-full border-r border-slate-200/30 dark:border-white/5">
           {/* Brand Mark */}
-          <div className="w-12 h-12 flex items-center justify-center mb-6 group cursor-pointer transition-transform hover:scale-105 active:scale-95">
+          <div 
+            onClick={onHomeClick}
+            className={`relative w-12 h-12 flex items-center justify-center mb-6 group cursor-pointer transition-transform hover:scale-105 active:scale-95 ${
+              !currentRoomId ? 'ring-2 ring-indigo-500 rounded-xl ring-offset-2 dark:ring-offset-slate-900' : ''
+            }`}
+          >
             <img src="/Logo.png" alt="Deezcord" className="w-9 h-9 object-contain rounded-xl" />
           </div>
 
@@ -321,15 +386,123 @@ export default function Sidebar({
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 opacity-40">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
+              <div className="h-full flex flex-col space-y-4">
+                <div className="flex bg-slate-100/50 dark:bg-white/5 rounded-xl p-1">
+                  <button
+                    onClick={() => setActiveFriendsTab('friends')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeFriendsTab === 'friends'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Friends
+                  </button>
+                  <button
+                    onClick={() => setActiveFriendsTab('pending')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeFriendsTab === 'pending'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Pending
+                  </button>
                 </div>
-                <div>
-                  <p className="text-sm font-bold">Welcome to Deezcord</p>
-                  <p className="text-xs mt-1">Select a room to start chatting</p>
+
+                <div className="flex-1 overflow-y-auto scrollbar-none space-y-1">
+                  {isLoadingFriends ? (
+                    <div className="space-y-2 animate-pulse">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-full h-12 bg-slate-200/50 dark:bg-white/5 rounded-xl" />
+                      ))}
+                    </div>
+                  ) : activeFriendsTab === 'friends' ? (
+                    friendsList.length > 0 ? (
+                      friendsList.map(friend => (
+                        <div 
+                          key={friend.id} 
+                          onClick={() => {
+                            setSelectedFriendProfile({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}
+                          className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                        >
+                          <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                              {friend.avatar_url ? (
+                                <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{(friend.username || 'U').substring(0, 1).toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${friend.isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{friend.username}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{friend.isOnline ? 'Online' : 'Offline'}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-40 mt-10">
+                        <div className="text-3xl mb-2">👋</div>
+                        <p className="text-xs font-bold">No friends yet</p>
+                        <p className="text-[10px] mt-1">Add some friends to see them here</p>
+                      </div>
+                    )
+                  ) : activeFriendsTab === 'pending' ? (
+                    pendingList.length > 0 ? (
+                      pendingList.map(request => (
+                        <div key={request.id} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 group">
+                          <div className="relative flex-shrink-0 cursor-pointer" onClick={() => {
+                            setSelectedFriendProfile({ id: request.id, username: request.username, avatar_url: request.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}>
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                              {request.avatar_url ? (
+                                <img src={request.avatar_url} alt={request.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{(request.username || 'U').substring(0, 1).toUpperCase()}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => {
+                            setSelectedFriendProfile({ id: request.id, username: request.username, avatar_url: request.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{request.username}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Wants to be friends</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAcceptRequest(request.id); }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
+                              title="Accept"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeclineRequest(request.id); }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-colors"
+                              title="Decline"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-40 mt-10">
+                        <div className="text-3xl mb-2">⏳</div>
+                        <p className="text-xs font-bold">No pending requests</p>
+                      </div>
+                    )
+                  ) : null}
                 </div>
               </div>
             )}
@@ -397,6 +570,20 @@ export default function Sidebar({
       <UserProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      <MemberProfileModal
+        isOpen={isFriendProfileOpen}
+        onClose={() => {
+          setIsFriendProfileOpen(false);
+          // Refresh list just in case they unfriend
+          if (!currentRoomId) {
+            import('../services/roomService').then(({ getFriendsList }) => {
+              getFriendsList().then(setFriendsList);
+            });
+          }
+        }}
+        user={selectedFriendProfile}
       />
     </>
   );
