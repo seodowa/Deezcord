@@ -8,6 +8,8 @@
     "dev": "nodemon --exec ts-node index.ts",
     "build": "tsc",
     "test-client": "ts-node tests/test-client.ts",
+    "test-stress-prepare": "ts-node tests/prepare-stress-test.ts",
+    "test-stress-cleanup": "ts-node tests/cleanup-stress-test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
