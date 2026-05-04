@@ -120,6 +120,38 @@ export default function MessageList({
                       }`}
                     >
                       {msg.content}
+                      
+                      {msg.file_url && (
+                        <div className={`mt-2 ${msg.content ? 'pt-2 border-t border-white/20 dark:border-white/10' : ''}`}>
+                          {msg.file_url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
+                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
+                              <img 
+                                src={msg.file_url} 
+                                alt="Attachment" 
+                                className="max-w-full max-h-64 object-contain hover:scale-[1.02] transition-transform duration-300"
+                              />
+                            </a>
+                          ) : (
+                            <a 
+                              href={msg.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 rounded-lg border transition-all duration-300 ${
+                                isOwn 
+                                  ? 'bg-white/20 border-white/30 hover:bg-white/30 text-white' 
+                                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-500'
+                              }`}
+                            >
+                              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="text-xs font-medium truncate max-w-[150px] md:max-w-[250px]">
+                                {msg.file_name || 'Download Attachment'}
+                              </span>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Reaction Trigger Button - Only visible on hover */}

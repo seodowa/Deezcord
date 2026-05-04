@@ -1,4 +1,3 @@
-import React from 'react';
 import type { MessageReaction } from '../types/message';
 
 interface ReactionListProps {

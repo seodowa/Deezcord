@@ -1,76 +1,71 @@
-# Plan: Implement Discord-like Channel Architecture (COMPLETED)
+# Impeccable Design Brief: Route-Driven Home Architecture Refactor
 
-## Background & Motivation
-Currently, messages in Deezcord are tied directly to a `room` (which acts like a Discord server/guild). To match Discord's functionality, we need to allow multiple text channels within a single room so users can categorize their conversations (e.g., `#general`, `#announcements`, `#random`).
+`IMPECCABLE_PREFLIGHT: context=pass product=pass command_reference=pass shape=pass image_gate=skipped:plan-mode mutation=open`
 
-## Scope & Impact
-- **Documentation:** The first step of implementation will be copying this plan into `plan.md` and the database migration plan into `migration_plan.md` in the project root directory.
-- **Database:** Supabase schema updates as detailed in `migration_plan.md`.
-- **Backend (`server/`):** New REST endpoints for channel management, updated message endpoints, and revised Socket.io logic.
-- **Frontend (`client/`):** UI updates to the Sidebar to display channels, Chat area updates to fetch/send messages by channel.
+## 1. Architectural Summary
+Refactor the monolithic `Home.tsx` into a modular, route-driven architecture using React Router. This transitions Deezcord from "state-driven rendering" (where a single massive component manages all views via local state) to a robust "layout-first" paradigm.
 
-## Proposed Solution
+## 2. Primary User Action
+Navigate seamlessly between distinct contexts (Discovery, Chat, Settings) utilizing native browser navigation (back/forward buttons) while maintaining a persistent, stable application shell (Sidebar and Headers) without full-page re-renders.
 
-### 0. Documentation Update
-- **Update `plan.md`**: Copy this approved plan into the project root's `plan.md`.
-- **Update `migration_plan.md`**: Copy the database migration details into the project root's `migration_plan.md`.
+## 3. Design Direction & Register
+- **Register:** Product. This is a highly interactive communication tool.
+- **Theme via Scene:** A user managing multiple active conversations, clicking from a general discovery view directly deep-linking into a specific `#general` channel without losing their place or experiencing a flash of unstyled content. The "Unified Glass" shell remains anchored while the core view slides in.
+- **Color Strategy:** Restrained. The navigation shell utilizes tinted glass (`bg-white/40 dark:bg-slate-800/40`), reserving the primary Electric Blue only for active states and critical calls to action within the routed views.
 
-### 1. Database Schema Changes
-Execute the SQL detailed in `migration_plan.md`:
-- Create `channels` table with RLS policies.
-- Backfill `channels` with a `#general` channel for each existing room.
-- Add `channel_id` to `messages` and backfill existing messages.
+## 4. Scope
+- **Fidelity:** Production-ready structural refactor.
+- **Breadth:** Complete overhaul of `client/src/pages/Home.tsx`, extraction of view sub-components into `client/src/pages/home/`, creation of `HomeLayout.tsx`, and updates to `App.tsx` routing.
+- **Interactivity:** Smooth transitions between `<Outlet />` pages, stable sidebar context.
 
-### 2. Backend Updates (`server/`)
-- **REST API (`routes/roomRoutes.ts`)**:
-  - `GET /rooms/:roomId/channels`
-  - `POST /rooms/:roomId/channels`
-  - Update `GET /rooms/:roomId/messages` to `GET /channels/:channelId/messages`.
-- **WebSockets (`index.ts`)**:
-  - Update `join_room` to use `channel:${channelId}` instead of `room:${roomId}`.
-  - Route `send_message` to the appropriate channel.
+## 5. Structural Strategy
 
-### 3. Frontend Updates (`client/`)
-- **Types (`client/src/types/`)**:
-  - Add `Channel` interface. Update `Message` and `SendMessagePayload` to use `channel_id`.
-- **UI Components**:
-  - `Sidebar.tsx`: Show channels.
-  - `MessageList.tsx` & `MessageInput.tsx`: Tie logic to `channel_id`.
+### The Persistent Shell (Layout)
+- **`client/src/layouts/HomeLayout.tsx`**
+  - Manages the overarching `div.h-screen.flex`.
+  - Renders the background gradient and decorative glowing orbs.
+  - Hosts the `Sidebar` and the mobile/desktop Headers.
+  - Contains the `react-router-dom` `<Outlet />` for rendering dynamic nested routes within the main content area.
+  - Hoists essential state (`rooms`, `channels`, user status) via context or props to ensure the Sidebar remains populated regardless of the current sub-route.
 
-## Verification
-- Create a new room; verify it automatically gets a `#general` channel.
-- Create a new channel in the room.
-- Send messages in `#general` and the new channel; verify they do not overlap.
-- Reload the app and verify message history is fetched correctly per channel.
+### The Dynamic Routes (Pages)
+- **`client/src/pages/home/WelcomePage.tsx` (`/home`)**
+  - The initial landing screen with branding and feature highlights.
+- **`client/src/pages/home/DiscoveryPage.tsx` (`/home/discovery`)**
+  - The grid of available communities to join.
+- **`client/src/pages/home/RoomPage.tsx` (`/home/rooms/:roomId`)**
+  - Handles the "Private Room" gate (join prompt) if the user is not a member. If they are a member, redirects to their last active channel or the first available channel.
+- **`client/src/pages/home/ChatPage.tsx` (`/home/rooms/:roomId/channels/:channelId`)**
+  - The core messaging interface. Instantiates `useChat` specific to the URL parameters.
+- **`client/src/pages/home/SettingsPage.tsx` (`/home/rooms/:roomId/settings`)**
+  - Room management interface for owners/members.
 
----
+## 6. Migration Plan
 
-# Plan: Real-time Room & Channel Creation Updates
+### Phase 1: Foundation
+1. Create `client/src/layouts/HomeLayout.tsx`. Extract the background, Sidebar, and Headers from the current `Home.tsx` into this layout.
+2. Replace the main content area in the layout with an `<Outlet />`.
+3. Set up a lightweight context (e.g., `HomeContext.tsx` or expand `useRooms`) if necessary to pass Sidebar-driving state down without prop-drilling through the layout.
 
-## Background & Motivation
-Currently, users must manually refresh to see newly created rooms in the Discovery tab, or newly created channels in their current room. We need to push these updates in real-time via Socket.io to ensure a seamless, "live" feel to the application that matches the Unified Glass aesthetic.
+### Phase 2: Page Extraction
+1. Create `WelcomePage.tsx` containing the branding hero UI.
+2. Create `DiscoveryPage.tsx` containing the `discoverRooms` fetching and rendering logic.
+3. Create `ChatPage.tsx` moving `MessageList` and `MessageInput` and the `useChat` instantiation here.
+4. Create `RoomPage.tsx` (the "Join" gate) and `SettingsPage.tsx`.
 
-## Scope & Impact
-- **Backend (`server/`)**: Expose the Socket.io instance to Express routes. Emit `room_created` on new room creation and `channel_created` on new channel creation.
-- **Frontend (`client/`)**: Update socket hooks to listen for these events. Update local state for `discoverRooms` and `channels` to react to these events. Introduce "Impeccable" UI micro-animations for incoming items.
+### Phase 3: Routing Integration
+1. Modify `client/src/App.tsx` to implement nested routes under `/home`:
+   ```tsx
+   <Route path="/home" element={<HomeLayout />}>
+     <Route index element={<WelcomePage />} />
+     <Route path="discovery" element={<DiscoveryPage />} />
+     <Route path="rooms/:roomId" element={<RoomPage />} />
+     <Route path="rooms/:roomId/channels/:channelId" element={<ChatPage />} />
+     <Route path="rooms/:roomId/settings" element={<SettingsPage />} />
+   </Route>
+   ```
 
-## Proposed Solution
-
-### 1. Backend Updates (`server/`)
-- **`server/index.ts`**: Attach the Socket.io `io` instance to the Express app using `app.set('io', io)`.
-- **`server/routes/roomRoutes.ts`**:
-  - In `POST /rooms` (create room): Retrieve `req.app.get('io')` and emit a global `room_created` event with the new room data.
-  - In `POST /rooms/:roomId/channels` (create channel): Retrieve `req.app.get('io')` and emit a `channel_created` event specifically to the users currently viewing the room using `io.to(roomId).emit(...)`.
-
-### 2. Frontend Updates (`client/`) - "Impeccable UI"
-- **`client/src/hooks/useSocket.ts`**: Add typed event listeners for `room_created` and `channel_created`.
-- **`client/src/hooks/useRooms.ts`**: Subscribe to `room_created`. If the newly created room is not authored by the current user, insert it into the `discoverRooms` state dynamically.
-- **`client/src/pages/Home.tsx`**: Subscribe to `channel_created`. If the `channel.room_id` matches the active `currentRoom.id`, append it to the `channels` list.
-- **Micro-Interactions (Impeccable Skill)**:
-  - **Sidebar Channels**: Wrap the channel list in an animation presence handler (or use simple CSS transitions). When a new channel appears, it should expand its height from 0 to full and fade in (`animate-fade-in-up`), avoiding jarring layout shifts. We can add a brief subtle highlight (e.g., a faint indigo flash) to draw the user's eye to the new channel.
-  - **Discovery Rooms**: Similar grid entry animations. When a new room card is added to the discovery grid, it should pop in smoothly rather than instantly appearing.
-
-## Verification
-- User A creates a new room. User B (on the Discovery tab) sees the room appear instantly with a smooth animation.
-- User A creates a new channel in "Room X". User B (currently viewing "Room X") sees the new channel smoothly slide into their sidebar.
-- Ensure the server correctly targets only the users in "Room X" when emitting the channel creation event.
+### Phase 4: Clean up & Validation
+1. Update `Sidebar` navigation links to use `react-router-dom`'s `<Link>` or `useNavigate` instead of state setters.
+2. Delete the old `Home.tsx` monolith.
+3. Audit for broken styles, test deep linking to a specific channel, and verify mobile responsive behavior.

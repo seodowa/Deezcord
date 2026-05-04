@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import type { Room, Member } from '../types/room';
 import AsyncButton from './AsyncButton';
+import Modal from './Modal';
 import { useToast } from '../hooks/useToast';
 import { updateRoom, addMember, kickMember, leaveRoom, deleteRoom } from '../services/roomService';
 
@@ -23,6 +24,8 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'delete_room' | 'leave_room' | 'kick_member' | null>(null);
+  const [targetMember, setTargetMember] = useState<{ id: string; username: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
@@ -74,13 +77,15 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
     }
   };
 
-  const handleKickMember = async (userId: string, username: string) => {
-    if (!window.confirm(`Are you sure you want to remove ${username}?`)) return;
+  const handleKickMember = async () => {
+    if (!targetMember) return;
 
-    setKickingId(userId);
+    setKickingId(targetMember.id);
     try {
-      await kickMember(room.id, userId);
-      addToast(`Removed ${username}`, 'info');
+      await kickMember(room.id, targetMember.id);
+      addToast(`Removed ${targetMember.username}`, 'info');
+      setConfirmAction(null);
+      setTargetMember(null);
       onMemberChange();
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to remove member', 'error');
@@ -95,12 +100,11 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
       return;
     }
 
-    if (!window.confirm('Are you sure you want to leave this room?')) return;
-
     setIsLeaving(true);
     try {
       await leaveRoom(room.id);
       addToast('You have left the room', 'info');
+      setConfirmAction(null);
       onLeave();
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to leave room', 'error');
@@ -111,13 +115,11 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
 
   const handleDeleteRoom = async () => {
     if (!isOwner) return;
-
-    if (!window.confirm('Are you sure you want to delete this room? This action cannot be undone.')) return;
-
     setIsDeleting(true);
     try {
       await deleteRoom(room.id);
       addToast('Room deleted successfully', 'success');
+      setConfirmAction(null);
       onLeave(); // We can reuse onLeave to navigate away
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
@@ -136,18 +138,6 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Room Settings</h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your community and room preferences.</p>
           </div>
-          <AsyncButton
-            onClick={handleLeaveRoom}
-            isLoading={isLeaving}
-            disabled={isOwner}
-            className={`px-6 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-              isOwner 
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed' 
-                : 'bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white shadow-sm'
-            }`}
-          >
-            {isOwner ? 'Cannot Leave (Owner)' : 'Leave Room'}
-          </AsyncButton>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -260,16 +250,18 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                       </div>
                       
                       {isOwner && member.role !== 'owner' && (
-                        <AsyncButton
-                          onClick={() => handleKickMember(member.user_id, profile.username || 'this user')}
-                          isLoading={kickingId === member.user_id}
+                        <button
+                          onClick={() => {
+                            setTargetMember({ id: member.user_id, username: profile.username || 'this user' });
+                            setConfirmAction('kick_member');
+                          }}
                           className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                           title="Remove member"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </AsyncButton>
+                        </button>
                       )}
                     </div>
                   );
@@ -313,28 +305,160 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
           </div>
         </div>
 
-        {/* Danger Zone (Owner Only) */}
-        {isOwner && (
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-red-200/50 dark:border-red-500/20 rounded-3xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-xl font-bold mb-4 text-red-600 dark:text-red-500 flex items-center gap-2">
-              <span className="w-8 h-8 bg-red-500/10 text-red-500 rounded-lg flex items-center justify-center text-sm">⚠️</span>
-              Danger Zone
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed max-w-3xl">
-              Once you delete a room, there is no going back. Please be certain. This will permanently delete the room, all channels, and all messages associated with it.
-            </p>
-            
+        {/* Danger Zone */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-red-200/50 dark:border-red-500/20 rounded-3xl p-6 md:p-8 shadow-sm">
+          <h3 className="text-xl font-bold mb-4 text-red-600 dark:text-red-500 flex items-center gap-2">
+            <span className="w-8 h-8 bg-red-500/10 text-red-500 rounded-lg flex items-center justify-center text-sm">⚠️</span>
+            Danger Zone
+          </h3>
+          
+          <div className="space-y-6">
+            {!isOwner ? (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-50">Leave Room</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">You will no longer be able to see messages or participate in this community.</p>
+                </div>
+                <button
+                  onClick={() => setConfirmAction('leave_room')}
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap"
+                >
+                  Leave Room
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-50">Delete Room</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete this room, all channels, and all messages. This cannot be undone.</p>
+                </div>
+                <button
+                  onClick={() => setConfirmAction('delete_room')}
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap"
+                >
+                  Delete Room
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Delete Room Modal */}
+      <Modal
+        isOpen={confirmAction === 'delete_room'}
+        onClose={() => setConfirmAction(null)}
+        title="Delete Room"
+        description={`Are you sure you want to delete "${room.name}"?`}
+        maxWidth="max-w-md"
+        isLoading={isDeleting}
+        footer={
+          <>
+            <button
+              onClick={() => setConfirmAction(null)}
+              disabled={isDeleting}
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
             <AsyncButton
               onClick={handleDeleteRoom}
               isLoading={isDeleting}
-              className="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-3 font-bold shadow-lg shadow-red-500/30 transition-all duration-300"
+              loadingText="Deleting..."
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
             >
-              Delete Room
+              Delete Permanently
             </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-3xl">
+            🗑️
           </div>
-        )}
+          <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+            This action is irreversible. You will lose all member history, media, and configurations. All members will be removed instantly.
+          </p>
+        </div>
+      </Modal>
 
-      </div>
+      {/* Leave Room Modal */}
+      <Modal
+        isOpen={confirmAction === 'leave_room'}
+        onClose={() => setConfirmAction(null)}
+        title="Leave Room"
+        description={`Are you sure you want to leave "${room.name}"?`}
+        maxWidth="max-w-md"
+        isLoading={isLeaving}
+        footer={
+          <>
+            <button
+              onClick={() => setConfirmAction(null)}
+              disabled={isLeaving}
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <AsyncButton
+              onClick={handleLeaveRoom}
+              isLoading={isLeaving}
+              loadingText="Leaving..."
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+            >
+              Leave Room
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-3xl">
+            🚪
+          </div>
+          <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+            You will lose access to all channels and messages in this room. You'll need an invite or find the room in discovery to join again.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Kick Member Modal */}
+      <Modal
+        isOpen={confirmAction === 'kick_member'}
+        onClose={() => { setConfirmAction(null); setTargetMember(null); }}
+        title="Remove Member"
+        description={targetMember ? `Are you sure you want to remove ${targetMember.username}?` : ''}
+        maxWidth="max-w-md"
+        isLoading={!!kickingId}
+        footer={
+          <>
+            <button
+              onClick={() => { setConfirmAction(null); setTargetMember(null); }}
+              disabled={!!kickingId}
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <AsyncButton
+              onClick={handleKickMember}
+              isLoading={!!kickingId}
+              loadingText="Removing..."
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+            >
+              Remove Member
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-3xl">
+            👤
+          </div>
+          <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+            The user will be immediately disconnected from all channels in this room and will no longer see its content.
+          </p>
+        </div>
+      </Modal>
+
     </div>
   );
 }

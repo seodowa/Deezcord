@@ -140,9 +140,9 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     return unsubscribe;
   }, [onPresenceUpdate]);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string) => {
     if (roomId && channelId && isMember) {
-      socketSendMessage({ room_id: roomId, channel_id: channelId, content });
+      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName });
       
       const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
@@ -153,7 +153,9 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         username: user?.username || user?.email.split('@')[0] || 'Me',
         content,
         created_at: new Date().toISOString(),
-        avatar_url: user?.avatar_url
+        avatar_url: user?.avatar_url,
+        file_url: fileUrl,
+        file_name: fileName
       };
       setMessages(prev => [...prev, newMessage]);
       socketStopTyping({ room_id: roomId, channel_id: channelId });

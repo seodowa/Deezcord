@@ -8,6 +8,8 @@ export interface Message {
   created_at: string;
   avatar_url?: string | null;
   reactions?: MessageReaction[];
+  file_url?: string;
+  file_name?: string;
 }
 
 export interface MessageReaction {
@@ -34,6 +36,8 @@ export interface SendMessagePayload {
   room_id: string;
   channel_id: string;
   content: string;
+  file_url?: string;
+  file_name?: string;
 }
 
 export interface ReceiveMessagePayload {
@@ -46,4 +50,6 @@ export interface ReceiveMessagePayload {
   created_at: string;
   avatar_url?: string | null;
   reactions?: MessageReaction[];
+  file_url?: string;
+  file_name?: string;
 }

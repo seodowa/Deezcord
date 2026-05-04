@@ -1,32 +1,39 @@
 import { useState, useEffect } from 'react';
+import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import CreateRoomModal from '../components/CreateRoomModal';
-import AsyncButton from '../components/AsyncButton';
-import MessageList from '../components/MessageList';
-import MessageInput from '../components/MessageInput';
-import RoomSettings from '../components/RoomSettings';
-import type { Room, Channel } from '../types/room';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useRooms } from '../hooks/useRooms';
 import { useChat } from '../hooks/useChat';
 import { getChannels, createChannel } from '../services/roomService';
+import type { Room, Channel } from '../types/room';
+import { generateSlug } from '../utils/slug';
 
-export default function HomePage() {
+export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
-  const [isDiscoveryMode, setIsDiscoveryMode] = useState(false);
-  const [isSettingsView, setIsSettingsView] = useState(false);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
-  
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const matchRoom = useMatch('/home/rooms/:roomSlug/*');
+  const matchChannel = useMatch('/home/rooms/:roomSlug/channels/:channelSlug');
+  const isDiscoveryMode = location.pathname === '/home/discovery';
+
+  const roomSlug = matchRoom?.params.roomSlug;
+  const channelSlug = matchChannel?.params.channelSlug;
+  const isSettingsView = location.pathname.endsWith('/settings');
+
+  const stateRoomId = location.state?.roomId;
+  const stateChannelId = location.state?.channelId;
+
   const { addToast } = useToast();
   const { logout, user } = useAuth();
   const { isDarkMode, mounted, toggleTheme } = useTheme();
-  
+
   const { 
     rooms, 
     setRooms,
@@ -41,6 +48,11 @@ export default function HomePage() {
     joinExistingRoom 
   } = useRooms();
 
+  const currentRoom = rooms.find(r => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
+  const roomId = currentRoom?.id;
+  const currentChannel = channels.find(c => stateChannelId ? c.id === stateChannelId : generateSlug(c.name) === channelSlug);
+  const channelId = currentChannel?.id;
+
   const {
     messages,
     members,
@@ -53,7 +65,7 @@ export default function HomePage() {
     onRoomCreated,
     onRoomDeleted,
     onChannelCreated
-  } = useChat(currentRoom?.id, currentChannel?.id, currentRoom?.isMember);
+  } = useChat(roomId, channelId, currentRoom?.isMember);
 
   useEffect(() => {
     const unsubscribe = onRoomCreated((data: unknown) => {
@@ -76,16 +88,34 @@ export default function HomePage() {
       setRooms(prevRooms => prevRooms.filter(r => r.id !== deletedRoomId));
       setDiscoverRooms(prevDiscover => prevDiscover.filter(r => r.id !== deletedRoomId));
       
-      if (currentRoom?.id === deletedRoomId) {
-        setCurrentRoom(null);
-        setCurrentChannel(null);
-        setChannels([]);
-        setIsSettingsView(false);
+      if (roomId === deletedRoomId) {
+        navigate('/home');
         addToast('This room has been deleted by the owner.', 'info');
       }
     });
     return unsubscribe;
-  }, [onRoomDeleted, currentRoom?.id, setRooms, setDiscoverRooms, addToast]);
+  }, [onRoomDeleted, roomId, setRooms, setDiscoverRooms, addToast, navigate]);
+
+  useEffect(() => {
+    if (currentRoom?.isMember) {
+      getChannels(currentRoom.id).then(rawData => {
+        const data = rawData as Channel[];
+        setChannels(data);
+        // If we navigated to a room without a channel, redirect to the first available channel
+        if (!channelId && !isSettingsView && data.length > 0) {
+          navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug(data[0].name)}`, { 
+            replace: true,
+            state: { roomId: currentRoom.id, channelId: data[0].id }
+          });
+        }
+      }).catch(err => {
+        console.error('Failed to load channels', err);
+        setChannels([]);
+      });
+    } else {
+      setChannels([]);
+    }
+  }, [currentRoom?.id, currentRoom?.isMember, currentRoom?.name, channelId, isSettingsView, navigate]);
 
   useEffect(() => {
     const unsubscribe = onChannelCreated((data: unknown) => {
@@ -101,65 +131,30 @@ export default function HomePage() {
     return unsubscribe;
   }, [onChannelCreated, currentRoom?.id]);
 
-  const fetchRoomChannels = async (roomId: string) => {
-    try {
-      const data = await getChannels(roomId);
-      const channelData = data as Channel[];
-      setChannels(channelData);
-      if (channelData.length > 0) {
-        // If we already have a channel selected for another room, it will be overridden here.
-        setCurrentChannel(channelData[0]);
-      } else {
-        setCurrentChannel(null);
-      }
-    } catch (err) {
-      console.error('Failed to load channels', err);
-      setChannels([]);
-      setCurrentChannel(null);
-    }
-  };
-
   const handleSelectRoom = (room: Room) => {
-    setCurrentRoom(room);
-    setIsDiscoveryMode(false);
-    setIsSettingsView(false);
     setIsMobileMenuOpen(false);
-    if (room.isMember) {
-      fetchRoomChannels(room.id);
-    } else {
-      setChannels([]);
-      setCurrentChannel(null);
-    }
+    navigate(`/home/rooms/${generateSlug(room.name)}`, { state: { roomId: room.id } });
   };
 
   const handleSelectChannel = (channel: Channel) => {
-    setCurrentChannel(channel);
     setIsMobileMenuOpen(false);
+    if (currentRoom) {
+      navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug(channel.name)}`, { 
+        state: { roomId: currentRoom.id, channelId: channel.id } 
+      });
+    }
   };
 
   const handleDiscoverRoom = () => {
-    setIsDiscoveryMode(true);
-    setCurrentRoom(null);
-    setCurrentChannel(null);
-    setChannels([]);
-    setIsSettingsView(false);
     setIsMobileMenuOpen(false);
-    fetchDiscoverRooms();
-  };
-
-  const handleOpenCreateModal = () => {
-    setIsCreateModalOpen(true);
+    navigate('/home/discovery');
   };
 
   const handleCreateRoom = async (name: string, file: File | null) => {
     try {
       const newRoom = await createNewRoom(name, file);
-      setCurrentRoom(newRoom);
-      setIsSettingsView(false);
       setIsCreateModalOpen(false);
-      // New rooms will eventually get a general channel via triggers/backend,
-      // but let's fetch anyway.
-      await fetchRoomChannels(newRoom.id);
+      navigate(`/home/rooms/${generateSlug(newRoom.name)}`, { state: { roomId: newRoom.id } });
     } catch {
       // Error is handled in useRooms
     }
@@ -171,8 +166,10 @@ export default function HomePage() {
     try {
       const newChannel = await createChannel(currentRoom.id, name);
       setChannels(prev => [...prev, newChannel as Channel]);
-      setCurrentChannel(newChannel as Channel);
       addToast(`Channel "#${name}" created!`, 'success');
+      navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug((newChannel as Channel).name)}`, { 
+        state: { roomId: currentRoom.id, channelId: (newChannel as Channel).id } 
+      });
     } catch (err: unknown) {
       const error = err as Error;
       addToast(error.message || 'Failed to create channel', 'error');
@@ -181,41 +178,33 @@ export default function HomePage() {
     }
   };
 
-  const handleJoinRoom = async (roomToJoin?: Room) => {
-    const room = roomToJoin || currentRoom;
-    if (!room) return;
-
-    try {
-      const updatedRoom = await joinExistingRoom(room);
-      setCurrentRoom(updatedRoom);
-      setIsDiscoveryMode(false);
-      setIsSettingsView(false);
-      await fetchRoomChannels(updatedRoom.id);
-    } catch {
-      // Error is handled in useRooms
-    }
-  };
-
-  const handleRoomUpdate = (updatedRoom: Room) => {
-    setCurrentRoom(prev => prev ? { ...prev, ...updatedRoom, isMember: true, role: prev.role } : null);
-    setRooms(prev => prev.map(r => r.id === updatedRoom.id ? { ...r, ...updatedRoom } : r));
-  };
-
-  const handleLeaveRoom = () => {
-    if (currentRoom) {
-      setRooms(prev => prev.filter(r => r.id !== currentRoom.id));
-      setCurrentRoom(null);
-      setCurrentChannel(null);
-      setChannels([]);
-      setIsSettingsView(false);
-    }
-  };
-
   const handleLogout = async () => {
     await new Promise(resolve => setTimeout(resolve, 600));
     logout();
     addToast('You have been signed out.', 'info');
     window.location.href = '/login';
+  };
+
+  const outletContext = {
+    currentRoom,
+    currentChannel,
+    channels,
+    messages,
+    members,
+    typingUsers,
+    sendMessage,
+    startTyping,
+    stopTyping,
+    toggleReaction,
+    fetchMembers,
+    user,
+    discoverRooms,
+    isLoadingDiscover,
+    fetchDiscoverRooms,
+    isJoining,
+    joinExistingRoom,
+    setRooms,
+    navigate
   };
 
   return (
@@ -227,8 +216,8 @@ export default function HomePage() {
       <Sidebar 
         rooms={rooms}
         channels={channels}
-        currentRoomId={currentRoom?.id}
-        currentChannelId={currentChannel?.id}
+        currentRoomId={roomId}
+        currentChannelId={channelId}
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
@@ -237,7 +226,7 @@ export default function HomePage() {
         onClose={() => setIsMobileMenuOpen(false)}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
-        onCreateRoom={handleOpenCreateModal}
+        onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
         isLoadingRooms={isLoadingRooms}
@@ -254,12 +243,12 @@ export default function HomePage() {
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
         
+        {/* Mobile Header */}
         <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md md:hidden z-20 sticky top-0">
           <div className="flex items-center gap-3">
              <button
                 onClick={() => setIsMobileMenuOpen(true)}
                 className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                aria-label="Open menu"
              >
                 <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -293,7 +282,7 @@ export default function HomePage() {
 
           {currentRoom?.isMember && !isDiscoveryMode && (
             <button
-              onClick={() => setIsSettingsView(!isSettingsView)}
+              onClick={() => isSettingsView ? navigate(`/home/rooms/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/home/rooms/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
               className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
                 isSettingsView 
                   ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
@@ -308,6 +297,7 @@ export default function HomePage() {
           )}
         </header>
 
+        {/* Desktop Header */}
         <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
           <div className="flex items-center gap-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
@@ -363,7 +353,7 @@ export default function HomePage() {
 
             {currentRoom?.isMember && !isDiscoveryMode && (
               <button
-                onClick={() => setIsSettingsView(!isSettingsView)}
+                onClick={() => isSettingsView ? navigate(`/home/rooms/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/home/rooms/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 font-bold text-sm ${
                   isSettingsView 
                     ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
@@ -381,148 +371,7 @@ export default function HomePage() {
         </header>
 
         <div className="flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0">
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-
-            {isDiscoveryMode ? (
-              <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-                <div className="max-w-4xl mx-auto animate-fade-in w-full">
-                  <div className="mb-8">
-                    <h2 className="text-3xl font-extrabold mb-2 text-slate-900 dark:text-slate-50">Explore Communities</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg">Discover new rooms and join conversations across the platform.</p>
-                  </div>
-                  
-                  {isLoadingDiscover ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
-                      {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700/50 rounded-2xl"></div>
-                      ))}
-                    </div>
-                  ) : discoverRooms.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {discoverRooms.map(room => (
-                        <div key={room.id} className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-500 flex flex-col justify-between ${
-                          room.isNew ? 'animate-fade-in-up ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-900/10' : ''
-                        }`}>
-                          <div>
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-4 shadow-sm overflow-hidden ${
-                              room.room_profile ? '' : 'bg-blue-500'
-                            }`}>
-                              {room.room_profile ? (
-                                <img src={room.room_profile} alt={`${room.name} profile`} className="w-full h-full object-cover" />
-                              ) : (
-                                <span>#</span>
-                              )}
-                            </div>
-                            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-slate-50">{room.name}</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Join this room to start chatting with its members.</p>
-                          </div>
-                          <AsyncButton
-                            onClick={() => handleJoinRoom(room)}
-                            isLoading={isJoining}
-                            className="w-full bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white py-2.5 rounded-xl font-bold transition-all duration-300"
-                          >
-                            Join Community
-                          </AsyncButton>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-20 bg-white/40 dark:bg-slate-800/40 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
-                      <div className="text-4xl mb-4 text-slate-400 italic">✨</div>
-                      <p className="text-lg text-slate-500 dark:text-slate-400">You've joined all available rooms! Try creating a new one.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : currentRoom ? (
-               currentRoom.isMember ? (
-                  isSettingsView ? (
-                    <RoomSettings 
-                      room={currentRoom} 
-                      members={members} 
-                      onRoomUpdate={handleRoomUpdate}
-                      onMemberChange={() => fetchMembers(currentRoom.id)}
-                      onLeave={handleLeaveRoom}
-                    />
-                  ) : (
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      {currentChannel ? (
-                        <>
-                          <MessageList 
-                            messages={messages} 
-                            members={members}
-                            currentUser={user} 
-                            typingUsers={typingUsers} 
-                            onToggleReaction={toggleReaction}
-                          />
-                          <MessageInput 
-                            onSendMessage={sendMessage} 
-                            onStartTyping={startTyping}
-                            onStopTyping={stopTyping}
-                          />
-                        </>
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50 p-6">
-                          <div className="text-4xl mb-4">💬</div>
-                          <p>No channel selected or available.</p>
-                          {currentRoom.role === 'owner' && (
-                             <p className="text-sm mt-2">Create a new channel in the sidebar.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-               ) : (
-                  <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                    <div className="min-h-full flex items-center justify-center">
-                      <div className="max-w-md w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-3xl p-8 text-center shadow-xl animate-fade-in-up">
-                        <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center text-3xl">
-                          🔒
-                        </div>
-                        <h2 className="text-2xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Private Room</h2>
-                        <p className="text-slate-500 dark:text-slate-400 mb-8">
-                          You are not a member of <strong>#{currentRoom.name}</strong>. Join the room to see messages and participate in the conversation.
-                        </p>
-                        <AsyncButton
-                          onClick={() => handleJoinRoom()}
-                          isLoading={isJoining}
-                          className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
-                        >
-                          Join Room
-                        </AsyncButton>
-                      </div>
-                    </div>
-                  </div>
-               )
-            ) : (
-              <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                <div className="min-h-full flex items-center justify-center">
-                  <div className="max-w-2xl w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-3xl p-8 md:p-12 text-center shadow-2xl animate-fade-in-up">
-                    <div className="flex justify-center mb-8 md:mb-10">
-                      <div className="p-1 rounded-[2.5rem] bg-indigo-500/10 ring-1 ring-indigo-500/20 shadow-xl">
-                       <img src="/Logo.png" alt="Deezcord Logo" className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-3xl" />
-                      </div>
-                    </div>
-                    <h2 className="text-2xl md:text-4xl font-extrabold mb-4 tracking-tight text-slate-900 dark:text-slate-50">Welcome to Deezcord</h2>                     <p className="text-sm md:text-lg text-slate-500 dark:text-slate-400 mb-8 md:mb-10 leading-relaxed">
-                       You've successfully joined the community! Select a room from the sidebar to start chatting or create a new one to invite your friends.
-                     </p>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div className="p-5 md:p-6 rounded-2xl bg-white/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5 text-left shadow-sm transition-transform hover:-translate-y-1 duration-300">
-                           <div className="w-10 h-10 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-500 mb-4 text-xl">⚡</div>
-                           <h3 className="font-bold mb-2 text-slate-900 dark:text-slate-50">Real-time Chat</h3>
-                           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Powered by WebSockets for instant, low-latency messaging across all active rooms.</p>
-                        </div>
-                        <div className="p-5 md:p-6 rounded-2xl bg-white/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5 text-left shadow-sm transition-transform hover:-translate-y-1 duration-300">
-                           <div className="w-10 h-10 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-500 mb-4 text-xl">🔒</div>
-                           <h3 className="font-bold mb-2 text-slate-900 dark:text-slate-50">Safe & Secure</h3>
-                           <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Protected by Supabase Authentication ensuring your data and identity remain private.</p>
-                        </div>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-            )}
-          </div>
+          <Outlet context={outletContext} />
         </div>
       </main>
     </div>
