@@ -43,7 +43,7 @@ export default function NotFoundPage() {
         </p>
 
         <button 
-          onClick={() => navigate('/home')}
+          onClick={() => navigate('/')}
           className="w-full p-4 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 relative overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_10px_20px_-10px_rgba(59,130,246,1)] active:translate-y-0"
         >
           Return Home

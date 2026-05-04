@@ -58,7 +58,7 @@ export default function LoginPage() {
       
       login(data.token, rememberMe);
       
-      navigate('/home');
+      navigate('/');
     } catch (error: unknown) {
       const err = error as Error;
       addToast(err.message || 'Login failed', 'error');

@@ -29,7 +29,7 @@ const ProtectedRoute = () => {
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -41,15 +41,13 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} replace />} />
-      
       <Route element={<ProtectedRoute />}>
-        <Route path="/home" element={<HomeLayout />}>
+        <Route path="/" element={<HomeLayout />}>
           <Route index element={<WelcomePage />} />
           <Route path="discovery" element={<DiscoveryPage />} />
-          <Route path="rooms/:roomSlug" element={<RoomPage />} />
-          <Route path="rooms/:roomSlug/channels/:channelSlug" element={<ChatPage />} />
-          <Route path="rooms/:roomSlug/settings" element={<SettingsPage />} />
+          <Route path=":roomSlug" element={<RoomPage />} />
+          <Route path=":roomSlug/settings" element={<SettingsPage />} />
+          <Route path=":roomSlug/:channelSlug" element={<ChatPage />} />
         </Route>
       </Route>
 

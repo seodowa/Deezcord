@@ -6,7 +6,7 @@ export default function SettingsPage() {
   const { currentRoom, members, fetchMembers, setRooms, navigate } = useOutletContext<any>();
 
   if (!currentRoom || !currentRoom.isMember) {
-    return <Navigate to={currentRoom ? `/home/rooms/${generateSlug(currentRoom.name)}` : '/home'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
+    return <Navigate to={currentRoom ? `/${generateSlug(currentRoom.name)}` : '/'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
   }
 
   const handleRoomUpdate = (updatedRoom: any) => {
@@ -15,7 +15,7 @@ export default function SettingsPage() {
 
   const handleLeaveRoom = () => {
     setRooms((prev: any) => prev.filter((r: any) => r.id !== currentRoom.id));
-    navigate('/home');
+    navigate('/');
   };
 
   return (

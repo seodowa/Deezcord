@@ -17,6 +17,7 @@ export default function ChatPage() {
     members,
     user,
     typingUsers,
+    isLoadingMessages,
     toggleReaction,
     sendMessage,
     startTyping,
@@ -64,7 +65,7 @@ export default function ChatPage() {
   }, [addToast]);
 
   if (!currentRoom || !currentRoom.isMember || !currentChannel) {
-    return <Navigate to={currentRoom ? `/home/rooms/${generateSlug(currentRoom.name)}` : '/home'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
+    return <Navigate to={currentRoom ? `/${generateSlug(currentRoom.name)}` : '/'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
   }
 
   return (
@@ -88,6 +89,7 @@ export default function ChatPage() {
         members={members}
         currentUser={user} 
         typingUsers={typingUsers} 
+        isLoadingMessages={isLoadingMessages}
         onToggleReaction={toggleReaction}
       />
       <MessageInput 

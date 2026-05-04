@@ -19,9 +19,9 @@ export default function HomeLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const matchRoom = useMatch('/home/rooms/:roomSlug/*');
-  const matchChannel = useMatch('/home/rooms/:roomSlug/channels/:channelSlug');
-  const isDiscoveryMode = location.pathname === '/home/discovery';
+  const matchRoom = useMatch('/:roomSlug/*');
+  const matchChannel = useMatch('/:roomSlug/:channelSlug');
+  const isDiscoveryMode = location.pathname === '/discovery';
 
   const roomSlug = matchRoom?.params.roomSlug;
   const channelSlug = matchChannel?.params.channelSlug;
@@ -57,6 +57,7 @@ export default function HomeLayout() {
     messages,
     members,
     typingUsers,
+    isLoadingMessages,
     sendMessage,
     startTyping,
     stopTyping,
@@ -89,7 +90,7 @@ export default function HomeLayout() {
       setDiscoverRooms(prevDiscover => prevDiscover.filter(r => r.id !== deletedRoomId));
       
       if (roomId === deletedRoomId) {
-        navigate('/home');
+        navigate('/');
         addToast('This room has been deleted by the owner.', 'info');
       }
     });
@@ -103,7 +104,7 @@ export default function HomeLayout() {
         setChannels(data);
         // If we navigated to a room without a channel, redirect to the first available channel
         if (!channelId && !isSettingsView && data.length > 0) {
-          navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug(data[0].name)}`, { 
+          navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(data[0].name)}`, { 
             replace: true,
             state: { roomId: currentRoom.id, channelId: data[0].id }
           });
@@ -133,13 +134,13 @@ export default function HomeLayout() {
 
   const handleSelectRoom = (room: Room) => {
     setIsMobileMenuOpen(false);
-    navigate(`/home/rooms/${generateSlug(room.name)}`, { state: { roomId: room.id } });
+    navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
   };
 
   const handleSelectChannel = (channel: Channel) => {
     setIsMobileMenuOpen(false);
     if (currentRoom) {
-      navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug(channel.name)}`, { 
+      navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(channel.name)}`, { 
         state: { roomId: currentRoom.id, channelId: channel.id } 
       });
     }
@@ -147,14 +148,14 @@ export default function HomeLayout() {
 
   const handleDiscoverRoom = () => {
     setIsMobileMenuOpen(false);
-    navigate('/home/discovery');
+    navigate('/discovery');
   };
 
   const handleCreateRoom = async (name: string, file: File | null) => {
     try {
       const newRoom = await createNewRoom(name, file);
       setIsCreateModalOpen(false);
-      navigate(`/home/rooms/${generateSlug(newRoom.name)}`, { state: { roomId: newRoom.id } });
+      navigate(`/${generateSlug(newRoom.name)}`, { state: { roomId: newRoom.id } });
     } catch {
       // Error is handled in useRooms
     }
@@ -167,7 +168,7 @@ export default function HomeLayout() {
       const newChannel = await createChannel(currentRoom.id, name);
       setChannels(prev => [...prev, newChannel as Channel]);
       addToast(`Channel "#${name}" created!`, 'success');
-      navigate(`/home/rooms/${generateSlug(currentRoom.name)}/channels/${generateSlug((newChannel as Channel).name)}`, { 
+      navigate(`/${generateSlug(currentRoom.name)}/${generateSlug((newChannel as Channel).name)}`, { 
         state: { roomId: currentRoom.id, channelId: (newChannel as Channel).id } 
       });
     } catch (err: unknown) {
@@ -192,6 +193,7 @@ export default function HomeLayout() {
     messages,
     members,
     typingUsers,
+    isLoadingMessages,
     sendMessage,
     startTyping,
     stopTyping,
@@ -282,7 +284,7 @@ export default function HomeLayout() {
 
           {currentRoom?.isMember && !isDiscoveryMode && (
             <button
-              onClick={() => isSettingsView ? navigate(`/home/rooms/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/home/rooms/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
+              onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
               className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
                 isSettingsView 
                   ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
@@ -353,7 +355,7 @@ export default function HomeLayout() {
 
             {currentRoom?.isMember && !isDiscoveryMode && (
               <button
-                onClick={() => isSettingsView ? navigate(`/home/rooms/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/home/rooms/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
+                onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 font-bold text-sm ${
                   isSettingsView 
                     ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 

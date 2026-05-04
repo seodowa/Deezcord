@@ -56,6 +56,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchMembers(roomId);
       if (channelId) {
+        setMessages([]);
         fetchMessages(roomId, channelId);
         socketJoinRoom({ room_id: roomId, channel_id: channelId });
       } else {

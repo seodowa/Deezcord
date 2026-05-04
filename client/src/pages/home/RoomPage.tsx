@@ -5,7 +5,7 @@ export default function RoomPage() {
   const { currentRoom, isJoining, joinExistingRoom } = useOutletContext<any>();
 
   if (!currentRoom) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleJoinRoom = async () => {

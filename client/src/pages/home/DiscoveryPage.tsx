@@ -13,7 +13,7 @@ export default function DiscoveryPage() {
   const handleJoinRoom = async (room: any) => {
     try {
       const updatedRoom = await joinExistingRoom(room);
-      navigate(`/home/rooms/${generateSlug(updatedRoom.name)}`, { state: { roomId: updatedRoom.id } });
+      navigate(`/${generateSlug(updatedRoom.name)}`, { state: { roomId: updatedRoom.id } });
     } catch {
       // Error handled in useRooms
     }
