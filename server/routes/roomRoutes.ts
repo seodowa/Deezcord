@@ -123,6 +123,14 @@ router.get('/:roomId/channels/:channelId/messages', verifyUser, verifyRoomMember
 
   const messagesWithReactions = messagesWithAvatars.map(msg => ({
     ...msg,
+    parent_message: msg.parent_id 
+      ? messages.find(m => m.id === msg.parent_id) 
+        ? { 
+            username: messages.find(m => m.id === msg.parent_id)!.username, 
+            content: messages.find(m => m.id === msg.parent_id)!.content 
+          }
+        : null
+      : null,
     reactions: (allReactions || [])
       .filter(r => r.message_id === msg.id)
       .map(r => ({
