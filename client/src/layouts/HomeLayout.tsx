@@ -332,26 +332,42 @@ export default function HomeLayout() {
           
           <div className="flex items-center gap-6">
             {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && (
-              <div className="flex -space-x-2 overflow-hidden">
-                {members.slice(0, 5).map((member) => (
-                  <div 
-                    key={member.user_id} 
-                    className="relative inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold"
-                    title={`${member.profiles.username} (${member.isOnline ? 'Online' : 'Offline'})`}
-                  >
-                    {member.profiles.username.substring(0, 2).toUpperCase()}
-                    <div 
-                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-white dark:border-slate-800 ${
-                        member.isOnline ? 'bg-emerald-500' : 'bg-slate-400'
-                      }`}
-                    />
+              <div className="group relative">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm cursor-help transition-all hover:bg-emerald-500/20">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  {members.filter(m => m.isOnline).length} active now
+                </div>
+                
+                {/* Online Users Tooltip */}
+                <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform origin-top-right group-hover:translate-y-0 translate-y-2">
+                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-1">
+                    Active Members
                   </div>
-                ))}
-                {members.length > 5 && (
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-100 dark:bg-slate-600 flex items-center justify-center text-xs font-bold">
-                    +{members.length - 5}
+                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                    {members.filter(m => m.isOnline).map((member) => (
+                      <div key={member.user_id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold overflow-hidden ring-1 ring-white/20">
+                          {member.profiles.avatar_url ? (
+                            <img src={member.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            member.profiles.username.substring(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold truncate dark:text-slate-200">
+                          {member.profiles.username}
+                        </span>
+                      </div>
+                    ))}
+                    {members.filter(m => m.isOnline).length === 0 && (
+                      <div className="text-xs text-slate-400 dark:text-slate-500 p-2 text-center">
+                        No one online
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
 

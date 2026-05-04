@@ -152,10 +152,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     return unsubscribe;
   }, [onPresenceUpdate]);
 
-  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string) => {
+  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => {
     if (roomId && channelId && isMember) {
-      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName });
+      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId });
       
+      const parentMessage = parentId ? messages.find(m => m.id === parentId) : null;
       const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
         id: tempId,
@@ -167,12 +168,17 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         created_at: new Date().toISOString(),
         avatar_url: user?.avatar_url,
         file_url: fileUrl,
-        file_name: fileName
+        file_name: fileName,
+        parent_id: parentId,
+        parent_message: parentMessage ? {
+          username: parentMessage.username,
+          content: parentMessage.content
+        } : null
       };
       setMessages(prev => [...prev, newMessage]);
       socketStopTyping({ room_id: roomId, channel_id: channelId });
     }
-  }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping]);
+  }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping, messages]);
 
   const unsendMessage = useCallback((messageId: string) => {
     if (roomId && channelId && isMember) {

@@ -10,6 +10,11 @@ export interface Message {
   reactions?: MessageReaction[];
   file_url?: string;
   file_name?: string;
+  parent_id?: string | null;
+  parent_message?: {
+    username: string;
+    content: string;
+  } | null;
 }
 
 export interface MessageReaction {
@@ -38,6 +43,7 @@ export interface SendMessagePayload {
   content: string;
   file_url?: string;
   file_name?: string;
+  parent_id?: string | null;
 }
 
 export interface ReceiveMessagePayload {
@@ -52,4 +58,9 @@ export interface ReceiveMessagePayload {
   reactions?: MessageReaction[];
   file_url?: string;
   file_name?: string;
+  parent_id?: string | null;
+  parent_message?: {
+    username: string;
+    content: string;
+  } | null;
 }

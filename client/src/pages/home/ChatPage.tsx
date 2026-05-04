@@ -8,6 +8,7 @@ import { generateSlug } from '../../utils/slug';
 export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; username: string; content: string } | null>(null);
   const { addToast } = useToast();
 
   const {
@@ -93,15 +94,21 @@ export default function ChatPage() {
         isLoadingMessages={isLoadingMessages}
         onToggleReaction={toggleReaction}
         onDeleteMessage={unsendMessage}
+        onReply={(msg) => setReplyTo({ id: msg.id, username: msg.username, content: msg.content })}
       />
       <MessageInput 
-        onSendMessage={(content, fileUrl, fileName) => sendMessage(content, fileUrl, fileName)} 
+        onSendMessage={(content, fileUrl, fileName, parentId) => {
+          sendMessage(content, fileUrl, fileName, parentId);
+          setReplyTo(null);
+        }} 
         onStartTyping={startTyping}
         onStopTyping={stopTyping}
         roomId={currentRoom.id}
         channelId={currentChannel.id}
         externalFile={droppedFile}
         onClearExternalFile={() => setDroppedFile(null)}
+        replyTo={replyTo}
+        onClearReply={() => setReplyTo(null)}
       />
     </div>
   );

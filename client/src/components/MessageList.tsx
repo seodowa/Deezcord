@@ -13,6 +13,7 @@ interface MessageListProps {
   isLoadingMessages?: boolean;
   onToggleReaction?: (messageId: string, emoji: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onReply?: (message: Message) => void;
 }
 
 const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '💯'];
@@ -24,7 +25,8 @@ export default function MessageList({
   typingUsers = [],
   isLoadingMessages,
   onToggleReaction,
-  onDeleteMessage
+  onDeleteMessage,
+  onReply
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePickerId, setActivePickerId] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export default function MessageList({
 
             return (
               <div 
+                id={`msg-${msg.id}`}
                 key={msg.id || `${msg.username}-${msg.created_at}`} 
                 className={`flex gap-3 relative group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
               >
@@ -140,6 +143,31 @@ export default function MessageList({
                 </div>
 
                 <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                  {/* Reply Context */}
+                  {msg.parent_id && (
+                    <div className={`flex items-center gap-2 mb-1 opacity-70 hover:opacity-100 transition-opacity cursor-pointer group/reply ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                         onClick={() => {
+                           const parentElement = document.getElementById(`msg-${msg.parent_id}`);
+                           if (parentElement) {
+                             parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                             parentElement.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'dark:ring-offset-slate-900');
+                             setTimeout(() => {
+                               parentElement.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'dark:ring-offset-slate-900');
+                             }, 2000);
+                           }
+                         }}>
+                      <div className="w-4 h-4 text-slate-400">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5" />
+                        </svg>
+                      </div>
+                      <div className={`text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 truncate max-w-[200px] ${isOwn ? 'text-right' : 'text-left'}`}>
+                        <span className="font-bold text-blue-500 mr-1">{msg.parent_message?.username || 'Unknown'}:</span>
+                        <span className="text-slate-500 dark:text-slate-400 italic">"{msg.parent_message?.content || 'Original message'}"</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                       {displayName}
@@ -194,8 +222,23 @@ export default function MessageList({
 
                     {/* Hover Actions Container */}
                     <div className={`absolute top-0.75 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
-                      isOwn ? (onDeleteMessage ? '-left-[4.75rem]' : '-left-10') : '-right-10'
+                      isOwn ? (onDeleteMessage ? '-left-[6.75rem]' : '-left-20') : '-right-20'
                     }`}>
+                      {onReply && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReply(msg);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                          title="Reply"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5" />
+                          </svg>
+                        </button>
+                      )}
+
                       {onToggleReaction && (
                         <button
                           onClick={(e) => {
