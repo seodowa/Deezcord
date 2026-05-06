@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import msgpackParser from "socket.io-msgpack-parser";
 import type { Socket } from 'socket.io-client';
 import { getToken } from '../utils/auth';
 
@@ -14,7 +15,8 @@ export const useSocket = () => {
     if (!token) return;
 
     const socket = io(SOCKET_URL, {
-      auth: { token }
+      auth: { token },
+      parser: msgpackParser,
     });
 
     socketRef.current = socket;

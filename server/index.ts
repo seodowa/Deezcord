@@ -4,6 +4,7 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import cors from 'cors';
 import { Server, Socket } from 'socket.io';
+import msgpackParser from "socket.io-msgpack-parser";
 
 // 1. Import our separated modules
 import supabase from './config/supabaseClient';
@@ -34,6 +35,7 @@ const io = new Server(server, {
     origin: "*", 
     methods: ["GET", "POST"],
   },
+  parser: msgpackParser
 });
 
 // Make io accessible to our routers

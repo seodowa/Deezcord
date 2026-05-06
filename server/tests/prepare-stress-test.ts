@@ -26,8 +26,8 @@ async function main() {
     console.log(`Token: ${token}`);
     console.log(`Room ID: ${room.id}`);
     console.log(`Channel ID: ${channel.id}`);
-    console.log("\n--- Run this command to start k6 ---");
-    console.log(`k6 run -e TOKEN=${token} -e ROOM_ID=${room.id} -e CHANNEL_ID=${channel.id} server/tests/websocket-stress-test.js`);
+    console.log("\n--- Run this command to start locust test ---");
+    console.log(`TOKEN=${token}\nROOM_ID=${room.id}\nCHANNEL_ID=${channel.id}\nBASE_URL=http://localhost:3001`);
     
   } catch (error: any) {
     console.error("Failed to prepare test context:", error.message);
