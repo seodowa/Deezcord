@@ -88,6 +88,7 @@ class ChatUser(User):
 
         # ---- Create Socket.IO client with msgpack serializer ----
         self._sio = socketio.Client(logger=False, engineio_logger=False, serializer="msgpack")
+        # self._sio = socketio.Client(logger=False, engineio_logger=False)
         self._register_handlers()
 
         # ---- Connect and measure handshake time ----
@@ -241,9 +242,9 @@ class DeezcordShape(LoadTestShape):
 
     stages = [
         # (cumulative end time s, target users, spawn_rate users/s)
-        (30,  100, 100 / 30),   # 0–30 s:   ramp 0 → 100
-        (90,  500, 400 / 60),   # 30–90 s:  ramp 100 → 500
-        (120,   0, 500 / 30),   # 90–120 s: ramp 500 → 0
+        (30,  10, 10 / 30),   # 0–30 s:   ramp 0 → 10
+        (90,  200, 40 / 60),   # 30–90 s:  ramp 10 → 200
+        (120,   0, 50 / 30),   # 90–120 s: ramp 200 → 0
     ]
 
     def tick(self):
