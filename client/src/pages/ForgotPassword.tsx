@@ -91,10 +91,8 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 w-full max-w-[420px] bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-500/10 dark:bg-blue-500/20 rounded-full mx-auto mb-6 flex items-center justify-center text-blue-500 dark:text-blue-400">
-            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
+          <div className="flex justify-center mb-6">
+            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Reset Password</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your email and we'll send you a link</p>

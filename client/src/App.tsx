@@ -5,24 +5,50 @@ import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
-import HomePage from './pages/Home';
+import HomeLayout from './layouts/HomeLayout';
+import WelcomePage from './pages/home/WelcomePage';
+import DiscoveryPage from './pages/home/DiscoveryPage';
+import RoomPage from './pages/home/RoomPage';
+import ChatPage from './pages/home/ChatPage';
+import SettingsPage from './pages/home/SettingsPage';
 import NotFoundPage from './pages/NotFound';
 import './index.css';
 
 const ProtectedRoute = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} replace />} />
-      
       <Route element={<ProtectedRoute />}>
-        <Route path="/home" element={<HomePage />} />
+        <Route path="/" element={<HomeLayout />}>
+          <Route index element={<WelcomePage />} />
+          <Route path="discovery" element={<DiscoveryPage />} />
+          <Route path=":roomSlug" element={<RoomPage />} />
+          <Route path=":roomSlug/settings" element={<SettingsPage />} />
+          <Route path=":roomSlug/:channelSlug" element={<ChatPage />} />
+        </Route>
       </Route>
 
       <Route path="/login" element={<LoginPage />} />

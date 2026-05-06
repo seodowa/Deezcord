@@ -1,187 +1,590 @@
-import React, { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import AsyncButton from './AsyncButton';
-import type { Room } from '../types/room';
+import type { Room, Channel } from '../types/room';
+import UserProfileModal from './UserProfileModal';
+import MemberProfileModal from './MemberProfileModal';
+import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
   rooms: Room[];
+  channels?: Channel[];
   currentRoomId?: string;
+  currentChannelId?: string;
   isDarkMode: boolean;
   mounted: boolean;
   isOpen: boolean;
+  userRole?: string | null;
   onToggleTheme: () => void;
   onLogout: () => void;
   onClose: () => void;
+  onHomeClick: () => void;
   onSelectRoom: (room: Room) => void;
+  onSelectChannel: (channel: Channel) => void;
   onCreateRoom: () => void;
+  onCreateChannel: (name: string) => void;
+  onDiscoverRoom: () => void;
   isLoadingRooms: boolean;
+  isCreatingRoom: boolean;
+  isCreatingChannel?: boolean;
+}
+
+/* ── Tiny Tooltip ── */
+function Tooltip({ text, targetRef, show }: { text: string; targetRef: React.RefObject<HTMLElement | null>; show: boolean }) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (show && targetRef.current) {
+      const rect = targetRef.current.getBoundingClientRect();
+      setPos({ top: rect.top + rect.height / 2, left: rect.right + 12 });
+    }
+  }, [show, targetRef]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className="fixed z-[200] px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap animate-tooltip-in"
+      style={{ top: pos.top, left: pos.left, transform: 'translateY(-50%)' }}
+    >
+      {text}
+      <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 rotate-45 bg-slate-900 dark:bg-slate-100" />
+    </div>
+  );
+}
+
+/* ── Room Icon (Unified Rail) ── */
+function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <>
+      <div className="relative flex items-center group w-full justify-center py-1.5">
+        {/* Modern Indicator: Subtle background pill instead of side-stripe */}
+        {isActive && (
+          <div className="absolute inset-x-2 inset-y-0.5 bg-indigo-500/10 dark:bg-indigo-400/10 rounded-2xl transition-all duration-300" />
+        )}
+        
+        <button
+          ref={ref}
+          onClick={onClick}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`relative w-11 h-11 flex-shrink-0 flex items-center justify-center font-bold text-sm transition-all duration-300 overflow-hidden ${
+            isActive
+              ? 'rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 scale-100'
+              : 'rounded-2xl bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-500 dark:hover:text-indigo-400'
+          }`}
+          aria-label={room.name}
+        >
+          {room.room_profile ? (
+            <img src={room.room_profile} alt={room.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-base">{room.name.charAt(0).toUpperCase()}</span>
+          )}
+        </button>
+      </div>
+      <Tooltip text={room.name} targetRef={ref} show={hovered} />
+    </>
+  );
 }
 
 export default function Sidebar({
   rooms,
+  channels = [],
   currentRoomId,
+  currentChannelId,
   isDarkMode,
   mounted,
   isOpen,
+  userRole,
   onToggleTheme,
   onLogout,
   onClose,
+  onHomeClick,
   onSelectRoom,
+  onSelectChannel,
   onCreateRoom,
-  isLoadingRooms
+  onCreateChannel,
+  onDiscoverRoom,
+  isLoadingRooms,
+  isCreatingRoom,
+  isCreatingChannel
 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [isChannelsCategoryOpen, setIsChannelsCategoryOpen] = useState(true);
+  const [activeFriendsTab, setActiveFriendsTab] = useState<'friends' | 'pending'>('friends');
+  const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [pendingList, setPendingList] = useState<any[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [selectedFriendProfile, setSelectedFriendProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
+  const [isFriendProfileOpen, setIsFriendProfileOpen] = useState(false);
+  const { user } = useAuth();
+
+  const createBtnRef = useRef<HTMLButtonElement>(null);
+  const [createHovered, setCreateHovered] = useState(false);
+  const discoverBtnRef = useRef<HTMLButtonElement>(null);
+  const [discoverHovered, setDiscoverHovered] = useState(false);
+
+  const currentRoom = rooms.find(r => r.id === currentRoomId);
+
+  const [prevRoomId, setPrevRoomId] = useState(currentRoomId);
+  if (currentRoomId !== prevRoomId) {
+    setIsCreatingChannelMode(false);
+    setNewChannelName('');
+    setPrevRoomId(currentRoomId);
+  }
+
+  // Fetch friends list if we are on the welcome page
+  useEffect(() => {
+    if (!currentRoomId) {
+      const fetchFriends = async () => {
+        setIsLoadingFriends(true);
+        try {
+          const { getFriendsList, getPendingFriends } = await import('../services/roomService');
+          const [friendsData, pendingData] = await Promise.all([
+            getFriendsList(),
+            getPendingFriends()
+          ]);
+          setFriendsList(friendsData);
+          setPendingList(pendingData);
+        } catch (error) {
+          console.error("Failed to load friends", error);
+        } finally {
+          setIsLoadingFriends(false);
+        }
+      };
+      fetchFriends();
+    }
+  }, [currentRoomId]);
+
+  const handleCreateChannelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChannelName.trim()) return;
+    await onCreateChannel(newChannelName);
+    setIsCreatingChannelMode(false);
+    setNewChannelName('');
+  };
+
+  const handleAcceptRequest = async (requesterId: string) => {
+    try {
+      const { acceptFriend } = await import('../services/roomService');
+      await acceptFriend(requesterId);
+      
+      // Move from pending to friends
+      const acceptedFriend = pendingList.find(p => p.id === requesterId);
+      if (acceptedFriend) {
+        setPendingList(prev => prev.filter(p => p.id !== requesterId));
+        setFriendsList(prev => [...prev, { ...acceptedFriend, status: 'accepted' }]);
+      }
+    } catch (err) {
+      console.error('Failed to accept friend request', err);
+    }
+  };
+
+  const handleDeclineRequest = async (requesterId: string) => {
+    try {
+      const { removeFriend } = await import('../services/roomService');
+      await removeFriend(requesterId);
+      
+      // Remove from pending
+      setPendingList(prev => prev.filter(p => p.id !== requesterId));
+    } catch (err) {
+      console.error('Failed to decline friend request', err);
+    }
+  };
 
   return (
     <>
-      {/* Mobile Backdrop Overlay - Soft fade-in, click to close */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-500 ease-out"
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={onClose}
           aria-label="Close Sidebar"
-        ></div>
+        />
       )}
 
-      {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col shadow-xl md:shadow-none transition-all duration-300 ease-out md:relative ${
+        className={`fixed inset-y-0 left-0 z-50 flex md:relative transition-all duration-300 ease-expo ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 w-72 ${isCollapsed ? 'md:w-20' : 'md:w-72'} bg-white/70 dark:bg-slate-800/60 backdrop-blur-md md:bg-white/40 md:dark:bg-slate-800/40`}
+        } md:translate-x-0 w-[312px] h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/5 flex-shrink-0 overflow-hidden`}
       >
-        {/* Header Section */}
-        <div className={`h-20 flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
-          
-          {/* Logo */}
-          {!isCollapsed && (
-            <h2 className="text-xl font-extrabold tracking-tight text-blue-500 dark:text-blue-400 truncate">
-              Deezcord
-            </h2>
-          )}
-          
-          <div className="flex items-center gap-2">
-             {/* Desktop Collapse Toggle */}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden md:flex w-10 h-10 rounded-full items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 text-slate-500 dark:text-slate-400 flex-shrink-0"
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-               {isCollapsed ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                  </svg>
-               ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
-                  </svg>
-               )}
-            </button>
+        {/* ── UNIFIED RAIL (Utility Area) ── */}
+        <div className="w-[68px] flex flex-col items-center py-4 flex-shrink-0 bg-slate-900/5 dark:bg-white/5 h-full border-r border-slate-200/30 dark:border-white/5">
+          {/* Brand Mark */}
+          <div 
+            onClick={onHomeClick}
+            className={`relative w-12 h-12 flex items-center justify-center mb-6 group cursor-pointer transition-transform hover:scale-105 active:scale-95 ${
+              !currentRoomId ? 'ring-2 ring-indigo-500 rounded-xl ring-offset-2 dark:ring-offset-slate-900' : ''
+            }`}
+          >
+            <img src="/Logo.png" alt="Deezcord" className="w-9 h-9 object-contain rounded-xl" />
+          </div>
 
-             {/* Mobile Close Button */}
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 md:hidden text-slate-500 dark:text-slate-400 flex-shrink-0"
-              aria-label="Close menu"
-            >
-               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-               </svg>
-            </button>
-
-            {/* Theme Toggle Button */}
-            {mounted && !isCollapsed && (
-              <button
-                onClick={onToggleTheme}
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 text-slate-900 dark:text-slate-50 flex-shrink-0"
-                aria-label="Toggle Dark Mode"
-                title="Toggle Dark Mode"
-              >
-                {isDarkMode ? (
-                  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M12 1V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M12 21V23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4.22 4.22L5.64 5.64" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M18.36 18.36L19.78 19.78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M1 12H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M21 12H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4.22 19.78L5.64 18.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M18.36 5.64L19.78 4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </button>
+          <div className="flex-1 w-full overflow-y-auto scrollbar-none flex flex-col items-center gap-1">
+            {isLoadingRooms ? (
+              <div className="space-y-3 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-11 h-11 rounded-2xl bg-slate-200 dark:bg-white/5" />
+                ))}
+              </div>
+            ) : (
+              rooms.map(room => (
+                <RoomIcon
+                  key={room.id}
+                  room={room}
+                  isActive={currentRoomId === room.id}
+                  onClick={() => onSelectRoom(room)}
+                />
+              ))
             )}
           </div>
-        </div>
 
-        {/* Rooms List Section */}
-        <div className={`flex-1 overflow-y-auto p-4 space-y-2 ${isCollapsed ? 'md:flex md:flex-col md:items-center md:px-2' : ''}`}>
-          <div className={`text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-2 mb-2 ${isCollapsed ? 'md:hidden' : ''}`}>
-            Available Rooms
+          {/* Action Area */}
+          <div className="flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto">
+            <div className="relative">
+              <AsyncButton
+                ref={createBtnRef}
+                onClick={onCreateRoom}
+                isLoading={isCreatingRoom}
+                onMouseEnter={() => setCreateHovered(true)}
+                onMouseLeave={() => setCreateHovered(false)}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </AsyncButton>
+              <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
+            </div>
+
+            <div className="relative">
+              <button
+                ref={discoverBtnRef}
+                onClick={onDiscoverRoom}
+                onMouseEnter={() => setDiscoverHovered(true)}
+                onMouseLeave={() => setDiscoverHovered(false)}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white transition-all duration-200"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+              <Tooltip text="Discover" targetRef={discoverBtnRef} show={discoverHovered} />
+            </div>
+          </div>
+        </div>
+        {/* ── CHANNEL CONTENT AREA ── */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/30 dark:border-white/5">
+            <h2 className="text-[17px] font-bold text-slate-900 dark:text-white truncate tracking-tight">
+              {currentRoom?.name || 'Deezcord'}
+            </h2>
+            
+            <div className="flex items-center gap-1 md:hidden">
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          {isLoadingRooms ? (
-            <div className="space-y-2 animate-pulse px-2">
-              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-full"></div>
-              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-full"></div>
-              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-full"></div>
-            </div>
-          ) : (
-            <>
-              {rooms.map(room => (
-                <button
-                  key={room.id}
-                  onClick={() => onSelectRoom(room)}
-                  className={`text-left rounded-xl transition-all duration-200 group flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500/50 px-3 py-2 w-full gap-3 ${
-                    currentRoomId === room.id 
-                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' 
-                    : 'bg-transparent hover:bg-white/50 dark:hover:bg-slate-700/50 border border-transparent hover:border-slate-200/50 dark:hover:border-white/10 text-slate-700 dark:text-slate-200'
-                  } ${isCollapsed ? 'md:justify-center md:p-2 md:w-12 md:h-12 md:shrink-0' : ''}`}
-                  title={isCollapsed ? room.name : undefined}
-                >
-                  <div className={`w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center font-bold transition-colors duration-200 ${
-                    currentRoomId === room.id
-                    ? 'bg-white/20 text-white'
-                    : 'bg-blue-500/10 dark:bg-blue-400/10 text-blue-500 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white dark:group-hover:bg-blue-500 dark:group-hover:text-white'
-                  }`}>
-                    #
-                  </div>
-                  <span className={`font-medium transition-colors duration-200 truncate ${isCollapsed ? 'md:hidden' : ''} ${currentRoomId === room.id ? 'text-white' : ''}`}>
-                    {room.name}
-                  </span>
-                </button>
-              ))}
-            </>
-          )}
-          
-          <button 
-            onClick={onCreateRoom}
-            className={`rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all duration-200 flex items-center bg-transparent hover:bg-blue-50/50 dark:hover:bg-blue-900/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mt-4 px-3 py-2 w-full gap-3 text-left ${isCollapsed ? 'md:justify-center md:mt-2 md:p-2 md:w-12 md:h-12 md:shrink-0' : ''}`}
-            title={isCollapsed ? "Create Room" : undefined}
-          >
-             <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center text-xl transition-colors duration-200">+</div>
-             <span className={`font-medium transition-colors duration-200 truncate ${isCollapsed ? 'md:hidden' : ''}`}>Create Room</span>
-          </button>
-        </div>
+          {/* List Section */}
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin">
+            {currentRoomId ? (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between px-2 mb-2 group">
+                  <button
+                    onClick={() => setIsChannelsCategoryOpen(!isChannelsCategoryOpen)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <svg
+                      className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isChannelsCategoryOpen ? 'rotate-0' : '-rotate-90'}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      Channels
+                    </span>
+                  </button>
 
-        {/* Footer Section (Sign Out) */}
-        <div className={`p-4 border-t border-slate-200/50 dark:border-white/10 flex ${isCollapsed ? 'md:justify-center md:px-2' : ''}`}>
-          <AsyncButton
-            onClick={onLogout}
-            className={`bg-white/50 dark:bg-slate-700/50 hover:bg-red-500/90 dark:hover:bg-red-500/90 text-red-500 dark:text-red-400 hover:text-white dark:hover:text-white rounded-xl font-semibold border border-red-100 dark:border-red-900/30 hover:border-transparent transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500/50 flex items-center justify-center w-full px-4 py-2.5 gap-2 ${isCollapsed ? 'md:w-12 md:h-12 md:px-0 md:py-0 md:shrink-0' : ''}`}
-            title={isCollapsed ? "Sign Out" : undefined}
-          >
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className={`truncate ${isCollapsed ? 'md:hidden' : ''}`}>Sign Out</span>
-          </AsyncButton>
+                  {userRole === 'owner' && (
+                    <button
+                      onClick={() => setIsCreatingChannelMode(!isCreatingChannelMode)}
+                      className="p-1 text-slate-400 hover:text-indigo-500 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {isCreatingChannelMode && (
+                  <form onSubmit={handleCreateChannelSubmit} className="px-2 mb-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="relative flex items-center bg-slate-100/50 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/10 p-1">
+                      <span className="pl-3 pr-1 text-slate-400 text-sm font-bold">#</span>
+                      <input
+                        type="text"
+                        value={newChannelName}
+                        onChange={e => setNewChannelName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                        className="w-full bg-transparent text-sm py-2 px-1 outline-none text-slate-800 dark:text-white placeholder-slate-400"
+                        placeholder="new-channel"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1">
+                        <button 
+                          type="button" 
+                          onClick={() => setIsCreatingChannelMode(false)}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                          title="Cancel"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <button 
+                          type="submit" 
+                          disabled={isCreatingChannel || !newChannelName} 
+                          className="p-1.5 bg-indigo-500 text-white rounded-lg disabled:opacity-50 hover:bg-indigo-600 transition-colors"
+                          title="Create"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                <div className={`space-y-0.5 transition-all duration-300 ${isChannelsCategoryOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+                  {channels.map(channel => (
+                    <button
+                      key={channel.id}
+                      onClick={() => onSelectChannel(channel)}
+                      className={`w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
+                        channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
+                      } ${
+                        currentChannelId === channel.id
+                          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span className={`text-lg transition-colors ${currentChannelId === channel.id ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400'}`}>#</span>
+                      <span className={`text-[15px] truncate ${currentChannelId === channel.id ? 'font-bold' : 'font-medium'}`}>
+                        {channel.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col space-y-4">
+                <div className="flex bg-slate-100/50 dark:bg-white/5 rounded-xl p-1">
+                  <button
+                    onClick={() => setActiveFriendsTab('friends')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeFriendsTab === 'friends'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Friends
+                  </button>
+                  <button
+                    onClick={() => setActiveFriendsTab('pending')}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeFriendsTab === 'pending'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Pending
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto scrollbar-none space-y-1">
+                  {isLoadingFriends ? (
+                    <div className="space-y-2 animate-pulse">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-full h-12 bg-slate-200/50 dark:bg-white/5 rounded-xl" />
+                      ))}
+                    </div>
+                  ) : activeFriendsTab === 'friends' ? (
+                    friendsList.length > 0 ? (
+                      friendsList.map(friend => (
+                        <div 
+                          key={friend.id} 
+                          onClick={() => {
+                            setSelectedFriendProfile({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}
+                          className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                        >
+                          <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                              {friend.avatar_url ? (
+                                <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{(friend.username || 'U').substring(0, 1).toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${friend.isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{friend.username}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{friend.isOnline ? 'Online' : 'Offline'}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-40 mt-10">
+                        <div className="text-3xl mb-2">👋</div>
+                        <p className="text-xs font-bold">No friends yet</p>
+                        <p className="text-[10px] mt-1">Add some friends to see them here</p>
+                      </div>
+                    )
+                  ) : activeFriendsTab === 'pending' ? (
+                    pendingList.length > 0 ? (
+                      pendingList.map(request => (
+                        <div key={request.id} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 group">
+                          <div className="relative flex-shrink-0 cursor-pointer" onClick={() => {
+                            setSelectedFriendProfile({ id: request.id, username: request.username, avatar_url: request.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}>
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                              {request.avatar_url ? (
+                                <img src={request.avatar_url} alt={request.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{(request.username || 'U').substring(0, 1).toUpperCase()}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => {
+                            setSelectedFriendProfile({ id: request.id, username: request.username, avatar_url: request.avatar_url });
+                            setIsFriendProfileOpen(true);
+                          }}>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{request.username}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Wants to be friends</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAcceptRequest(request.id); }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors"
+                              title="Accept"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeclineRequest(request.id); }}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-colors"
+                              title="Decline"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center opacity-40 mt-10">
+                        <div className="text-3xl mb-2">⏳</div>
+                        <p className="text-xs font-bold">No pending requests</p>
+                      </div>
+                    )
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Footer Panel */}
+          <div className="p-4 border-t border-slate-200/30 dark:border-white/5 bg-slate-50/30 dark:bg-black/10">
+            <div className="flex items-center justify-between p-2 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm">
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden">
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{(user?.username || user?.email || 'U').substring(0, 1).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {user?.username || user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-tighter">
+                    Online
+                  </p>
+                </div>
+              </button>
+
+              <div className="flex items-center gap-0.5">
+                {mounted && (
+                  <button
+                    onClick={onToggleTheme}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                  >
+                    {isDarkMode ? (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="12" r="5" />
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+                <AsyncButton
+                  onClick={onLogout}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </AsyncButton>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
+
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      <MemberProfileModal
+        isOpen={isFriendProfileOpen}
+        onClose={() => {
+          setIsFriendProfileOpen(false);
+          // Refresh list just in case they unfriend
+          if (!currentRoomId) {
+            import('../services/roomService').then(({ getFriendsList }) => {
+              getFriendsList().then(setFriendsList);
+            });
+          }
+        }}
+        user={selectedFriendProfile}
+      />
     </>
   );
 }

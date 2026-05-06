@@ -60,4 +60,28 @@ export const verifyRoomMember = async (req: AuthenticatedRequest, res: Response,
   next(); // User is a member! Proceed to the route handler.
 };
 
+export const verifyRoomOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  const { roomId } = req.params;
+  const userId = req.user?.id;
+
+  if (!roomId || !userId) {
+    res.status(400).json({ error: "Missing room ID or user ID" });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('room_members')
+    .select('role')
+    .eq('room_id', roomId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data || data.role !== 'owner') {
+    res.status(403).json({ error: "Forbidden: Only room owners can perform this action" });
+    return;
+  }
+
+  next();
+};
+
 

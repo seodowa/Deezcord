@@ -44,20 +44,20 @@ The client frontend is under active development, focusing heavily on a responsiv
 
 **Core Features (In Progress):**
 - **Authentication:** User Registration, Login, Logout, and Forgot Password flow.
-- **Rooms:** Create public/private chat rooms and browse existing ones.
-- **Chat:** Real-time messaging (<500ms latency) via WebSockets (Socket.IO).
-- **History:** Lazy-loading past messages.
-- **Moderation:** Profanity filters, admin roles, and real-time presence tracking.
+- **Rooms:** Create rooms with profile pictures, join/leave rooms, and browse available ones.
+- **Chat:** Real-time messaging with typing indicators and presence tracking via Socket.IO.
+- **History:** Persistent message history fetched from the database.
+- **Moderation:** Admin/Owner roles with member management (add/kick) and room settings.
 - **Routing:** Protected routes, global 404 handling.
 
 ## 📂 Project Structure
 - `src/assets/` - Static assets like images and icons.
-- `src/components/` - Reusable UI components. (Note: Use `AsyncButton` for any button that sends or requests data from the server to prevent spam clicking. Use the `useToast` hook for all application notifications instead of standard browser alerts).
-- `src/context/` - Global state management using React Context.
-- `src/hooks/` - Custom React hooks.
+- `src/components/` - Reusable UI components (Sidebar, MessageList, MessageInput, RoomSettings, CreateRoomModal).
+- `src/context/` - Global state management using React Context (Auth, Toast).
+- `src/hooks/` - Custom React hooks (useAuth, useChat, useRooms, useSocket, useTheme, useToast).
 - `src/layouts/` - Shared layouts like navbars and sidebars.
-- `src/pages/` - Main page views (e.g., Login, Register, Home, ForgotPassword, NotFound).
-- `src/services/` - API and WebSocket integration logic.
+- `src/pages/` - Main page views (Login, Register, Home, ForgotPassword, NotFound).
+- `src/services/` - API and WebSocket integration logic (authService, roomService).
 - `src/types/` - TypeScript interface definitions.
 - `src/utils/` - Utility functions and helpers.
 
@@ -68,6 +68,14 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [ ] Create email verification page
 - [ ] Create MFA modal
 - [x] Integrate Sidebar with backend `GET /rooms` & `POST /rooms`
-- [ ] Create chat page / Real-time messaging
+- [x] Create chat page / Real-time messaging
+- [x] Create chat page / Real-time messaging
 - [x] Turn current sidebar into sidebar component
-- [x] Implement modern "Tray" design with collapsible desktop sidebar 
+- [x] Redesign Sidebar to "Unified Glass" aesthetic with squircle icons
+- [x] Implement Room Settings and Member Management
+- [x] Add Typing Indicators and Presence Tracking
+- [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages)
+- [x] Integrate and refine brand logo (Logo.png) across all application pages
+- [x] Add real-time room/channel creation updates to the sidebar (Socket.io)
+- [ ] Redesign Chat area to match Unified Glass aesthetic
+- [ ] Create a reusable modal component that can be used for anything.

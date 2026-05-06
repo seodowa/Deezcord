@@ -114,6 +114,9 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full max-w-[420px] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+          </div>
           <h1 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Create Account</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Join the Deezcord community today</p>
         </div>

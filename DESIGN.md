@@ -119,7 +119,8 @@ The system relies heavily on shadows and the glassmorphic blur to establish dept
 
 ### Navigation (Sidebar)
 - **Style:** Glassmorphic panel extending the full height, separated from the main content by a subtle border and shadow.
-- **States:** Interactive elements within the sidebar (like room links) have a transparent background that shifts to a subtle fill (`hover:bg-white/50` or `dark:hover:bg-slate-700/50`) on hover.
+- **Structure:** Divided into Room navigation and Channel navigation sections.
+- **States:** Interactive elements within the sidebar (like room and channel links) have a transparent background that shifts to a subtle fill (`hover:bg-white/50` or `dark:hover:bg-slate-700/50`) on hover. Active rooms and channels are visually highlighted with a more opaque background or accent border.
 
 ## 6. Do's and Don'ts
 
