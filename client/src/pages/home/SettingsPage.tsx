@@ -1,20 +1,30 @@
 import { useOutletContext, Navigate } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router-dom';
 import RoomSettings from '../../components/RoomSettings';
 import { generateSlug } from '../../utils/slug';
+import type { Room, Member } from '../../types/room';
+
+interface HomeContextType {
+  currentRoom: Room;
+  members: Member[];
+  fetchMembers: (roomId: string) => Promise<void>;
+  setRooms: React.Dispatch<React.SetStateAction<Room[]>>;
+  navigate: NavigateFunction;
+}
 
 export default function SettingsPage() {
-  const { currentRoom, members, fetchMembers, setRooms, navigate } = useOutletContext<any>();
+  const { currentRoom, members, fetchMembers, setRooms, navigate } = useOutletContext<HomeContextType>();
 
   if (!currentRoom || !currentRoom.isMember) {
     return <Navigate to={currentRoom ? `/${generateSlug(currentRoom.name)}` : '/'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
   }
 
-  const handleRoomUpdate = (updatedRoom: any) => {
-    setRooms((prev: any) => prev.map((r: any) => r.id === updatedRoom.id ? { ...r, ...updatedRoom } : r));
+  const handleRoomUpdate = (updatedRoom: Room) => {
+    setRooms((prev) => prev.map((r) => r.id === updatedRoom.id ? { ...r, ...updatedRoom } : r));
   };
 
   const handleLeaveRoom = () => {
-    setRooms((prev: any) => prev.filter((r: any) => r.id !== currentRoom.id));
+    setRooms((prev) => prev.filter((r) => r.id !== currentRoom.id));
     navigate('/');
   };
 
@@ -28,3 +38,4 @@ export default function SettingsPage() {
     />
   );
 }
+

@@ -1,8 +1,15 @@
 import { useOutletContext, Navigate } from 'react-router-dom';
 import AsyncButton from '../../components/AsyncButton';
+import type { Room } from '../../types/room';
+
+interface HomeContextType {
+  currentRoom: Room;
+  isJoining: boolean;
+  joinExistingRoom: (room: Room) => Promise<Room>;
+}
 
 export default function RoomPage() {
-  const { currentRoom, isJoining, joinExistingRoom } = useOutletContext<any>();
+  const { currentRoom, isJoining, joinExistingRoom } = useOutletContext<HomeContextType>();
 
   if (!currentRoom) {
     return <Navigate to="/" replace />;

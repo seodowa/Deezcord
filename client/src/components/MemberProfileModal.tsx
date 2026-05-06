@@ -3,15 +3,12 @@ import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { useToast } from '../hooks/useToast';
 import { getFriendStatus, requestFriend, acceptFriend, removeFriend } from '../services/roomService';
+import type { User } from '../types/user';
 
 interface MemberProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: {
-    id: string;
-    username: string;
-    avatar_url?: string | null;
-  } | null;
+  user: User | null;
 }
 
 export default function MemberProfileModal({ isOpen, onClose, user }: MemberProfileModalProps) {
@@ -26,7 +23,7 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
         setIsCheckingStatus(true);
         try {
           const status = await getFriendStatus(user.id);
-          setFriendStatus(status as any);
+          setFriendStatus(status as 'friends' | 'request_sent' | 'request_received' | 'none');
         } catch (error) {
           console.error('Failed to check friend status:', error);
         } finally {
@@ -60,8 +57,9 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
         setFriendStatus('request_sent');
         addToast(`Friend request sent to ${user.username}!`, 'success');
       }
-    } catch (error: any) {
-      addToast(error.message || 'Failed to update friend status', 'error');
+    } catch (error: unknown) {
+      const err = error as Error;
+      addToast(err.message || 'Failed to update friend status', 'error');
     } finally {
       setIsLoading(false);
     }

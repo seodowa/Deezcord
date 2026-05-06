@@ -5,12 +5,30 @@ import MessageInput from '../../components/MessageInput';
 import MemberProfileModal from '../../components/MemberProfileModal';
 import { useToast } from '../../hooks/useToast';
 import { generateSlug } from '../../utils/slug';
+import type { Message } from '../../types/message';
+import type { Room, Channel, Member } from '../../types/room';
+import type { User } from '../../types/user';
+
+interface HomeContextType {
+  currentRoom: Room;
+  currentChannel: Channel;
+  messages: Message[];
+  members: Member[];
+  user: User | null;
+  typingUsers: string[];
+  isLoadingMessages: boolean;
+  toggleReaction: (messageId: string, emoji: string) => void;
+  sendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => void;
+  unsendMessage: (messageId: string) => void;
+  startTyping: () => void;
+  stopTyping: () => void;
+}
 
 export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const [replyTo, setReplyTo] = useState<{ id: string; username: string; content: string } | null>(null);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const { addToast } = useToast();
 
@@ -27,7 +45,7 @@ export default function ChatPage() {
     unsendMessage,
     startTyping,
     stopTyping
-  } = useOutletContext<any>();
+  } = useOutletContext<HomeContextType>();
 
   useEffect(() => {
     const handleGlobalDragOver = (e: DragEvent) => {

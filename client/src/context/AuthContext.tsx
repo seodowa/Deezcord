@@ -2,14 +2,7 @@
 import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { getToken, setToken as setTokenUtil, removeToken as removeTokenUtil } from '../utils/auth';
 import { getCurrentUser } from '../services/authService';
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-  username?: string;
-  avatar_url?: string | null;
-}
+import type { User } from '../types/user';
 
 interface AuthContextType {
   isAuthenticated: boolean;

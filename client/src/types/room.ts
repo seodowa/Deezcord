@@ -26,3 +26,4 @@ export interface Member {
     avatar_url?: string | null;
   };
 }
+

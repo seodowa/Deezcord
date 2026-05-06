@@ -1,5 +1,6 @@
 import { getToken } from '../utils/auth';
 import type { Room } from '../types/room';
+import type { User } from '../types/user';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -263,7 +264,7 @@ export const deleteRoom = async (roomId: string): Promise<void> => {
 
 // --- Friendship Service ---
 
-export const getFriendsList = async (): Promise<any[]> => {
+export const getFriendsList = async (): Promise<User[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
@@ -282,7 +283,7 @@ export const getFriendsList = async (): Promise<any[]> => {
   return data;
 };
 
-export const getPendingFriends = async (): Promise<any[]> => {
+export const getPendingFriends = async (): Promise<User[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
