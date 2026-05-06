@@ -78,4 +78,4 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
 - [x] Create a reusable modal component that can be used for anything.
 - [ ] Add Direct Messages (DMs).
-- [ ] Redesign the home page.
+- [ ] Redesign the home page (needs more polish).
