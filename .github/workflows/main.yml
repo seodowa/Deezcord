@@ -20,6 +20,6 @@ jobs:
       - name: Run Tests
         run: |
           cd /home/deezcord/repos/CS323_FinalsPIT_Deezcord/server/tests && npm run test-health
-      
+        
       - name: Restart App
         run: sudo systemctl restart deezcord_chat
