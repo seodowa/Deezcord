@@ -57,7 +57,7 @@ The client frontend is under active development, focusing heavily on a responsiv
 - `src/hooks/` - Custom React hooks (useAuth, useChat, useRooms, useSocket, useTheme, useToast).
 - `src/layouts/` - Shared layouts like navbars and sidebars.
 - `src/pages/` - Main page views (Login, Register, Home, ForgotPassword, NotFound).
-- `src/services/` - API and WebSocket integration logic (authService, roomService).
+- `src/services/` - API and WebSocket integration logic (authService, roomService, friendService, userService).
 - `src/types/` - TypeScript interface definitions.
 - `src/utils/` - Utility functions and helpers.
 
@@ -79,3 +79,4 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [x] Create a reusable modal component that can be used for anything.
 - [ ] Add Direct Messages (DMs).
 - [ ] Redesign the home page (needs more polish).
+- [x] Modularize API services and separate domain logic.
