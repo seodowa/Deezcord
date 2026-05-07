@@ -598,6 +598,37 @@ router.delete('/:roomId', verifyUser, verifyRoomOwner, async (req: Authenticated
 
 // --- Friendship Endpoints ---
 
+// GET /rooms/users/search - Search for users by username
+router.get('/users/search', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const { q } = req.query;
+  const myId = req.user?.id;
+
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const { data: users, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .ilike('username', `%${q.trim()}%`)
+    .neq('id', myId)
+    .limit(10);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  // Check online status for each user
+  const usersWithPresence = users?.map(u => ({
+    ...u,
+    isOnline: isUserOnline(u.id)
+  }));
+
+  res.json(usersWithPresence || []);
+});
+
 // GET /rooms/friends/list - Get all accepted friends for the current user
 router.get('/friends/list', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;

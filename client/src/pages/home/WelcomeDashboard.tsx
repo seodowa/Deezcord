@@ -9,6 +9,7 @@ import HeroFeatureCard from './components/HeroFeatureCard';
 import InviteTeamCard from './components/InviteTeamCard';
 import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
+import SearchSidebar from './components/SearchSidebar';
 import NewUserEmptyState from './components/NewUserEmptyState';
 import MemberProfileModal from '../../components/MemberProfileModal';
 import UserProfileModal from '../../components/UserProfileModal';
@@ -49,6 +50,9 @@ const WelcomeDashboard = () => {
   const [selectedFriendProfile, setSelectedFriendProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
   const [isFriendProfileOpen, setIsFriendProfileOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isNewUser = rooms.length === 0;
 
@@ -71,6 +75,25 @@ const WelcomeDashboard = () => {
     };
     fetchFriends();
   }, []);
+
+  const handleUserSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { searchUsers } = await import('../../services/roomService');
+      const results = await searchUsers(query);
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Failed to search users', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const handleAcceptRequest = async (requesterId: string) => {
     try {
@@ -153,8 +176,20 @@ const WelcomeDashboard = () => {
         </div>
       </div>
 
-      {/* Floating Social Sidebar (Fixed to middle-right edge) */}
-      <aside className="hidden xl:block fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] max-h-[85vh] overflow-y-auto scrollbar-none pb-4 z-40">
+      {/* Left Sidebar - Search & Discovery (Not glued to edge) */}
+      <aside className="hidden 2xl:block fixed left-8 top-1/2 -translate-y-1/2 w-[320px] max-h-[85vh] z-40">
+        <SearchSidebar 
+          onSearch={handleUserSearch}
+          onNavigate={navigate}
+          results={searchResults}
+          isLoading={isSearching}
+          onUserClick={handleUserClick}
+          searchQuery={searchQuery}
+        />
+      </aside>
+
+      {/* Right Sidebar - Floating Social Sidebar (Fixed to middle-right edge) */}
+      <aside className="hidden 2xl:block fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] max-h-[85vh] overflow-y-auto scrollbar-none pb-4 z-40">
         <SocialSection 
           user={user}
           onLogout={contextLogout}
