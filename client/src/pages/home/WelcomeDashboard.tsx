@@ -133,13 +133,13 @@ const WelcomeDashboard = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 scrollbar-none animate-fade-in relative">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 2xl:pr-[380px] scrollbar-none animate-fade-in relative">
       <div className="absolute top-0 right-0 w-full h-[300px] bg-gradient-to-b from-blue-500/10 to-transparent pointer-events-none -z-10"></div>
       
-      <div className="max-w-7xl mx-auto relative">
-        <div className="flex flex-col items-center relative">
-          {/* Main Content Area - Truly Centered */}
-          <div className="w-full max-w-5xl space-y-16 lg:pr-0">
+      <div className="w-full relative">
+        <div className="flex flex-col relative">
+          {/* Main Content Area - Balanced with Sidebar */}
+          <div className="w-full max-w-6xl mx-auto 2xl:ml-0 2xl:max-w-7xl space-y-16">
             <WelcomeHeader 
               user={user} 
               roomCount={rooms.length} 

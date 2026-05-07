@@ -6,7 +6,7 @@ import { useTheme } from '../../../hooks/useTheme';
 interface SocialSectionProps {
   user: User | null;
   onLogout: () => Promise<void>;
-  onOpenProfile: () => void;
+  onOpenProfile: () => Promise<void> | void;
   friendsList: User[];
   pendingList: User[];
   isLoadingFriends: boolean;
@@ -208,12 +208,11 @@ export default function SocialSection({
         )}
       </div>
 
-      {/* Sidebar Bottom Section - User Profile (Pill Design) */}
       <div className="shrink-0 border-t border-slate-200/50 dark:border-white/5 px-3 py-4">
         <div className="flex items-center justify-between p-3 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-white/40 dark:border-white/5 shadow-sm group/profile">
-          <button 
+          <AsyncButton 
             onClick={onOpenProfile}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1 justify-start"
           >
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden ring-2 ring-white/10 transition-transform group-hover/profile:scale-105">
@@ -233,7 +232,7 @@ export default function SocialSection({
                 Online
               </p>
             </div>
-          </button>
+          </AsyncButton>
 
           <div className="flex items-center gap-1 ml-2">
             <button
