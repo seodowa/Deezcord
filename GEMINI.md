@@ -67,11 +67,13 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 
 ## Key Files
 
-- `server/index.ts`: Main entry point, Socket.io setup with channel-based routing, and authentication logic.
-- `server/routes/roomRoutes.ts`: Room management, channel creation, and channel-specific message history endpoints.
+- `server/index.ts`: Main entry point, Socket.io setup, and base API route mounting.
+- `server/routes/roomRoutes.ts`: Room resource and membership management.
+- `server/routes/channelRoutes.ts`: Channel management and message history (nested under rooms).
+- `server/routes/friendRoutes.ts`: Relationship management (friends list, requests, status).
+- `server/routes/userRoutes.ts`: User resource management (profile updates, search, etc.).
 - `server/config/supabaseClient.ts`: Supabase client initialization.
 - `client/src/App.tsx`: Main React application and routing (includes protected routes and global 404 handler).
-- `client/src/pages/Home.tsx`: Main chat interface managing room and channel selection.
 - `client/src/hooks/useChat.ts`: Custom hook for managing message state, fetching history, and sending messages via channels.
 - `client/src/components/Sidebar.tsx`: Room and channel navigation sidebar.
 
@@ -93,6 +95,6 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [ ] Add Direct Messages (DMs).
 - [ ] Redesign the home page (needs more polish).
     - [ ] Add recent direct messages to dashboard/homepage.
-- [ ] Server: Refactor roomRoutes.ts (Separate friend system).
+- [x] Server: Refactor roomRoutes.ts (Separate domain routes into specialized files).
 - [ ] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
 
