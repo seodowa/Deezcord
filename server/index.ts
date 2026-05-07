@@ -20,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.static(path.join(__dirname, '../../client/dist')));
 
 // 2. Tell Express to use the routes we separated
 app.use('/api/auth', authRoutes);
@@ -33,7 +33,7 @@ app.get('/api', (req: Request, res: Response) => {
 });
 
 app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '../../client/dist', 'index.html'));
 });
 
 const server = http.createServer(app);
