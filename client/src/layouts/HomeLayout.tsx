@@ -3,7 +3,6 @@ import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import CreateRoomModal from '../components/CreateRoomModal';
 import UserProfileModal from '../components/UserProfileModal';
-import UserProfilePill from '../components/UserProfilePill';
 import AsyncButton from '../components/AsyncButton';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -254,15 +253,6 @@ export default function HomeLayout() {
         isCreatingChannel={isCreatingChannel}
         userRole={currentRoom?.role || null}
       />
-
-      {/* Persistent Floating User Profile Pill - Only on WelcomePage */}
-      {isWelcomeMode && (
-        <UserProfilePill 
-          user={user}
-          onOpenProfile={() => setIsUserProfileOpen(true)}
-          onLogout={handleLogout}
-        />
-      )}
 
       <CreateRoomModal
         isOpen={isCreateModalOpen}

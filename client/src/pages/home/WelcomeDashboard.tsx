@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 // Sub-components
 import WelcomeHeader from './components/WelcomeHeader';
@@ -10,6 +11,7 @@ import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
 import NewUserEmptyState from './components/NewUserEmptyState';
 import MemberProfileModal from '../../components/MemberProfileModal';
+import UserProfileModal from '../../components/UserProfileModal';
 
 // Types
 import type { Room } from '../../types/room';
@@ -23,24 +25,30 @@ interface HomeContextType {
   isJoining: boolean;
   isLoadingRooms: boolean;
   navigate: NavigateFunction;
+  onLogout: () => Promise<void>;
 }
 
 const WelcomeDashboard = () => {
   const { 
-    user, 
+    user: contextUser, 
     rooms, 
     discoverRooms, 
     joinExistingRoom, 
     isJoining, 
     isLoadingRooms, 
-    navigate 
+    navigate,
+    onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
+
+  const { user: authUser } = useAuth();
+  const user = authUser || contextUser;
 
   const [friendsList, setFriendsList] = useState<User[]>([]);
   const [pendingList, setPendingList] = useState<User[]>([]);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [selectedFriendProfile, setSelectedFriendProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
   const [isFriendProfileOpen, setIsFriendProfileOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
 
   const isNewUser = rooms.length === 0;
 
@@ -100,67 +108,66 @@ const WelcomeDashboard = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-12 scrollbar-none animate-fade-in relative">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 scrollbar-none animate-fade-in relative">
       <div className="absolute top-0 right-0 w-full h-[300px] bg-gradient-to-b from-blue-500/10 to-transparent pointer-events-none -z-10"></div>
       
-      <div className="max-w-6xl mx-auto space-y-12">
-        <WelcomeHeader 
-          user={user} 
-          roomCount={rooms.length} 
-          isNewUser={isNewUser} 
-        />
-
-        {isNewUser && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <HeroFeatureCard 
+      <div className="max-w-7xl mx-auto relative">
+        <div className="flex flex-col items-center relative">
+          {/* Main Content Area - Truly Centered */}
+          <div className="w-full max-w-5xl space-y-16 lg:pr-0">
+            <WelcomeHeader 
+              user={user} 
+              roomCount={rooms.length} 
               isNewUser={isNewUser} 
-              onExplore={() => navigate('/discovery')} 
             />
-            <InviteTeamCard 
-              onAction={() => navigate('/', { state: { openCreateModal: true } })}
-            />
-          </div>
-        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            {isNewUser ? (
-              <NewUserEmptyState 
-                onDiscover={() => navigate('/discovery')}
-                onCreateRoom={() => navigate('/', { state: { openCreateModal: true } })}
-              />
-            ) : (
-              <RecentRooms 
-                rooms={rooms} 
-                isLoading={isLoadingRooms} 
-                onNavigate={navigate} 
-              />
-            )}
-          </div>
+            <div className="space-y-16">
+              {/* Room Access Section */}
+              <section>
+                {isNewUser ? (
+                  <NewUserEmptyState 
+                    onDiscover={() => navigate('/discovery')}
+                    onCreateRoom={() => navigate('/', { state: { openCreateModal: true } })}
+                  />
+                ) : (
+                  <RecentRooms 
+                    rooms={rooms} 
+                    isLoading={isLoadingRooms} 
+                    onNavigate={navigate} 
+                  />
+                )}
+              </section>
 
-          <SocialSection 
-            friendsList={friendsList}
-            pendingList={pendingList}
-            isLoadingFriends={isLoadingFriends}
-            onAcceptRequest={handleAcceptRequest}
-            onDeclineRequest={handleDeclineRequest}
-            onUserClick={handleUserClick}
-            onNavigate={navigate}
-          />
+              {/* CTA Row - High visibility actions */}
+              <section className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <HeroFeatureCard 
+                  isNewUser={isNewUser} 
+                  onExplore={() => navigate('/discovery')} 
+                />
+                <InviteTeamCard 
+                  onAction={() => navigate('/', { state: { openCreateModal: true } })}
+                />
+              </section>
+            </div>
+          </div>
         </div>
-
-        {!isNewUser && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <HeroFeatureCard 
-              isNewUser={isNewUser} 
-              onExplore={() => navigate('/discovery')} 
-            />
-            <InviteTeamCard 
-              onAction={() => navigate('/', { state: { openCreateModal: true } })}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Floating Social Sidebar (Fixed to middle-right edge) */}
+      <aside className="hidden xl:block fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] max-h-[85vh] overflow-y-auto scrollbar-none pb-4 z-40">
+        <SocialSection 
+          user={user}
+          onLogout={contextLogout}
+          onOpenProfile={() => setIsUserProfileOpen(true)}
+          friendsList={friendsList}
+          pendingList={pendingList}
+          isLoadingFriends={isLoadingFriends}
+          onAcceptRequest={handleAcceptRequest}
+          onDeclineRequest={handleDeclineRequest}
+          onUserClick={handleUserClick}
+          onNavigate={navigate}
+        />
+      </aside>
 
       <MemberProfileModal
         isOpen={isFriendProfileOpen}
@@ -169,6 +176,11 @@ const WelcomeDashboard = () => {
           handleRefreshFriends();
         }}
         user={selectedFriendProfile}
+      />
+
+      <UserProfileModal
+        isOpen={isUserProfileOpen}
+        onClose={() => setIsUserProfileOpen(false)}
       />
     </div>
   );
