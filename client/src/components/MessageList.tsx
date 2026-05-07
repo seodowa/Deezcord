@@ -41,11 +41,17 @@ export default function MessageList({
     }
   };
 
+  // Scroll to bottom logic
+  const lastMessageId = messages[messages.length - 1]?.id;
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Only auto-scroll if already at bottom or if it's a new message
+      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 100;
+      if (isAtBottom) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
-  }, [messages, typingUsers]);
+  }, [lastMessageId, typingUsers]);
 
   const currentUserId = currentUser?.id;
   const currentUsername = currentUser?.username || currentUser?.email?.split('@')[0] || '';
@@ -230,7 +236,7 @@ export default function MessageList({
                     </div>
 
                     {/* Hover Actions Container */}
-                    <div className={`absolute top-0.75 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
+                    <div className={`absolute top-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
                       isOwn ? (onDeleteMessage ? '-left-[6.75rem]' : '-left-20') : '-right-20'
                     }`}>
                       {onReplyMessage && (
