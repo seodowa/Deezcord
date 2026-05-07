@@ -28,9 +28,9 @@ import time
 import threading
 from dotenv import load_dotenv
 
-import socketio
-from locust import User, task, constant, events, LoadTestShape
-from locust.exception import StopUser
+import socketio # type: ignore
+from locust import User, task, constant, events, LoadTestShape # type: ignore
+from locust.exception import StopUser # type: ignore
 
 load_dotenv()
 

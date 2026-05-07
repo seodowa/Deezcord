@@ -16,6 +16,10 @@ jobs:
         run: |
           cd /home/deezcord/repos/CS323_FinalsPIT_Deezcord/client && npm install && npm run build
           cd ../server && npm install && npm run build
+      
+      - name: Run Tests
+        run: |
+          cd /home/deezcord/repos/CS323_FinalsPIT_Deezcord/server/tests && npm run test-health
         
       - name: Restart App
         run: sudo systemctl restart deezcord_chat
