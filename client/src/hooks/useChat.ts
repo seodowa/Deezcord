@@ -88,15 +88,21 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
           const exists = prev.some(m => m.id === newMessage.id);
           if (exists) return prev;
           
+          // Remove temporary message that matches this new message
           const filtered = prev.filter(m => 
-            !(m.id.startsWith('temp-') && m.content === newMessage.content && m.username === newMessage.username)
+            !(m.id.startsWith('temp-') && 
+              m.content.trim() === newMessage.content.trim() && 
+              (m.username === newMessage.username || m.user_id === newMessage.user_id))
           );
 
-          return [...filtered, {
+          const updated = [...filtered, {
             ...newMessage,
-            id: newMessage.id || Date.now().toString(),
-            created_at: newMessage.created_at || new Date().toISOString()
+            id: newMessage.id,
+            created_at: newMessage.created_at
           }];
+
+          // Ensure sorted by creation time
+          return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         });
       }
     });
@@ -157,7 +163,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
       socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId });
       
       const parentMessage = parentId ? messages.find(m => m.id === parentId) : null;
-      const tempId = `temp-${Date.now()}`;
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const newMessage: Message = {
         id: tempId,
         user_id: user?.id || null,
