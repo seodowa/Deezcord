@@ -6,7 +6,7 @@ import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
 import HomeLayout from './layouts/HomeLayout';
-import WelcomePage from './pages/home/WelcomePage';
+import WelcomeDashboard from './pages/home/WelcomeDashboard';
 import DiscoveryPage from './pages/home/DiscoveryPage';
 import RoomPage from './pages/home/RoomPage';
 import ChatPage from './pages/home/ChatPage';
@@ -43,7 +43,7 @@ const AppRoutes = () => {
     <Routes>
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomeLayout />}>
-          <Route index element={<WelcomePage />} />
+          <Route index element={<WelcomeDashboard />} />
           <Route path="discovery" element={<DiscoveryPage />} />
           <Route path=":roomSlug" element={<RoomPage />} />
           <Route path=":roomSlug/settings" element={<SettingsPage />} />

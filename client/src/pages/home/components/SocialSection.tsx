@@ -4,12 +4,9 @@ import type { Room } from '../../../types/room';
 interface SocialSectionProps {
   friendsList: User[];
   pendingList: User[];
-  suggestedRooms: Room[];
   isLoadingFriends: boolean;
-  isJoining: boolean;
   onAcceptRequest: (id: string) => Promise<void>;
   onDeclineRequest: (id: string) => Promise<void>;
-  onJoinRoom: (id: string) => Promise<void>;
   onUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
   onNavigate: (path: string, state?: any) => void;
 }
@@ -17,12 +14,9 @@ interface SocialSectionProps {
 export default function SocialSection({
   friendsList,
   pendingList,
-  suggestedRooms,
   isLoadingFriends,
-  isJoining,
   onAcceptRequest,
   onDeclineRequest,
-  onJoinRoom,
   onUserClick,
   onNavigate
 }: SocialSectionProps) {
@@ -136,58 +130,6 @@ export default function SocialSection({
         </div>
       </div>
 
-      {/* Discovery Suggestions Container */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Suggested Rooms</h4>
-          <button onClick={() => onNavigate('/discovery')} className="text-xs font-bold text-blue-500 hover:underline">See All</button>
-        </div>
-        {suggestedRooms.length > 0 ? (
-          suggestedRooms.map((room) => (
-            <div key={room.id} className="p-4 rounded-[2rem] bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-sm flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0 overflow-hidden shadow-md">
-                  {room.room_profile ? (
-                    <img src={room.room_profile} alt={room.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold">
-                      {room.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h5 className="text-sm font-bold text-slate-900 dark:text-slate-50 truncate">{room.name}</h5>
-                  <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Public Community</p>
-                </div>
-              </div>
-              <button
-                onClick={() => onJoinRoom(room.id)}
-                disabled={isJoining}
-                className="w-full py-2.5 bg-blue-500/10 hover:bg-blue-500 text-blue-600 dark:text-blue-400 hover:text-white rounded-xl font-bold text-sm transition-all duration-300 disabled:opacity-50"
-              >
-                {isJoining ? 'Joining...' : 'Quick Join'}
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="p-6 rounded-[2rem] bg-slate-100/50 dark:bg-slate-800/20 border border-slate-200/50 dark:border-white/5 text-center">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Finding communities...</p>
-          </div>
-        )}
-      </div>
-
-      {/* Create Room CTA */}
-      <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden group">
-           <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-colors"></div>
-           <h4 className="text-lg font-bold relative z-10">Invite your team</h4>
-           <p className="text-sm text-slate-400 mt-2 relative z-10">Every community starts with a single room. Create yours today.</p>
-           <button 
-            onClick={() => onNavigate('/', { state: { openCreateModal: true } })}
-            className="mt-6 w-full py-3 bg-white text-slate-900 rounded-xl font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all relative z-10 shadow-xl"
-           >
-             Create a Room
-           </button>
-      </div>
     </div>
   );
 }

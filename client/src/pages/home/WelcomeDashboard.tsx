@@ -5,7 +5,8 @@ import type { NavigateFunction } from 'react-router-dom';
 // Sub-components
 import WelcomeHeader from './components/WelcomeHeader';
 import HeroFeatureCard from './components/HeroFeatureCard';
-import RecentHubs from './components/RecentHubs';
+import InviteTeamCard from './components/InviteTeamCard';
+import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
 import NewUserEmptyState from './components/NewUserEmptyState';
 import MemberProfileModal from '../../components/MemberProfileModal';
@@ -24,7 +25,7 @@ interface HomeContextType {
   navigate: NavigateFunction;
 }
 
-export default function WelcomePage() {
+const WelcomeDashboard = () => {
   const { 
     user, 
     rooms, 
@@ -109,10 +110,17 @@ export default function WelcomePage() {
           isNewUser={isNewUser} 
         />
 
-        <HeroFeatureCard 
-          isNewUser={isNewUser} 
-          onExplore={() => navigate('/discovery')} 
-        />
+        {isNewUser && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <HeroFeatureCard 
+              isNewUser={isNewUser} 
+              onExplore={() => navigate('/discovery')} 
+            />
+            <InviteTeamCard 
+              onAction={() => navigate('/', { state: { openCreateModal: true } })}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -122,7 +130,7 @@ export default function WelcomePage() {
                 onCreateRoom={() => navigate('/', { state: { openCreateModal: true } })}
               />
             ) : (
-              <RecentHubs 
+              <RecentRooms 
                 rooms={rooms} 
                 isLoading={isLoadingRooms} 
                 onNavigate={navigate} 
@@ -133,16 +141,25 @@ export default function WelcomePage() {
           <SocialSection 
             friendsList={friendsList}
             pendingList={pendingList}
-            suggestedRooms={discoverRooms.slice(0, 3)}
             isLoadingFriends={isLoadingFriends}
-            isJoining={isJoining}
             onAcceptRequest={handleAcceptRequest}
             onDeclineRequest={handleDeclineRequest}
-            onJoinRoom={joinExistingRoom}
             onUserClick={handleUserClick}
             onNavigate={navigate}
           />
         </div>
+
+        {!isNewUser && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <HeroFeatureCard 
+              isNewUser={isNewUser} 
+              onExplore={() => navigate('/discovery')} 
+            />
+            <InviteTeamCard 
+              onAction={() => navigate('/', { state: { openCreateModal: true } })}
+            />
+          </div>
+        )}
       </div>
 
       <MemberProfileModal
@@ -155,4 +172,6 @@ export default function WelcomePage() {
       />
     </div>
   );
-}
+};
+
+export default WelcomeDashboard;
