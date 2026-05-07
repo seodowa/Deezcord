@@ -1,6 +1,6 @@
 import { getToken } from '../utils/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const registerUser = async (username: string, email: string, password: string) => {
   const response = await fetch(`${API_URL}/api/auth/register`, {
