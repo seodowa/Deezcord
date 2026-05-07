@@ -8,7 +8,7 @@ export const getRooms = async (): Promise<Room[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms`, {
+  const response = await fetch(`${API_URL}/api/rooms`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -27,7 +27,7 @@ export const getDiscoverRooms = async (): Promise<Room[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/discover`, {
+  const response = await fetch(`${API_URL}/api/rooms/discover`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -52,7 +52,7 @@ export const createRoom = async (name: string, file: File | null): Promise<Room>
     formData.append('file', file);
   }
 
-  const response = await fetch(`${API_URL}/rooms`, {
+  const response = await fetch(`${API_URL}/api/rooms`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -75,7 +75,7 @@ export const joinRoom = async (roomId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/join`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -92,7 +92,7 @@ export const getRoomMembers = async (roomId: string): Promise<unknown[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/members`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -111,7 +111,7 @@ export const getChannels = async (roomId: string): Promise<unknown[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/channels`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -130,7 +130,7 @@ export const createChannel = async (roomId: string, name: string, type: string =
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/channels`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -152,7 +152,7 @@ export const getMessages = async (roomId: string, channelId: string): Promise<un
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/channels/${channelId}/messages`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels/${channelId}/messages`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -175,7 +175,7 @@ export const updateRoom = async (roomId: string, name?: string, file?: File | nu
   if (name) formData.append('name', name);
   if (file) formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -196,7 +196,7 @@ export const addMember = async (roomId: string, email: string): Promise<void> =>
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/members`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -215,7 +215,7 @@ export const kickMember = async (roomId: string, userId: string): Promise<void> 
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/members/${userId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members/${userId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -232,7 +232,7 @@ export const leaveRoom = async (roomId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/leave`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/leave`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -249,7 +249,7 @@ export const deleteRoom = async (roomId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -268,7 +268,7 @@ export const getFriendsList = async (): Promise<User[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/list`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/list`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -287,7 +287,7 @@ export const getPendingFriends = async (): Promise<User[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/pending`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/pending`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -306,7 +306,7 @@ export const getFriendStatus = async (targetId: string): Promise<string> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/status/${targetId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/status/${targetId}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -325,7 +325,7 @@ export const requestFriend = async (addresseeId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/request/${addresseeId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/request/${addresseeId}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -342,7 +342,7 @@ export const acceptFriend = async (requesterId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/accept/${requesterId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/accept/${requesterId}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -359,7 +359,7 @@ export const removeFriend = async (targetId: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/rooms/friends/${targetId}`, {
+  const response = await fetch(`${API_URL}/api/rooms/friends/${targetId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,

@@ -3,6 +3,7 @@ dotenv.config();
 import express, { Request, Response } from 'express';
 import http from 'http';
 import cors from 'cors';
+import path from 'path';
 import { Server, Socket } from 'socket.io';
 import msgpackParser from "socket.io-msgpack-parser";
 
@@ -17,15 +18,22 @@ import { addUser, removeUser } from './utils/presence';
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(express.static(path.join(__dirname, '../../client/dist')));
 
 // 2. Tell Express to use the routes we separated
-app.use('/auth', authRoutes);
-app.use('/health', healthRoutes);
-app.use('/rooms', roomRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Redirect root to /rooms
-app.get('/', (req: Request, res: Response) => {
-  res.redirect('/rooms');
+app.get('/api', (req: Request, res: Response) => {
+  res.redirect('/api/rooms');
+});
+
+app.get('/{*splat}', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/dist', 'index.html'));
 });
 
 const server = http.createServer(app);
