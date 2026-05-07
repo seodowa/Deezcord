@@ -10,7 +10,8 @@
     "test-client": "ts-node tests/test-client.ts",
     "test-stress-prepare": "ts-node tests/prepare-stress-test.ts",
     "test-stress-cleanup": "ts-node tests/cleanup-stress-test.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-health": "ts-node tests/server.test.ts"
   },
   "keywords": [],
   "author": "",
