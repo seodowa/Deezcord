@@ -221,7 +221,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           file_url: data.file_url,
           file_name: data.file_name,
           parent_id: data.parent_id,
-          parent_message: parentMessage
+          parent_message: parentMessage,
+          temp_id: data.temp_id
       };
 
       io.to(`channel:${data.channel_id}`).emit('receive_message', broadcastData);
@@ -297,37 +298,38 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const userId = socket.user?.id;
       if (!userId || !data.message_id || !data.emoji || !data.channel_id) return;
 
-      // Insert reaction
-      const { error } = await supabase
+      // Fetch user profile to get username
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+
+      // Insert reaction and fetch the inserted row
+      const { data: insertedReaction, error } = await supabase
         .from('message_reactions')
         .insert([{
           message_id: data.message_id,
           user_id: userId,
           emoji: data.emoji
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error && error.code !== '23505') throw error; // Ignore unique constraint violation (already reacted)
-
-      // Fetch all reactions for this message to broadcast the updated state
-      const { data: reactions, error: fetchError } = await supabase
-        .from('message_reactions')
-        .select('id, message_id, user_id, emoji, profiles(username)')
-        .eq('message_id', data.message_id);
-
-      if (fetchError) throw fetchError;
-
-      const formattedReactions = reactions.map((r: any) => ({
-        id: r.id,
-        message_id: r.message_id,
-        user_id: r.user_id,
-        emoji: r.emoji,
-        username: r.profiles?.username
-      }));
-
-      io.to(`channel:${data.channel_id}`).emit('reaction_update', {
-        message_id: data.message_id,
-        reactions: formattedReactions
-      });
+      
+      if (insertedReaction) {
+        io.to(`channel:${data.channel_id}`).emit('reaction_added', {
+          message_id: data.message_id,
+          reaction: {
+            id: insertedReaction.id,
+            message_id: data.message_id,
+            user_id: userId,
+            emoji: data.emoji,
+            username: profile?.username
+          }
+        });
+      }
     } catch (error) {
       console.error("Error adding reaction:", error);
     }
@@ -347,25 +349,10 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       if (error) throw error;
 
-      // Fetch updated reactions
-      const { data: reactions, error: fetchError } = await supabase
-        .from('message_reactions')
-        .select('id, message_id, user_id, emoji, profiles(username)')
-        .eq('message_id', data.message_id);
-
-      if (fetchError) throw fetchError;
-
-      const formattedReactions = reactions.map((r: any) => ({
-        id: r.id,
-        message_id: r.message_id,
-        user_id: r.user_id,
-        emoji: r.emoji,
-        username: r.profiles?.username
-      }));
-
-      io.to(`channel:${data.channel_id}`).emit('reaction_update', {
+      io.to(`channel:${data.channel_id}`).emit('reaction_removed', {
         message_id: data.message_id,
-        reactions: formattedReactions
+        user_id: userId,
+        emoji: data.emoji
       });
     } catch (error) {
       console.error("Error removing reaction:", error);

@@ -5,8 +5,41 @@ import { isUserOnline } from '../utils/presence';
 
 const router = express.Router();
 
-// GET /friends/list - Get all accepted friends for the current user
-router.get('/list', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// --- Friendship Endpoints ---
+
+// GET /rooms/users/search - Search for users by username
+router.get('/users/search', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const { q } = req.query;
+  const myId = req.user?.id;
+
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const { data: users, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .ilike('username', `%${q.trim()}%`)
+    .neq('id', myId)
+    .limit(10);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  // Check online status for each user
+  const usersWithPresence = users?.map(u => ({
+    ...u,
+    isOnline: isUserOnline(u.id)
+  }));
+
+  res.json(usersWithPresence || []);
+});
+
+// GET /rooms/friends/list - Get all accepted friends for the current user
+router.get('/friends/list', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
 
   // We query where requester_id = userId AND status = 'accepted'
@@ -37,8 +70,8 @@ router.get('/list', verifyUser, async (req: AuthenticatedRequest, res: Response)
   res.status(200).json(friends);
 });
 
-// GET /friends/pending - Get received pending friend requests
-router.get('/pending', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// GET /rooms/friends/pending - Get received pending friend requests
+router.get('/friends/pending', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
 
   // We query where addressee_id = userId AND status = 'pending'
@@ -69,8 +102,8 @@ router.get('/pending', verifyUser, async (req: AuthenticatedRequest, res: Respon
   res.status(200).json(requests);
 });
 
-// GET /friends/status/:targetId - Get relation status with a specific user
-router.get('/status/:targetId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// GET /rooms/friends/status/:userId - Get relation status with a specific user
+router.get('/friends/status/:targetId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
   const { targetId } = req.params;
 
@@ -106,8 +139,8 @@ router.get('/status/:targetId', verifyUser, async (req: AuthenticatedRequest, re
   }
 });
 
-// POST /friends/request/:addresseeId - Send a friend request
-router.post('/request/:addresseeId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// POST /rooms/friends/request/:addresseeId - Send a friend request
+router.post('/friends/request/:addresseeId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const requesterId = req.user?.id;
   const { addresseeId } = req.params;
 
@@ -140,9 +173,14 @@ router.post('/request/:addresseeId', verifyUser, async (req: AuthenticatedReques
   // Insert single row for pending request
   const { error } = await supabase
     .from('friendships')
-    .upsert([{ requester_id: requesterId, addressee_id: addresseeId, status: 'pending' }]);
+    .insert([{ requester_id: requesterId, addressee_id: addresseeId, status: 'pending' }]);
 
   if (error) {
+    if (error.code === '23505') {
+      // Unique constraint violation means it already exists (either pending or accepted)
+      res.status(200).json({ message: "Friend request already sent" });
+      return;
+    }
     res.status(500).json({ error: error.message });
     return;
   }
@@ -155,8 +193,8 @@ router.post('/request/:addresseeId', verifyUser, async (req: AuthenticatedReques
   res.status(200).json({ message: "Friend request sent" });
 });
 
-// POST /friends/accept/:requesterId - Accept a friend request
-router.post('/accept/:requesterId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// POST /rooms/friends/accept/:requesterId - Accept a friend request
+router.post('/friends/accept/:requesterId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const myId = req.user?.id;
   const { requesterId } = req.params;
 
@@ -190,8 +228,8 @@ router.post('/accept/:requesterId', verifyUser, async (req: AuthenticatedRequest
   res.status(200).json({ message: "Friend request accepted" });
 });
 
-// DELETE /friends/:targetId - Remove a friend or cancel a request
-router.delete('/:targetId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+// DELETE /rooms/friends/:targetId - Remove a friend or cancel a request
+router.delete('/friends/:targetId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const requesterId = req.user?.id;
   const { targetId } = req.params;
 
@@ -213,5 +251,6 @@ router.delete('/:targetId', verifyUser, async (req: AuthenticatedRequest, res: R
 
   res.status(200).json({ message: "Friend removed or request cancelled" });
 });
+
 
 export default router;

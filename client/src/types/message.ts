@@ -15,6 +15,7 @@ export interface Message {
     username: string;
     content: string;
   } | null;
+  temp_id?: string;
 }
 
 export interface MessageReaction {
@@ -44,6 +45,7 @@ export interface SendMessagePayload {
   file_url?: string;
   file_name?: string;
   parent_id?: string | null;
+  temp_id?: string;
 }
 
 export interface ReceiveMessagePayload {
@@ -63,4 +65,5 @@ export interface ReceiveMessagePayload {
     username: string;
     content: string;
   } | null;
+  temp_id?: string;
 }
