@@ -2,7 +2,7 @@ import { getToken } from '../utils/auth';
 import type { Room } from '../types/room';
 import type { User } from '../types/user';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const getRooms = async (): Promise<Room[]> => {
   const token = getToken();
