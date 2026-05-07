@@ -4,11 +4,14 @@ import { io as Client } from 'socket.io-client';
 import * as parser from 'socket.io-msgpack-parser';
 import signIn from '../utils/auth';
 
-const SERVER_URL = 'http://localhost:3001';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const SERVER_URL = process.env.VITE_API_URL;
 
 test('Express Server Health Check', async (t) => {
     try {
-        const response = await fetch(`${SERVER_URL}/health`);
+        const response = await fetch(`${SERVER_URL}/api/health`);
         assert.strictEqual(response.status, 200, 'Health endpoint should return 200 OK');
         
         const data = await response.json();
@@ -23,7 +26,7 @@ test('Express Server Health Check', async (t) => {
 
 test('Integration Health Check', async (t) => {
     try {
-        const response = await fetch(`${SERVER_URL}/health/integration`);
+        const response = await fetch(`${SERVER_URL}/api/health/integration`);
         assert.strictEqual(response.status, 200, 'Integration endpoint should return 200 OK');
         
         const data = await response.json();
