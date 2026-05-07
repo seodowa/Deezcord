@@ -13,7 +13,6 @@ interface SearchSidebarProps {
 
 export default function SearchSidebar({ 
   onSearch, 
-  onNavigate, 
   results, 
   isLoading, 
   onUserClick,

@@ -9,7 +9,6 @@ import HeroFeatureCard from './components/HeroFeatureCard';
 import InviteTeamCard from './components/InviteTeamCard';
 import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
-import SearchSidebar from './components/SearchSidebar';
 import NewUserEmptyState from './components/NewUserEmptyState';
 import MemberProfileModal from '../../components/MemberProfileModal';
 import UserProfileModal from '../../components/UserProfileModal';
@@ -32,10 +31,7 @@ interface HomeContextType {
 const WelcomeDashboard = () => {
   const { 
     user: contextUser, 
-    rooms, 
-    discoverRooms, 
-    joinExistingRoom, 
-    isJoining, 
+    rooms,  
     isLoadingRooms, 
     navigate,
     onLogout: contextLogout

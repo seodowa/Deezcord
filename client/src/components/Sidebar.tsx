@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AsyncButton from './AsyncButton';
 import type { Room, Channel } from '../types/room';
-import UserProfileModal from './UserProfileModal';
 import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
