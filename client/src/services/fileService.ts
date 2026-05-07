@@ -1,6 +1,6 @@
 import { getToken } from '../utils/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const uploadFile = async (roomId: string, channelId: string, file: File): Promise<string> => {
   const token = getToken();
@@ -9,7 +9,7 @@ export const uploadFile = async (roomId: string, channelId: string, file: File):
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/rooms/${roomId}/channels/${channelId}/messages/upload`, {
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels/${channelId}/messages/upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`

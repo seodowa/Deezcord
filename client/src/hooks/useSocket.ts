@@ -5,7 +5,7 @@ import type { Socket } from 'socket.io-client';
 import { getToken } from '../utils/auth';
 import type { MessageReaction } from '../types/message';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_API_URL;
 
 export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
