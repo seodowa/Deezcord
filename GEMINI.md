@@ -92,3 +92,7 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Create a reusable modal component that can be used for anything.
 - [ ] Add Direct Messages (DMs).
 - [ ] Redesign the home page (needs more polish).
+    - [ ] Add recent direct messages to dashboard/homepage.
+- [ ] Server: Refactor roomRoutes.ts (Separate friend system).
+- [ ] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
+

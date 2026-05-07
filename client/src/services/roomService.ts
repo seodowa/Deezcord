@@ -371,3 +371,22 @@ export const removeFriend = async (targetId: string): Promise<void> => {
     throw new Error(data.error || 'Failed to remove friend');
   }
 };
+
+export const searchUsers = async (query: string): Promise<User[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${API_URL}/api/rooms/users/search?q=${encodeURIComponent(query)}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to search users');
+  }
+
+  return data;
+};
