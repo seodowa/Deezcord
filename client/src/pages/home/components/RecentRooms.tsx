@@ -44,15 +44,6 @@ export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoom
     <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">Recent Rooms</h3>
-        <button 
-          onClick={() => onNavigate('/discovery')}
-          className="text-sm font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 group"
-        >
-          View All
-          <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
       </div>
       
       <div className="relative group/carousel -mx-4 px-4">
