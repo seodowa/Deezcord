@@ -49,7 +49,7 @@ export const useSocket = () => {
     }
   }, []);
 
-  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; parent_id?: string | null }) => {
+  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; parent_id?: string | null; temp_id?: string }) => {
     if (socketRef.current) {
       socketRef.current.emit('send_message', data);
     }
@@ -105,18 +105,30 @@ export const useSocket = () => {
         socketRef.current.off('message_deleted', callback);
       }
     };
-  }, [socketRef.current]);
-
-  const onReactionUpdate = useCallback((callback: (data: { message_id: string; reactions: MessageReaction[] }) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on('reaction_update', callback);
-    }
+  }, []);
+const onReactionAdded = useCallback((callback: (data: { message_id: string; reaction: MessageReaction }) => void) => {
+  if (socketRef.current) {
+    socketRef.current.on('reaction_added', callback);
     return () => {
       if (socketRef.current) {
-        socketRef.current.off('reaction_update', callback);
+        socketRef.current.off('reaction_added', callback);
       }
     };
-  }, [socketRef.current]);
+  }
+  return () => {};
+}, []);
+
+const onReactionRemoved = useCallback((callback: (data: { message_id: string; user_id: string; emoji: string }) => void) => {
+  if (socketRef.current) {
+    socketRef.current.on('reaction_removed', callback);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('reaction_removed', callback);
+      }
+    };
+  }
+  return () => {};
+}, []);
 
   const onTyping = useCallback((callback: (data: { room_id: string; channel_id?: string; username: string; isTyping: boolean }) => void) => {
     if (socketRef.current) {
@@ -218,7 +230,8 @@ export const useSocket = () => {
     removeReaction,
     onMessage,
     onMessageDeleted,
-    onReactionUpdate,
+    onReactionAdded,
+    onReactionRemoved,
     onTyping, 
     onPresenceUpdate, 
     onRoomCreated, 
