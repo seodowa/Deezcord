@@ -54,6 +54,8 @@ const WelcomeDashboard = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'friends' | 'search'>('friends');
+
   const isNewUser = rooms.length === 0;
 
   useEffect(() => {
@@ -176,20 +178,8 @@ const WelcomeDashboard = () => {
         </div>
       </div>
 
-      {/* Left Sidebar - Search & Discovery (Not glued to edge) */}
-      <aside className="hidden 2xl:block fixed left-8 top-1/2 -translate-y-1/2 w-[320px] max-h-[85vh] z-40">
-        <SearchSidebar 
-          onSearch={handleUserSearch}
-          onNavigate={navigate}
-          results={searchResults}
-          isLoading={isSearching}
-          onUserClick={handleUserClick}
-          searchQuery={searchQuery}
-        />
-      </aside>
-
-      {/* Right Sidebar - Floating Social Sidebar (Fixed to middle-right edge) */}
-      <aside className="hidden 2xl:block fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] max-h-[85vh] overflow-y-auto scrollbar-none pb-4 z-40">
+      {/* Right Sidebar - Unified Command Center (Social + Search) */}
+      <aside className="hidden 2xl:flex fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] h-[90vh] flex-col z-40 bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 border-r-0 rounded-l-[2.5rem] shadow-2xl shadow-slate-900/5 overflow-hidden">
         <SocialSection 
           user={user}
           onLogout={contextLogout}
@@ -201,6 +191,12 @@ const WelcomeDashboard = () => {
           onDeclineRequest={handleDeclineRequest}
           onUserClick={handleUserClick}
           onNavigate={navigate}
+          activeTab={activeSidebarTab}
+          onTabChange={setActiveSidebarTab}
+          onSearch={handleUserSearch}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          searchQuery={searchQuery}
         />
       </aside>
 

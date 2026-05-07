@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { User } from '../../../types/user';
+import AsyncButton from '../../../components/AsyncButton';
 
 interface SearchSidebarProps {
   onSearch: (query: string) => void;
@@ -26,18 +27,7 @@ export default function SearchSidebar({
   };
 
   return (
-    <div className="flex flex-col h-[600px] max-h-[80vh] rounded-[2.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 shadow-2xl shadow-slate-900/5 overflow-hidden">
-      {/* Search Header */}
-      <div className="px-6 py-5 border-b border-slate-200/50 dark:border-white/5">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-          Find People
-        </h3>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1 uppercase tracking-wider">Search Deezcord users</p>
-      </div>
-
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto scrollbar-none p-6 space-y-6 flex flex-col">
         {/* Search Input Section */}
         <form onSubmit={handleSearch} className="relative group shrink-0">
@@ -50,14 +40,17 @@ export default function SearchSidebar({
             placeholder="Search by username..."
             className="w-full bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium"
           />
-          <button 
-            type="submit"
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-transform"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <AsyncButton 
+              type="submit"
+              isLoading={isLoading}
+              className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-transform"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </AsyncButton>
+          </div>
         </form>
 
         {/* Results Area */}
