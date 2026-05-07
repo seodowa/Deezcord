@@ -38,8 +38,12 @@ export default function MessageInput({
 
   useEffect(() => {
     if (externalFile) {
-      setSelectedFile(externalFile);
-      onClearExternalFile?.();
+      // Defer state update to avoid cascading renders warning
+      const timeoutId = setTimeout(() => {
+        setSelectedFile(externalFile);
+        onClearExternalFile?.();
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [externalFile, onClearExternalFile]);
 
@@ -70,8 +74,9 @@ export default function MessageInput({
           clearTimeout(typingTimeoutRef.current);
         }
         isTypingRef.current = false;
-      } catch (error: any) {
-        addToast(error.message || 'Failed to upload file', 'error');
+      } catch (error: unknown) {
+        const err = error as Error;
+        addToast(err.message || 'Failed to upload file', 'error');
       } finally {
         setIsUploading(false);
       }

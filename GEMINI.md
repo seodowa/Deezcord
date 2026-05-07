@@ -76,14 +76,19 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - `client/src/components/Sidebar.tsx`: Room and channel navigation sidebar.
 
 ## TODOs / Future Enhancements
+- [x] Integrate Login/Register pages with the backend.
+- [x] Setup protected routes and global 404 handling.
+- [ ] Create email verification page.
+- [ ] Create MFA modal.
 - [x] Implement full message persistence on the frontend.
-- [x] Complete the integration of the Login/Register pages with the backend.
 - [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
-- [x] Implement user profiles and avatars (Basic implementation in members list).
-- [x] Implement room ownership and membership.
+- [x] Implement user profiles, avatars, and presence tracking.
+- [x] Implement room ownership, membership, and settings.
+- [x] Implement room deletion feature for room owners (with real-time updates).
 - [x] Redesign Sidebar to "Unified Glass" aesthetic with squircle icons.
 - [x] Integrate and refine brand logo (Logo.png) across all application pages.
 - [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
-- [x] Implement room deletion feature for room owners (with confirmation and real-time updates).
 - [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
-- [ ] Create a reusable modal component that can be used for anything.
+- [x] Create a reusable modal component that can be used for anything.
+- [ ] Add Direct Messages (DMs).
+- [ ] Redesign the home page (needs more polish).

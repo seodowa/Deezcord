@@ -1,16 +1,27 @@
 import { useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router-dom';
 import AsyncButton from '../../components/AsyncButton';
 import { generateSlug } from '../../utils/slug';
+import type { Room } from '../../types/room';
+
+interface HomeContextType {
+  discoverRooms: Room[];
+  isLoadingDiscover: boolean;
+  fetchDiscoverRooms: () => void;
+  joinExistingRoom: (room: Room) => Promise<Room>;
+  isJoining: boolean;
+  navigate: NavigateFunction;
+}
 
 export default function DiscoveryPage() {
-  const { discoverRooms, isLoadingDiscover, fetchDiscoverRooms, joinExistingRoom, isJoining, navigate } = useOutletContext<any>();
+  const { discoverRooms, isLoadingDiscover, fetchDiscoverRooms, joinExistingRoom, isJoining, navigate } = useOutletContext<HomeContextType>();
 
   useEffect(() => {
     fetchDiscoverRooms();
   }, [fetchDiscoverRooms]);
 
-  const handleJoinRoom = async (room: any) => {
+  const handleJoinRoom = async (room: Room) => {
     try {
       const updatedRoom = await joinExistingRoom(room);
       navigate(`/${generateSlug(updatedRoom.name)}`, { state: { roomId: updatedRoom.id } });
@@ -35,7 +46,7 @@ export default function DiscoveryPage() {
           </div>
         ) : discoverRooms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {discoverRooms.map((room: any) => (
+            {discoverRooms.map((room) => (
               <div key={room.id} className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-500 flex flex-col justify-between ${
                 room.isNew ? 'animate-fade-in-up ring-2 ring-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-900/10' : ''
               }`}>
@@ -72,3 +83,4 @@ export default function DiscoveryPage() {
     </div>
   );
 }
+

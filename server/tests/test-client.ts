@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import * as parser from "socket.io-msgpack-parser";
 import supabase from '../config/supabaseClient';
 import signIn from "../utils/auth";
 import readline from 'readline';
@@ -14,7 +15,15 @@ async function main() {
     const token = await signIn(process.env.email || '', process.env.password || '');
     console.log(token);
     const socket = io("http://localhost:3001", {
-      auth: { token }
+      auth: { token },
+      transports: ["websocket", "polling"],
+      timeout: 20000,
+      reconnectionAttempts: 5,
+      parser,
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error(`\n[!] Connection error: ${err.message}`);
     });
 
     const { data: roomData, error: roomError } = await supabase

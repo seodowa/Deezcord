@@ -63,19 +63,19 @@ The client frontend is under active development, focusing heavily on a responsiv
 
 
 ## Task List
-- [x] Connect login page to auth service.
-- [x] Setup protected routes
-- [ ] Create email verification page
-- [ ] Create MFA modal
-- [x] Integrate Sidebar with backend `GET /rooms` & `POST /rooms`
-- [x] Create chat page / Real-time messaging
-- [x] Create chat page / Real-time messaging
-- [x] Turn current sidebar into sidebar component
-- [x] Redesign Sidebar to "Unified Glass" aesthetic with squircle icons
-- [x] Implement Room Settings and Member Management
-- [x] Add Typing Indicators and Presence Tracking
-- [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages)
-- [x] Integrate and refine brand logo (Logo.png) across all application pages
-- [x] Add real-time room/channel creation updates to the sidebar (Socket.io)
-- [ ] Redesign Chat area to match Unified Glass aesthetic
-- [ ] Create a reusable modal component that can be used for anything.
+- [x] Integrate Login/Register pages with the backend.
+- [x] Setup protected routes and global 404 handling.
+- [ ] Create email verification page.
+- [ ] Create MFA modal.
+- [x] Implement full message persistence on the frontend.
+- [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
+- [x] Implement user profiles, avatars, and presence tracking.
+- [x] Implement room ownership, membership, and settings.
+- [x] Implement room deletion feature for room owners (with real-time updates).
+- [x] Redesign Sidebar to "Unified Glass" aesthetic with squircle icons.
+- [x] Integrate and refine brand logo (Logo.png) across all application pages.
+- [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
+- [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
+- [x] Create a reusable modal component that can be used for anything.
+- [ ] Add Direct Messages (DMs).
+- [ ] Redesign the home page (needs more polish).

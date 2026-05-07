@@ -3,7 +3,7 @@ import { getToken } from '../utils/auth';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const registerUser = async (username: string, email: string, password: string) => {
-  const response = await fetch(`${API_URL}/auth/register`, {
+  const response = await fetch(`${API_URL}/api/auth/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -24,7 +24,7 @@ export const getCurrentUser = async () => {
   const token = getToken();
   if (!token) throw new Error('No token found');
 
-  const response = await fetch(`${API_URL}/auth/me`, {
+  const response = await fetch(`${API_URL}/api/auth/me`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -47,7 +47,7 @@ export const updateProfile = async (username?: string, file?: File | null) => {
   if (username) formData.append('username', username);
   if (file) formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/auth/profile`, {
+  const response = await fetch(`${API_URL}/api/auth/profile`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -68,7 +68,7 @@ export const updatePassword = async (password: string) => {
   const token = getToken();
   if (!token) throw new Error('No token found');
 
-  const response = await fetch(`${API_URL}/auth/password`, {
+  const response = await fetch(`${API_URL}/api/auth/password`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -87,7 +87,7 @@ export const updatePassword = async (password: string) => {
 };
 
 export const loginUser = async (identifier: string, password: string) => {
-  const response = await fetch(`${API_URL}/auth/login`, {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -113,7 +113,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   }, [onMessageDeleted, channelId]);
 
   useEffect(() => {
-    const unsubscribe = onReactionUpdate((data: any) => {
+    const unsubscribe = onReactionUpdate((data) => {
       setMessages(prev => prev.map(msg => {
         if (msg.id === data.message_id) {
           return { ...msg, reactions: data.reactions };
@@ -163,7 +163,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         user_id: user?.id || null,
         room_id: roomId,
         channel_id: channelId,
-        username: user?.username || user?.email.split('@')[0] || 'Me',
+        username: user?.username || user?.email?.split('@')[0] || 'Me',
         content,
         created_at: new Date().toISOString(),
         avatar_url: user?.avatar_url,

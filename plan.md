@@ -1,71 +1,63 @@
-# Impeccable Design Brief: Route-Driven Home Architecture Refactor
+# Impeccable Design Brief: Welcome Dashboard Redesign
 
 `IMPECCABLE_PREFLIGHT: context=pass product=pass command_reference=pass shape=pass image_gate=skipped:plan-mode mutation=open`
 
 ## 1. Architectural Summary
-Refactor the monolithic `Home.tsx` into a modular, route-driven architecture using React Router. This transitions Deezcord from "state-driven rendering" (where a single massive component manages all views via local state) to a robust "layout-first" paradigm.
+Refactor the initial landing experience (`WelcomePage.tsx`) from a static hero banner into a dynamic, personalized "Dashboard". Crucially, when the user is on this dashboard, the primary `Sidebar.tsx` will collapse to display *only* the unified rail (room icons), allowing the dashboard to take over the entire remaining viewport.
 
 ## 2. Primary User Action
-Navigate seamlessly between distinct contexts (Discovery, Chat, Settings) utilizing native browser navigation (back/forward buttons) while maintaining a persistent, stable application shell (Sidebar and Headers) without full-page re-renders.
+Serve as mission control immediately after login. Users can check their friend statuses, manage pending requests, search for new users, and review recent activity, all before deep-linking into specific room communications.
 
 ## 3. Design Direction & Register
-- **Register:** Product. This is a highly interactive communication tool.
-- **Theme via Scene:** A user managing multiple active conversations, clicking from a general discovery view directly deep-linking into a specific `#general` channel without losing their place or experiencing a flash of unstyled content. The "Unified Glass" shell remains anchored while the core view slides in.
-- **Color Strategy:** Restrained. The navigation shell utilizes tinted glass (`bg-white/40 dark:bg-slate-800/40`), reserving the primary Electric Blue only for active states and critical calls to action within the routed views.
+- **Register:** Product. This is an operational dashboard.
+- **Theme via Scene:** A user firing up Deezcord for the day, needing a quick snapshot of who is online, who wants to connect, and what happened recently.
+- **Color Strategy:** Restrained. Heavy reliance on tinted glass (`bg-white/40 dark:bg-slate-800/40`), intense background blur (`backdrop-blur-xl`), and squircle geometry (`rounded-[2.5rem]`). Active calls-to-action and primary metrics will leverage the electric blue/indigo brand gradients.
+- **Structural Integrity:** Everything must be containerized. No floating elements. Each functional section (Friends, Requests, Activity) lives within its own glass "card" with consistent padding and inner rhythm.
 
 ## 4. Scope
-- **Fidelity:** Production-ready structural refactor.
-- **Breadth:** Complete overhaul of `client/src/pages/Home.tsx`, extraction of view sub-components into `client/src/pages/home/`, creation of `HomeLayout.tsx`, and updates to `App.tsx` routing.
-- **Interactivity:** Smooth transitions between `<Outlet />` pages, stable sidebar context.
+- **Fidelity:** Production-ready UI overhaul.
+- **Component 1 (`Sidebar.tsx`):** Conditionally render the secondary panel (`w-[312px]`) so it hides when on the root path `/`, leaving only the `68px` rail.
+- **Component 2 (`HomeLayout.tsx`):** Ensure the layout gracefully expands the `<main>` container when the sidebar collapses.
+- **Component 3 (`WelcomePage.tsx`):** Complete structural rewrite using CSS Grid to organize the required modules:
+  - Personalized Greeting Header
+  - Global User Search Bar
+  - Friends List (transferred from Sidebar)
+  - Pending Requests (transferred from Sidebar)
+  - Recent Activity Feed
 
 ## 5. Structural Strategy
 
-### The Persistent Shell (Layout)
-- **`client/src/layouts/HomeLayout.tsx`**
-  - Manages the overarching `div.h-screen.flex`.
-  - Renders the background gradient and decorative glowing orbs.
-  - Hosts the `Sidebar` and the mobile/desktop Headers.
-  - Contains the `react-router-dom` `<Outlet />` for rendering dynamic nested routes within the main content area.
-  - Hoists essential state (`rooms`, `channels`, user status) via context or props to ensure the Sidebar remains populated regardless of the current sub-route.
+### The Dynamic Grid (`WelcomePage.tsx`)
+We will utilize a responsive asymmetric grid (e.g., `grid-cols-1 lg:grid-cols-3`):
 
-### The Dynamic Routes (Pages)
-- **`client/src/pages/home/WelcomePage.tsx` (`/home`)**
-  - The initial landing screen with branding and feature highlights.
-- **`client/src/pages/home/DiscoveryPage.tsx` (`/home/discovery`)**
-  - The grid of available communities to join.
-- **`client/src/pages/home/RoomPage.tsx` (`/home/rooms/:roomId`)**
-  - Handles the "Private Room" gate (join prompt) if the user is not a member. If they are a member, redirects to their last active channel or the first available channel.
-- **`client/src/pages/home/ChatPage.tsx` (`/home/rooms/:roomId/channels/:channelId`)**
-  - The core messaging interface. Instantiates `useChat` specific to the URL parameters.
-- **`client/src/pages/home/SettingsPage.tsx` (`/home/rooms/:roomId/settings`)**
-  - Room management interface for owners/members.
+1. **Header & Search (Top Full-Width):**
+   - **Greeting:** Time-aware ("Good Morning, [Name]") with prominent typography.
+   - **Search Bar:** A prominent, containerized input centered or aligned right, specifically dedicated to looking up other users to send friend requests.
+
+2. **Main Feed Column (`lg:col-span-2`):**
+   - **Recent Activity Container:** A glass card displaying a timeline or grid of recently visited rooms (using the existing `rooms` data or a cached history).
+
+3. **Social Column (`lg:col-span-1`):**
+   - **Friends List Container:** A scrollable glass list showing friends categorized by Online/Offline. Avatar, name, and quick-action buttons.
+   - **Pending Requests Container:** Distinct cards for inbound/outbound friend requests with immediate Accept/Decline actions.
 
 ## 6. Migration Plan
 
-### Phase 1: Foundation
-1. Create `client/src/layouts/HomeLayout.tsx`. Extract the background, Sidebar, and Headers from the current `Home.tsx` into this layout.
-2. Replace the main content area in the layout with an `<Outlet />`.
-3. Set up a lightweight context (e.g., `HomeContext.tsx` or expand `useRooms`) if necessary to pass Sidebar-driving state down without prop-drilling through the layout.
+### Phase 1: Layout & Sidebar Collapse
+1. Modify `client/src/components/Sidebar.tsx` to detect if `currentRoomId` is null (or if we are on the root route). If so, apply CSS classes to collapse the secondary channel/friends panel (`w-0`, `opacity-0`).
+2. Adjust `client/src/layouts/HomeLayout.tsx` to ensure smooth width transitions for the `<main>` content area.
 
-### Phase 2: Page Extraction
-1. Create `WelcomePage.tsx` containing the branding hero UI.
-2. Create `DiscoveryPage.tsx` containing the `discoverRooms` fetching and rendering logic.
-3. Create `ChatPage.tsx` moving `MessageList` and `MessageInput` and the `useChat` instantiation here.
-4. Create `RoomPage.tsx` (the "Join" gate) and `SettingsPage.tsx`.
+### Phase 2: Logic Relocation
+1. Extract the `friendsList`, `pendingList`, and related fetching/accept/decline logic currently residing in `Sidebar.tsx`.
+2. Re-implement this state and logic inside `WelcomePage.tsx`.
 
-### Phase 3: Routing Integration
-1. Modify `client/src/App.tsx` to implement nested routes under `/home`:
-   ```tsx
-   <Route path="/home" element={<HomeLayout />}>
-     <Route index element={<WelcomePage />} />
-     <Route path="discovery" element={<DiscoveryPage />} />
-     <Route path="rooms/:roomId" element={<RoomPage />} />
-     <Route path="rooms/:roomId/channels/:channelId" element={<ChatPage />} />
-     <Route path="rooms/:roomId/settings" element={<SettingsPage />} />
-   </Route>
-   ```
+### Phase 3: Dashboard Implementation
+1. Construct the grid layout in `WelcomePage.tsx`.
+2. Build the **Header & Search Bar** component.
+3. Build the containerized **Friends List** and **Pending Requests** sections.
+4. Build the **Recent Activity** placeholder/feed.
 
-### Phase 4: Clean up & Validation
-1. Update `Sidebar` navigation links to use `react-router-dom`'s `<Link>` or `useNavigate` instead of state setters.
-2. Delete the old `Home.tsx` monolith.
-3. Audit for broken styles, test deep linking to a specific channel, and verify mobile responsive behavior.
+### Phase 4: Polish
+1. Apply the "Unified Glass" styling (blurs, specific rounded corners, subtle borders).
+2. Ensure animations (like `animate-fade-in-up`) trigger correctly on page load.
+3. Verify responsive stacking on mobile devices.

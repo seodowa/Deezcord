@@ -56,11 +56,22 @@ router.get('/integration', async (req: Request, res: Response) => {
     if (roomError) throw new Error(`Failed to create test room: ${roomError.message}`);
     createdRoomId = roomData.id;
 
-    // 3. Test INSERT (Message)
+    // 3. Test INSERT (Channel)
+    const { data: channelData, error: channelError } = await supabase
+      .from('channels')
+      .insert([{ room_id: createdRoomId, name: 'general', type: 'text' }])
+      .select()
+      .single();
+
+    if (channelError) throw new Error(`Failed to create test channel: ${channelError.message}`);
+    const createdChannelId = channelData.id;
+
+    // 4. Test INSERT (Message)
     const { error: msgError } = await supabase
       .from('messages')
       .insert([{
         room_id: createdRoomId,
+        channel_id: createdChannelId,
         username: 'health_bot',
         content: 'Automated integration test message.'
       }]);

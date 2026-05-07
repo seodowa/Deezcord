@@ -54,7 +54,7 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
         Cancel
       </button>
       <AsyncButton
-        onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
+        onClick={(e) => { e.preventDefault(); handleSubmit(e as unknown as React.FormEvent); }}
         disabled={!name.trim()}
         isLoading={isLoading}
         loadingText="Creating..."
@@ -142,3 +142,4 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
     </Modal>
   );
 }
+

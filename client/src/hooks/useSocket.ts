@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import msgpackParser from "socket.io-msgpack-parser";
 import type { Socket } from 'socket.io-client';
 import { getToken } from '../utils/auth';
+import type { MessageReaction } from '../types/message';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -106,7 +107,7 @@ export const useSocket = () => {
     };
   }, []);
 
-  const onReactionUpdate = useCallback((callback: (data: any) => void) => {
+  const onReactionUpdate = useCallback((callback: (data: { message_id: string; reactions: MessageReaction[] }) => void) => {
     if (socketRef.current) {
       socketRef.current.on('reaction_update', callback);
     }
