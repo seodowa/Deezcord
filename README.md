@@ -9,3 +9,5 @@ This project serves as our Performance Innovative Task in the course Parallel an
 - HyuseCS - Christian John Legaspi
 - seodowa - Theodore Pagalan
 - Peruereee  - Carl Dominic Rejas
+
+test commit to see if runner works
