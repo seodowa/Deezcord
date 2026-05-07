@@ -58,7 +58,7 @@ const WelcomeDashboard = () => {
     const fetchFriends = async () => {
       setIsLoadingFriends(true);
       try {
-        const { getFriendsList, getPendingFriends } = await import('../../services/roomService');
+        const { getFriendsList, getPendingFriends } = await import('../../services/friendService');
         const [friendsData, pendingData] = await Promise.all([
           getFriendsList(),
           getPendingFriends()
@@ -83,7 +83,7 @@ const WelcomeDashboard = () => {
 
     setIsSearching(true);
     try {
-      const { searchUsers } = await import('../../services/roomService');
+      const { searchUsers } = await import('../../services/userService');
       const results = await searchUsers(query);
       setSearchResults(results);
     } catch (err) {
@@ -95,7 +95,7 @@ const WelcomeDashboard = () => {
 
   const handleAcceptRequest = async (requesterId: string) => {
     try {
-      const { acceptFriend } = await import('../../services/roomService');
+      const { acceptFriend } = await import('../../services/friendService');
       await acceptFriend(requesterId);
       const acceptedFriend = pendingList.find(p => p.id === requesterId);
       if (acceptedFriend) {
@@ -109,7 +109,7 @@ const WelcomeDashboard = () => {
 
   const handleDeclineRequest = async (requesterId: string) => {
     try {
-      const { removeFriend } = await import('../../services/roomService');
+      const { removeFriend } = await import('../../services/friendService');
       await removeFriend(requesterId);
       setPendingList(prev => prev.filter(p => p.id !== requesterId));
     } catch (err) {
@@ -123,7 +123,7 @@ const WelcomeDashboard = () => {
   };
 
   const handleRefreshFriends = async () => {
-    const { getFriendsList } = await import('../../services/roomService');
+    const { getFriendsList } = await import('../../services/friendService');
     const friendsData = await getFriendsList();
     setFriendsList(friendsData);
   };

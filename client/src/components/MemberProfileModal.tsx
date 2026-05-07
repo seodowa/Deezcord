@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { useToast } from '../hooks/useToast';
-import { getFriendStatus, requestFriend, acceptFriend, removeFriend } from '../services/roomService';
+import { getFriendStatus, requestFriend, acceptFriend, removeFriend } from '../services/friendService';
 import type { User } from '../types/user';
 
 interface MemberProfileModalProps {

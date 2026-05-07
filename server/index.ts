@@ -10,6 +10,8 @@ import msgpackParser from "socket.io-msgpack-parser";
 // 1. Import our separated modules
 import supabase from './config/supabaseClient';
 import roomRoutes from './routes/roomRoutes';
+import friendRoutes from './routes/friendRoutes';
+import userRoutes from './routes/userRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
 import { ReceiveMessagePayload } from './types/socket';
@@ -29,8 +31,10 @@ app.use(express.static(clientDistPath));
 
 // 2. Tell Express to use the routes we separated
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Redirect root to /rooms
 app.get('/api', (req: Request, res: Response) => {
