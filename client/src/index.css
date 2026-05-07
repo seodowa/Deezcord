@@ -83,3 +83,70 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Neutralize Browser Autofill Styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #0f172a !important; /* slate-900 */
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-text-fill-color: #f8fafc !important; /* slate-50 */
+}
+
+/* Specifically prevent checkbox and label darkening */
+input[type="checkbox"] {
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.dark input[type="checkbox"] {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+input[type="checkbox"]:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="checkbox"]:-webkit-autofill {
+  filter: none !important;
+  -webkit-box-shadow: 0 0 0 100px rgba(255, 255, 255, 0.05) inset !important;
+  accent-color: #3b82f6 !important; /* blue-500 */
+}
+
+.dark input[type="checkbox"]:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px rgba(255, 255, 255, 0.02) inset !important;
+}
+
+input {
+  color-scheme: light dark;
+}

@@ -4,9 +4,10 @@ interface WelcomeHeaderProps {
   user: User | null;
   roomCount: number;
   isNewUser: boolean;
+  isLoading?: boolean;
 }
 
-export default function WelcomeHeader({ user, roomCount, isNewUser }: WelcomeHeaderProps) {
+export default function WelcomeHeader({ user, roomCount, isNewUser, isLoading }: WelcomeHeaderProps) {
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -27,7 +28,9 @@ export default function WelcomeHeader({ user, roomCount, isNewUser }: WelcomeHea
           )}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 font-medium max-w-lg">
-          {isNewUser ? (
+          {isLoading ? (
+            "Getting your rooms ready..."
+          ) : isNewUser ? (
             "Your open channel for real-time communication. Start by joining a community or creating your own."
           ) : (
             <>It's great to see you again! You have <span className="text-slate-900 dark:text-slate-200 font-bold">{roomCount} rooms</span> active right now.</>

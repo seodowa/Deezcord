@@ -52,7 +52,7 @@ const WelcomeDashboard = () => {
 
   const [activeSidebarTab, setActiveSidebarTab] = useState<'friends' | 'search'>('friends');
 
-  const isNewUser = rooms.length === 0;
+  const isNewUser = !isLoadingRooms && rooms.length === 0;
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -140,6 +140,7 @@ const WelcomeDashboard = () => {
               user={user} 
               roomCount={rooms.length} 
               isNewUser={isNewUser} 
+              isLoading={isLoadingRooms}
             />
 
             <div className="space-y-16">
