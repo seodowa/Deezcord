@@ -83,7 +83,7 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
       } else {
         addToast('Failed to start conversation.', 'error');
       }
-    } catch (error) {
+    } catch {
       addToast('An error occurred.', 'error');
     } finally {
       setIsMessageLoading(false);

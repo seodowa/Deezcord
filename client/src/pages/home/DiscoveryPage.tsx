@@ -35,7 +35,7 @@ export default function DiscoveryPage() {
     onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
 
-  const { createDM } = useDMs();
+  const { createDM, dms, isLoading: isLoadingDMs } = useDMs();
   const { addToast } = useToast();
 
   const {
@@ -69,9 +69,15 @@ export default function DiscoveryPage() {
       } else {
         addToast('Failed to start conversation.', 'error');
       }
-    } catch (error) {
+    } catch {
       addToast('An error occurred.', 'error');
     }
+  };
+
+  const handleDMClick = (dm: Room) => {
+    navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
+      state: { roomId: dm.id, channelId: dm.defaultChannelId } 
+    });
   };
 
   useEffect(() => {
@@ -160,6 +166,9 @@ export default function DiscoveryPage() {
           searchResults={searchResults}
           isSearching={isSearching}
           searchQuery={searchQuery}
+          dmList={dms}
+          isLoadingDMs={isLoadingDMs}
+          onDMClick={handleDMClick}
         />
       </aside>
 

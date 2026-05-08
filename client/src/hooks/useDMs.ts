@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { getToken } from '../utils/auth';
+import { saveDMs, loadDMs } from '../utils/persistence';
 import type { Room } from '../types/room';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -12,11 +13,19 @@ export function useDMs() {
   const token = getToken();
   const { onDMCreated } = useSocket();
 
+  useEffect(() => {
+    loadDMs().then((cached) => {
+      if (cached && cached.length > 0) {
+        setDms(cached as Room[]);
+        setIsLoading(false);
+      }
+    });
+  }, []);
+
   const fetchDMs = useCallback(async () => {
     if (!token) return;
 
     try {
-      setIsLoading(true);
       setError(null);
       const response = await fetch(`${API_URL}/api/dms`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -24,14 +33,16 @@ export function useDMs() {
       if (!response.ok) throw new Error('Failed to fetch DMs');
       const data = await response.json();
       setDms(data);
-    } catch (err: any) {
-      setError(err.message);
+      saveDMs(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setIsLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDMs();
   }, [fetchDMs]);
 
@@ -59,7 +70,7 @@ export function useDMs() {
       }
 
       return { room: data, channelId: data.defaultChannelId };
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       return null;
     }

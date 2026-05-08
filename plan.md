@@ -1,63 +1,90 @@
-# Impeccable Design Brief: Welcome Dashboard Redesign
+# Impeccable Design Brief: Unified Social & Messages List
 
 `IMPECCABLE_PREFLIGHT: context=pass product=pass command_reference=pass shape=pass image_gate=skipped:plan-mode mutation=open`
 
 ## 1. Architectural Summary
-Refactor the initial landing experience (`WelcomePage.tsx`) from a static hero banner into a dynamic, personalized "Dashboard". Crucially, when the user is on this dashboard, the primary `Sidebar.tsx` will collapse to display *only* the unified rail (room icons), allowing the dashboard to take over the entire remaining viewport.
+We are refining the `SocialSection` component to serve as the unified command center for both friends and Direct Messages (DMs) when the user is on the `WelcomeDashboard`. Instead of forcing the user to switch between a "Friends" tab and a "Messages" tab, we will implement a **Unified Social List**.
 
-## 2. Primary User Action
-Serve as mission control immediately after login. Users can check their friend statuses, manage pending requests, search for new users, and review recent activity, all before deep-linking into specific room communications.
+This unified list will establish a clear visual hierarchy:
+1. **Recent Conversations:** Users with whom the client has an active DM history (prioritized at the top).
+2. **Active Friends:** Online friends without a recent DM.
+3. **Offline Friends:** Offline friends without a recent DM.
 
-## 3. Design Direction & Register
-- **Register:** Product. This is an operational dashboard.
-- **Theme via Scene:** A user firing up Deezcord for the day, needing a quick snapshot of who is online, who wants to connect, and what happened recently.
-- **Color Strategy:** Restrained. Heavy reliance on tinted glass (`bg-white/40 dark:bg-slate-800/40`), intense background blur (`backdrop-blur-xl`), and squircle geometry (`rounded-[2.5rem]`). Active calls-to-action and primary metrics will leverage the electric blue/indigo brand gradients.
-- **Structural Integrity:** Everything must be containerized. No floating elements. Each functional section (Friends, Requests, Activity) lives within its own glass "card" with consistent padding and inner rhythm.
+This aligns with the **Unified Glass** aesthetic by reducing interaction friction and maximizing context density without overwhelming the user.
 
-## 4. Scope
-- **Fidelity:** Production-ready UI overhaul.
-- **Component 1 (`Sidebar.tsx`):** Conditionally render the secondary panel (`w-[312px]`) so it hides when on the root path `/`, leaving only the `68px` rail.
-- **Component 2 (`HomeLayout.tsx`):** Ensure the layout gracefully expands the `<main>` container when the sidebar collapses.
-- **Component 3 (`WelcomePage.tsx`):** Complete structural rewrite using CSS Grid to organize the required modules:
-  - Personalized Greeting Header
-  - Global User Search Bar
-  - Friends List (transferred from Sidebar)
-  - Pending Requests (transferred from Sidebar)
-  - Recent Activity Feed
+## 2. Component Modifications
 
-## 5. Structural Strategy
+### A. `persistence.ts` & Caching
 
-### The Dynamic Grid (`WelcomePage.tsx`)
-We will utilize a responsive asymmetric grid (e.g., `grid-cols-1 lg:grid-cols-3`):
+To prevent constant refetching and ensure instant load times when navigating:
+1. **New Cache Keys:** Add a `DMS_CACHE_KEY` constant.
+2. **New Methods:** Implement `saveDMs(dms: Room[])` and `loadDMs(): Promise<Room[]>` alongside the existing room/channel cache methods.
+3. **Clear Cache:** Update `clearMessageCache` to include the `DMS_CACHE_KEY`.
 
-1. **Header & Search (Top Full-Width):**
-   - **Greeting:** Time-aware ("Good Morning, [Name]") with prominent typography.
-   - **Search Bar:** A prominent, containerized input centered or aligned right, specifically dedicated to looking up other users to send friend requests.
+### B. `useDMs.ts`
 
-2. **Main Feed Column (`lg:col-span-2`):**
-   - **Recent Activity Container:** A glass card displaying a timeline or grid of recently visited rooms (using the existing `rooms` data or a cached history).
+Integrate caching into the data-fetching hook:
+1. On initial mount, call `loadDMs()`. If cached data exists, immediately set `dms` state and turn off `isLoading`.
+2. Proceed with the background fetch (`fetchDMs()`) to get the latest state.
+3. When `fetchDMs` receives new data, call `saveDMs()` to persist it and update the state.
 
-3. **Social Column (`lg:col-span-1`):**
-   - **Friends List Container:** A scrollable glass list showing friends categorized by Online/Offline. Avatar, name, and quick-action buttons.
-   - **Pending Requests Container:** Distinct cards for inbound/outbound friend requests with immediate Accept/Decline actions.
+### C. `SocialSection.tsx`
 
-## 6. Migration Plan
+**1. Props Update:**
+Extend `SocialSectionProps` to accept DM-related data:
+- `dmList: Room[]`
+- `isLoadingDMs: boolean`
+- `onDMClick: (dm: Room) => void`
 
-### Phase 1: Layout & Sidebar Collapse
-1. Modify `client/src/components/Sidebar.tsx` to detect if `currentRoomId` is null (or if we are on the root route). If so, apply CSS classes to collapse the secondary channel/friends panel (`w-0`, `opacity-0`).
-2. Adjust `client/src/layouts/HomeLayout.tsx` to ensure smooth width transitions for the `<main>` content area.
+**2. List Generation Logic:**
+Inside the component, we will compute the distinct groups to avoid duplicate entries.
+- `dmUserIds`: Extract the target user IDs from `dmList`.
+- `otherOnlineFriends`: Filter `friendsList` for `isOnline === true` AND `id` not in `dmUserIds`.
+- `otherOfflineFriends`: Filter `friendsList` for `isOnline === false` AND `id` not in `dmUserIds`.
 
-### Phase 2: Logic Relocation
-1. Extract the `friendsList`, `pendingList`, and related fetching/accept/decline logic currently residing in `Sidebar.tsx`.
-2. Re-implement this state and logic inside `WelcomePage.tsx`.
+**3. Render Hierarchy (Friends Tab):**
+The `friends` tab will now render multiple distinct sections in a continuous scrollable column:
+- **Pending Requests:** (Existing logic, renders at the very top if `pendingList.length > 0`).
+- **Recent Conversations:** Renders the `dmList`.
+  - Uses a prominent label (e.g., "Recent Conversations").
+  - Click action triggers `onDMClick`.
+  - Shows online status via the target user's profile.
+- **Active Friends:** Renders `otherOnlineFriends`.
+  - Uses the existing layout but only shows friends not already listed above.
+- **Offline Friends:** Renders `otherOfflineFriends`.
+  - Visually distinct (e.g., slightly lower opacity for avatars) to maintain hierarchy.
 
-### Phase 3: Dashboard Implementation
-1. Construct the grid layout in `WelcomePage.tsx`.
-2. Build the **Header & Search Bar** component.
-3. Build the containerized **Friends List** and **Pending Requests** sections.
-4. Build the **Recent Activity** placeholder/feed.
+**4. Tab Structure:**
+The 2-tab structure ("Friends", "Search") remains intact, ensuring a clean and focused navigation header.
 
-### Phase 4: Polish
-1. Apply the "Unified Glass" styling (blurs, specific rounded corners, subtle borders).
-2. Ensure animations (like `animate-fade-in-up`) trigger correctly on page load.
-3. Verify responsive stacking on mobile devices.
+### B. `WelcomeDashboard.tsx`
+
+**1. Data Fetching:**
+- Destructure `dms` and `isLoading` (aliased to `isLoadingDMs`) from the existing `useDMs()` hook call.
+
+**2. Prop Drilling:**
+- Pass the new props to the `SocialSection` components (both desktop and mobile variants):
+  - `dmList={dms}`
+  - `isLoadingDMs={isLoadingDMs}`
+  - `onDMClick={(dm) => navigate(...)}`
+
+## 3. Design Register & Styling (Impeccable Standards)
+
+- **Register:** Product Dashboard.
+- **Theme via Scene:** A user seeking rapid context on active conversations and available friends immediately upon login.
+- **Styling Rules Applied:**
+  - **No side-stripe borders:** Selection states will use subtle background tints (`bg-indigo-500/10`) and full rounded outlines (`rounded-2xl`).
+  - **Hierarchy via scale & weight:** Section headers ("Recent Conversations", "Active Friends") will use uppercase tracking (`tracking-[0.2em]`) and `font-extrabold` to act as strong visual dividers without needing structural borders.
+  - **Glassmorphism restraint:** The lists themselves will use hover background tints (`hover:bg-white/60 dark:hover:bg-slate-700/40`) rather than individually blurred cards to maintain performance and avoid "glass soup."
+
+## 4. Execution Steps
+1. Update `SocialSectionProps` in `client/src/pages/home/components/SocialSection.tsx`.
+2. Implement the derived list logic (`dmUserIds`, `otherOnlineFriends`, `otherOfflineFriends`).
+3. Update the JSX return for `activeTab === 'friends'` to render the new hierarchy.
+4. Update `client/src/pages/home/WelcomeDashboard.tsx` to pass the necessary DM props to the `SocialSection` instances.
+5. Update `client/src/pages/home/DiscoveryPage.tsx` to pass the same props to its `SocialSection` instances (to prevent TypeScript errors and ensure consistency).
+
+## 5. Verification
+- Confirm that users appearing in "Recent Conversations" do not duplicate in "Active Friends" or "Offline Friends".
+- Confirm that clicking a DM in the social sidebar correctly navigates to the chat room.
+- Confirm mobile/tablet sidebar layout remains intact.

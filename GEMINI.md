@@ -92,9 +92,18 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
 - [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
 - [x] Create a reusable modal component that can be used for anything.
-- [x] Add Direct Messages (DMs).
+- [ ] Add Direct Messages (DMs).
 - [ ] Redesign the home page (needs more polish).
     - [ ] Add recent direct messages to dashboard/homepage.
 - [x] Server: Refactor roomRoutes.ts (Separate domain routes into specialized files).
 - [x] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
 
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
+- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

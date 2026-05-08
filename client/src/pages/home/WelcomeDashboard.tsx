@@ -44,7 +44,7 @@ const WelcomeDashboard = () => {
 
   const { user: authUser } = useAuth();
   const user = authUser || contextUser;
-  const { createDM } = useDMs();
+  const { createDM, dms, isLoading: isLoadingDMs } = useDMs();
   const { addToast } = useToast();
 
   const {
@@ -78,9 +78,15 @@ const WelcomeDashboard = () => {
       } else {
         addToast('Failed to start conversation.', 'error');
       }
-    } catch (error) {
+    } catch {
       addToast('An error occurred.', 'error');
     }
+  };
+
+  const handleDMClick = (dm: Room) => {
+    navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
+      state: { roomId: dm.id, channelId: dm.defaultChannelId } 
+    });
   };
 
   const isNewUser = !isLoadingRooms && rooms.length === 0;
@@ -150,6 +156,9 @@ const WelcomeDashboard = () => {
                     searchResults={searchResults}
                     isSearching={isSearching}
                     searchQuery={searchQuery}
+                    dmList={dms}
+                    isLoadingDMs={isLoadingDMs}
+                    onDMClick={handleDMClick}
                   />
                 </section>
               </div>
@@ -178,6 +187,9 @@ const WelcomeDashboard = () => {
           searchResults={searchResults}
           isSearching={isSearching}
           searchQuery={searchQuery}
+          dmList={dms}
+          isLoadingDMs={isLoadingDMs}
+          onDMClick={handleDMClick}
         />
       </aside>
 

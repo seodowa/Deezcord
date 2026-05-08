@@ -76,24 +76,49 @@ router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => 
     return;
   }
 
-  // 5. Combine the data
-  const processedRooms = memberships.map((m: any) => {
-    const room = m.rooms;
-    const targetMember = allMembers?.find(member => member.room_id === room.id);
-    const targetProfile = targetMember ? profiles?.find(p => p.id === targetMember.user_id) : null;
-    const channel = channels?.find(c => c.room_id === room.id);
+  const channelIds = channels?.map(c => c.id) || [];
 
-    return {
-      ...room,
-      isMember: true,
-      role: m.role,
-      targetUser: targetProfile ? {
-        ...targetProfile,
-        isOnline: isUserOnline(targetProfile.id)
-      } : null,
-      defaultChannelId: channel?.id
-    };
-  });
+  // 5. Fetch the latest message timestamp and message count for each channel
+  // This allows us to filter out empty DMs and sort by activity
+  const { data: messageStats, error: statsError } = await supabase
+    .from('messages')
+    .select('channel_id, created_at')
+    .in('channel_id', channelIds)
+    .order('created_at', { ascending: false });
+
+  if (statsError) {
+    res.status(500).json({ error: statsError.message });
+    return;
+  }
+
+  // 6. Combine the data and filter out empty DMs
+  const processedRooms = memberships
+    .map((m: any) => {
+      const room = m.rooms;
+      const targetMember = allMembers?.find(member => member.room_id === room.id);
+      const targetProfile = targetMember ? profiles?.find(p => p.id === targetMember.user_id) : null;
+      const channel = channels?.find(c => c.room_id === room.id);
+      
+      // Find latest message for this channel
+      const latestMessage = messageStats?.find(ms => ms.channel_id === channel?.id);
+
+      return {
+        ...room,
+        isMember: true,
+        role: m.role,
+        targetUser: targetProfile ? {
+          ...targetProfile,
+          isOnline: isUserOnline(targetProfile.id)
+        } : null,
+        defaultChannelId: channel?.id,
+        last_message_at: latestMessage?.created_at || null
+      };
+    })
+    .filter(room => room.last_message_at !== null) // Only show DMs with messages
+    .sort((a, b) => {
+      // Sort by latest message timestamp (Most Recent First)
+      return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+    });
 
   res.json(processedRooms);
 });
