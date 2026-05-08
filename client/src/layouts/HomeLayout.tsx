@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import CreateRoomModal from '../components/CreateRoomModal';
@@ -10,6 +10,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useRooms } from '../hooks/useRooms';
 import { useChat } from '../hooks/useChat';
 import { getChannels, createChannel } from '../services/roomService';
+import { loadChannels, saveChannels } from '../utils/persistence';
 import type { Room, Channel } from '../types/room';
 import { generateSlug } from '../utils/slug';
 
@@ -19,6 +20,7 @@ export default function HomeLayout() {
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,26 +105,66 @@ export default function HomeLayout() {
   }, [onRoomDeleted, roomId, setRooms, setDiscoverRooms, addToast, navigate]);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (currentRoom?.isMember) {
-      getChannels(currentRoom.id).then(rawData => {
-        const data = rawData as Channel[];
-        setChannels(data);
-        // If we navigated to a room without a channel, redirect to the first available channel
-        if (!channelId && !isSettingsView && data.length > 0) {
-          navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(data[0].name)}`, { 
-            replace: true,
-            state: { roomId: currentRoom.id, channelId: data[0].id }
-          });
+      const fetchAndCacheChannels = async (showLoading: boolean) => {
+        if (showLoading) {
+          setIsLoadingChannels(true);
         }
-      }).catch(err => {
-        console.error('Failed to load channels', err);
-        setChannels([]);
+
+        try {
+          const rawData = await getChannels(currentRoom.id);
+          if (!isMounted) return;
+
+          const data = rawData as Channel[];
+          setChannels(data);
+          saveChannels(currentRoom.id, data);
+          
+          // Only redirect if still on the room root and not settings
+          if (!channelId && !isSettingsView && data.length > 0) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(data[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: data[0].id }
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load channels', err);
+          if (isMounted) setChannels([]);
+        } finally {
+          if (isMounted) setIsLoadingChannels(false);
+        }
+      };
+
+      // Try to load from cache first
+      loadChannels(currentRoom.id).then(cached => {
+        if (!isMounted) return;
+
+        if (cached && cached.length > 0) {
+          const cachedChannels = cached as Channel[];
+          setChannels(cachedChannels);
+          setIsLoadingChannels(false);
+          
+          // Immediate redirect on cache hit if needed
+          if (!channelId && !isSettingsView) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(cachedChannels[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: cachedChannels[0].id }
+            });
+          }
+          fetchAndCacheChannels(false); // Silent sync
+        } else {
+          fetchAndCacheChannels(true); // Full loading
+        }
       });
     } else {
-      // Defer state update to avoid cascading renders warning
-      const timeoutId = setTimeout(() => setChannels([]), 0);
-      return () => clearTimeout(timeoutId);
+      queueMicrotask(() => {
+        setIsLoadingChannels(false);
+        setChannels([]);
+      });
     }
+
+    return () => { isMounted = false; };
   }, [currentRoom?.id, currentRoom?.isMember, currentRoom?.name, channelId, isSettingsView, navigate]);
 
   useEffect(() => {
@@ -186,28 +228,21 @@ export default function HomeLayout() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await new Promise(resolve => setTimeout(resolve, 600));
     logout();
     addToast('You have been signed out.', 'info');
     window.location.href = '/login';
-  };
+  }, [logout, addToast]);
 
-  // Show a full-page loading screen until both user and initial rooms are loaded
-  if (!user || (isLoadingRooms && rooms.length === 0)) {
-    return (
-      <LoadingScreen 
-        message={!user ? "Syncing your profile..." : "Getting your rooms ready..."} 
-      />
-    );
-  }
-
-  const outletContext = {
+  const outletContext = useMemo(() => ({
     currentRoom,
     currentChannel,
     channels,
+    isLoadingChannels,
     messages,
     members,
+    user,
     typingUsers,
     isLoadingMessages,
     sendMessage,
@@ -216,7 +251,6 @@ export default function HomeLayout() {
     stopTyping,
     toggleReaction,
     fetchMembers,
-    user,
     rooms,
     discoverRooms,
     isLoadingRooms,
@@ -227,7 +261,42 @@ export default function HomeLayout() {
     setRooms,
     navigate,
     onLogout: handleLogout
-  };
+  }), [
+    currentRoom, 
+    currentChannel, 
+    channels, 
+    isLoadingChannels, 
+    messages, 
+    members, 
+    user, 
+    typingUsers, 
+    isLoadingMessages, 
+    sendMessage, 
+    unsendMessage, 
+    startTyping, 
+    stopTyping, 
+    toggleReaction, 
+    fetchMembers, 
+    rooms, 
+    discoverRooms, 
+    isLoadingRooms, 
+    isLoadingDiscover, 
+    fetchDiscoverRooms, 
+    isJoining, 
+    joinExistingRoom, 
+    setRooms, 
+    navigate,
+    handleLogout
+  ]);
+
+  // Show a full-page loading screen until both user and initial rooms are loaded
+  if (!user || (isLoadingRooms && rooms.length === 0)) {
+    return (
+      <LoadingScreen 
+        message={!user ? "Syncing your profile..." : "Getting your rooms ready..."} 
+      />
+    );
+  }
 
   return (
     <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">

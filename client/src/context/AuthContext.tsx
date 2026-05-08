@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { getToken, setToken as setTokenUtil, removeToken as removeTokenUtil } from '../utils/auth';
 import { getCurrentUser } from '../services/userService';
 import type { User } from '../types/user';
@@ -73,8 +73,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const value = useMemo(() => ({
+    isAuthenticated,
+    user,
+    setUser,
+    login,
+    logout,
+    isLoading
+  }), [isAuthenticated, user, login, logout, isLoading]);
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, setUser, login, logout, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

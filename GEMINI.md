@@ -96,5 +96,5 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [ ] Redesign the home page (needs more polish).
     - [ ] Add recent direct messages to dashboard/homepage.
 - [x] Server: Refactor roomRoutes.ts (Separate domain routes into specialized files).
-- [ ] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
+- [x] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
 

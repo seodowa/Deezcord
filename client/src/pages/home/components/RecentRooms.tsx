@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
+import type { NavigateOptions } from 'react-router-dom';
 import type { Room } from '../../../types/room';
 import { generateSlug } from '../../../utils/slug';
 
 interface RecentRoomsProps {
   rooms: Room[];
   isLoading: boolean;
-  onNavigate: (path: string, state?: any) => void;
+  onNavigate: (path: string, options?: NavigateOptions) => void;
 }
 
 export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoomsProps) {

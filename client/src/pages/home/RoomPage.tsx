@@ -1,18 +1,25 @@
 import { useOutletContext, Navigate } from 'react-router-dom';
 import AsyncButton from '../../components/AsyncButton';
+import MessageSkeleton from '../../components/MessageSkeleton';
 import type { Room } from '../../types/room';
 
 interface HomeContextType {
   currentRoom: Room;
   isJoining: boolean;
+  isLoadingChannels: boolean;
   joinExistingRoom: (room: Room) => Promise<Room>;
 }
 
 export default function RoomPage() {
-  const { currentRoom, isJoining, joinExistingRoom } = useOutletContext<HomeContextType>();
+  const { currentRoom, isJoining, isLoadingChannels, joinExistingRoom } = useOutletContext<HomeContextType>();
 
   if (!currentRoom) {
     return <Navigate to="/" replace />;
+  }
+
+  // If we're currently loading channels, show the skeleton instead of "No channel"
+  if (isLoadingChannels) {
+    return <MessageSkeleton />;
   }
 
   const handleJoinRoom = async () => {
@@ -26,7 +33,7 @@ export default function RoomPage() {
 
   if (currentRoom.isMember) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50 p-6">
+      <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50 p-6 animate-fade-in">
         <div className="text-4xl mb-4">💬</div>
         <p>No channel selected or available.</p>
         {currentRoom.role === 'owner' && (

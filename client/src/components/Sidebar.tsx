@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import AsyncButton from './AsyncButton';
 import type { Room, Channel } from '../types/room';
@@ -59,6 +59,12 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
   const ref = useRef<HTMLButtonElement>(null);
   const [hovered, setHovered] = useState(false);
 
+  const handleClick = async () => {
+    // Add a slight delay to prevent rapid-fire switches and show the loading state
+    await new Promise(resolve => setTimeout(resolve, 300));
+    onClick();
+  };
+
   return (
     <>
       <div className="relative flex items-center group w-full justify-center py-1.5">
@@ -67,9 +73,9 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
           <div className="absolute inset-x-2 inset-y-0.5 bg-indigo-500/10 dark:bg-indigo-400/10 rounded-2xl transition-all duration-300" />
         )}
         
-        <button
+        <AsyncButton
           ref={ref}
-          onClick={onClick}
+          onClick={handleClick}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           className={`relative w-11 h-11 flex-shrink-0 flex items-center justify-center font-bold text-sm transition-all duration-300 overflow-hidden ${
@@ -84,14 +90,14 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
           ) : (
             <span className="text-base">{room.name.charAt(0).toUpperCase()}</span>
           )}
-        </button>
+        </AsyncButton>
       </div>
       <Tooltip text={room.name} targetRef={ref} show={hovered} />
     </>
   );
 }
 
-export default function Sidebar({
+function SidebarComponent({
   rooms,
   channels = [],
   currentRoomId,
@@ -313,10 +319,13 @@ export default function Sidebar({
 
                 <div className={`space-y-0.5 transition-all duration-300 ${isChannelsCategoryOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
                   {channels.map(channel => (
-                    <button
+                    <AsyncButton
                       key={channel.id}
-                      onClick={() => onSelectChannel(channel)}
-                      className={`w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
+                      onClick={async () => {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        onSelectChannel(channel);
+                      }}
+                      className={`w-full group flex items-center !justify-start gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
                         channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
                       } ${
                         currentChannelId === channel.id
@@ -328,7 +337,7 @@ export default function Sidebar({
                       <span className={`text-[15px] truncate ${currentChannelId === channel.id ? 'font-bold' : 'font-medium'}`}>
                         {channel.name}
                       </span>
-                    </button>
+                    </AsyncButton>
                   ))}
                 </div>
               </div>
@@ -396,3 +405,5 @@ export default function Sidebar({
     </>
   );
 }
+
+export default memo(SidebarComponent);

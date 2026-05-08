@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { uploadFile } from '../services/fileService';
 import { useToast } from '../hooks/useToast';
 
@@ -15,7 +15,7 @@ interface MessageInputProps {
   onClearReply?: () => void;
 }
 
-export default function MessageInput({ 
+function MessageInputComponent({ 
   onSendMessage, 
   onStartTyping, 
   onStopTyping, 
@@ -243,3 +243,5 @@ export default function MessageInput({
     </div>
   );
 }
+
+export default memo(MessageInputComponent);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, forwardRef } from 'react';
+import React, { useState, useCallback, forwardRef, memo } from 'react';
 
 export interface AsyncButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
@@ -7,7 +7,7 @@ export interface AsyncButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLBu
   isLoading?: boolean;
 }
 
-const AsyncButton = forwardRef<HTMLButtonElement, AsyncButtonProps>(({
+const AsyncButton = memo(forwardRef<HTMLButtonElement, AsyncButtonProps>(({
   children,
   onClick,
   disabled,
@@ -68,7 +68,7 @@ const AsyncButton = forwardRef<HTMLButtonElement, AsyncButtonProps>(({
       )}
     </button>
   );
-});
+}));
 
 AsyncButton.displayName = 'AsyncButton';
 

@@ -3,6 +3,7 @@ import { useOutletContext, Navigate } from 'react-router-dom';
 import MessageList from '../../components/MessageList';
 import MessageInput from '../../components/MessageInput';
 import MemberProfileModal from '../../components/MemberProfileModal';
+import MessageSkeleton from '../../components/MessageSkeleton';
 import { useToast } from '../../hooks/useToast';
 import { generateSlug } from '../../utils/slug';
 import type { Message } from '../../types/message';
@@ -12,6 +13,7 @@ import type { User } from '../../types/user';
 interface HomeContextType {
   currentRoom: Room;
   currentChannel: Channel;
+  isLoadingChannels: boolean;
   messages: Message[];
   members: Member[];
   user: User | null;
@@ -35,6 +37,7 @@ export default function ChatPage() {
   const {
     currentRoom,
     currentChannel,
+    isLoadingChannels,
     messages,
     members,
     user,
@@ -86,6 +89,16 @@ export default function ChatPage() {
       window.removeEventListener('drop', handleGlobalDrop);
     };
   }, [addToast]);
+
+  // While channels are loading, show a subtle loading state within the content area
+  if (isLoadingChannels) {
+    return <MessageSkeleton />;
+  }
+
+  // While messages are loading for the first time, show a subtle loading state
+  if (isLoadingMessages && messages.length === 0) {
+    return <MessageSkeleton />;
+  }
 
   if (!currentRoom || !currentRoom.isMember || !currentChannel) {
     return <Navigate to={currentRoom ? `/${generateSlug(currentRoom.name)}` : '/'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;

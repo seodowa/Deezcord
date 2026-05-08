@@ -1,3 +1,4 @@
+import type { NavigateOptions } from 'react-router-dom';
 import type { User } from '../../../types/user';
 import AsyncButton from '../../../components/AsyncButton';
 import SearchSidebar from './SearchSidebar';
@@ -13,7 +14,7 @@ interface SocialSectionProps {
   onAcceptRequest: (id: string) => Promise<void>;
   onDeclineRequest: (id: string) => Promise<void>;
   onUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
-  onNavigate: (path: string, state?: any) => void;
+  onNavigate: (path: string, options?: NavigateOptions) => void;
   activeTab: 'friends' | 'search';
   onTabChange: (tab: 'friends' | 'search') => void;
   // Search Props
