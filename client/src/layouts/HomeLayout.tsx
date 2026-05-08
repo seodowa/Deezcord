@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import Logo from '../components/Logo';
 import CreateRoomModal from '../components/CreateRoomModal';
 import UserProfileModal from '../components/UserProfileModal';
 import LoadingScreen from '../components/LoadingScreen';
@@ -379,15 +380,14 @@ export default function HomeLayout() {
                        {currentChannel ? `#${currentChannel.name}` : currentRoom.name}
                      </h2>
                    </div>
-                 ) : (
+                   ) : (
                    <div className="flex items-center gap-2">
-                     <img src="/Logo.png" alt="Deezcord" className="w-8 h-8 object-contain rounded-lg" />
+                     <Logo className="w-8 h-8" />
                      <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">
                        {isDiscoveryMode ? 'Discovery' : 'Deezcord'}
                      </h2>
                    </div>
-                 )}
-              </div>
+                   )}              </div>
 
               {currentRoom?.isMember && !isDiscoveryMode && (
                 <button

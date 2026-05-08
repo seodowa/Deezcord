@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
+import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
 import { loginUser } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -78,7 +79,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full mx-5 max-w-[25rem] min-w-[20rem] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Welcome Back</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your details to access your account</p>

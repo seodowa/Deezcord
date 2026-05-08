@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import AsyncButton from './AsyncButton';
+import Logo from './Logo';
 import type { Room, Channel } from '../types/room';
 import { useAuth } from '../hooks/useAuth';
 
@@ -177,7 +178,7 @@ function SidebarComponent({
               !currentRoomId ? 'ring-2 ring-indigo-500 rounded-xl ring-offset-2 dark:ring-offset-slate-900' : ''
             }`}
           >
-            <img src="/Logo.png" alt="Deezcord" className="w-9 h-9 object-contain rounded-xl" />
+            <Logo className="w-9 h-9" />
           </div>
 
           <div className="flex-1 w-full overflow-y-auto scrollbar-none flex flex-col items-center gap-1">
