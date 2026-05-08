@@ -35,6 +35,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/dms', dmRoutes);
 
 // Redirect root to /rooms
 app.get('/api', (req: Request, res: Response) => {

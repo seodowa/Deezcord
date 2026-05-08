@@ -9,6 +9,7 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useRooms } from '../hooks/useRooms';
+import { useDMs } from '../hooks/useDMs';
 import { useChat } from '../hooks/useChat';
 import { getChannels, createChannel } from '../services/roomService';
 import { loadChannels, saveChannels } from '../utils/persistence';
@@ -55,10 +56,15 @@ export default function HomeLayout() {
     joinExistingRoom 
   } = useRooms();
 
-  const currentRoom = rooms.find(r => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
+  const { dms } = useDMs();
+
+  const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
+                      dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
   const roomId = currentRoom?.id;
   const currentChannel = channels.find(c => stateChannelId ? c.id === stateChannelId : generateSlug(c.name) === channelSlug);
   const channelId = currentChannel?.id;
+
+  const isHomeView = isWelcomeMode || currentRoom?.is_dm;
 
   const {
     messages,
@@ -309,15 +315,16 @@ export default function HomeLayout() {
 
       <Sidebar 
         rooms={rooms}
+        dms={dms}
         channels={channels}
         currentRoomId={roomId}
         currentChannelId={channelId}
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isWelcomeMode || isDiscoveryMode}
+        isCollapsed={isDiscoveryMode}
         isDiscoveryMode={isDiscoveryMode}
-        isWelcomeMode={isWelcomeMode}
+        isWelcomeMode={isHomeView}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
@@ -327,6 +334,12 @@ export default function HomeLayout() {
         }}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
+        onSelectDM={(dm) => {
+          setIsMobileMenuOpen(false);
+          navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
+            state: { roomId: dm.id, channelId: dm.defaultChannelId } 
+          });
+        }}
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
@@ -368,16 +381,22 @@ export default function HomeLayout() {
                  {currentRoom && !isDiscoveryMode ? (
                    <div className="flex items-center gap-2 overflow-hidden">
                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 ${
-                       currentRoom.room_profile ? '' : 'bg-blue-500'
+                       currentRoom.is_dm ? 'bg-slate-200 dark:bg-slate-700' : (currentRoom.room_profile ? '' : 'bg-blue-500')
                      }`}>
-                       {currentRoom.room_profile ? (
+                       {currentRoom.is_dm ? (
+                         currentRoom.targetUser?.avatar_url ? (
+                           <img src={currentRoom.targetUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                         ) : (
+                           <span className="text-slate-600 dark:text-slate-300">{(currentRoom.targetUser?.username || 'U').substring(0,1).toUpperCase()}</span>
+                         )
+                       ) : currentRoom.room_profile ? (
                          <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
                        ) : (
                          <span>#</span>
                        )}
                      </div>
                      <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
-                       {currentChannel ? `#${currentChannel.name}` : currentRoom.name}
+                       {currentRoom.is_dm ? currentRoom.targetUser?.username : (currentChannel ? `#${currentChannel.name}` : currentRoom.name)}
                      </h2>
                    </div>
                    ) : (
@@ -410,9 +429,15 @@ export default function HomeLayout() {
             <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
               <div className="flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
-                  currentRoom?.room_profile ? '' : 'bg-blue-500'
+                  currentRoom?.is_dm ? 'bg-slate-200 dark:bg-slate-700' : (currentRoom?.room_profile ? '' : 'bg-blue-500')
                 }`}>
-                  {currentRoom?.room_profile ? (
+                  {currentRoom?.is_dm ? (
+                    currentRoom.targetUser?.avatar_url ? (
+                      <img src={currentRoom.targetUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-slate-600 dark:text-slate-300">{(currentRoom.targetUser?.username || 'U').substring(0,1).toUpperCase()}</span>
+                    )
+                  ) : currentRoom?.room_profile ? (
                     <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
                   ) : (
                     <span>#</span>
@@ -420,23 +445,23 @@ export default function HomeLayout() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
-                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom ? currentRoom.name : 'Select a Room')}
+                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? currentRoom.name : 'Select a Room'))}
                   </h1>
                   <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    {isDiscoveryMode ? 'Find new communities to join' : (currentRoom ? (currentRoom.isMember ? (
+                    {isDiscoveryMode ? 'Find new communities to join' : (currentRoom?.is_dm ? 'Direct Message' : (currentRoom ? (currentRoom.isMember ? (
                       <>
                         <span>Chatting in</span>
                         {currentChannel && (
                           <span className="font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">#{currentChannel.name}</span>
                         )}
                       </>
-                    ) : `Not a member of ${currentRoom.name}`) : 'Join the conversation')}
+                    ) : `Not a member of ${currentRoom.name}`) : 'Join the conversation'))}
                   </p>
                 </div>
               </div>
               
               <div className="flex items-center gap-6">
-                {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && (
+                {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && !currentRoom?.is_dm && (
                   <div className="group relative">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm cursor-help transition-all hover:bg-emerald-500/20">
                       <span className="relative flex h-2 w-2">

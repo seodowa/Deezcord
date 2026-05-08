@@ -218,6 +218,17 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     };
   }, []);
 
+  const onDMCreated = useCallback((callback: (data: unknown) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('dm_created', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('dm_created', callback);
+      }
+    };
+  }, []);
+
   return { 
     isConnected, 
     joinRoom, 
@@ -239,6 +250,7 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     onChannelCreated,
     onFriendRequestReceived,
     onFriendRequestAccepted,
-    onFriendRemoved
+    onFriendRemoved,
+    onDMCreated
   };
 };
