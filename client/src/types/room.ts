@@ -23,6 +23,7 @@ export interface Room {
     isOnline?: boolean;
   } | null;
   defaultChannelId?: string;
+  last_message_at?: string | null;
 }
 
 export interface Member {

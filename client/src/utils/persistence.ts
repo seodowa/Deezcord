@@ -5,6 +5,8 @@ const MESSAGE_CACHE_PREFIX = 'deezcord_msg_cache_';
 const CHANNELS_CACHE_PREFIX = 'deezcord_channels_cache_';
 const ROOMS_CACHE_KEY = 'deezcord_rooms_cache';
 const DMS_CACHE_KEY = 'deezcord_dms_cache';
+const FRIENDS_CACHE_KEY = 'deezcord_friends_cache';
+const PENDING_CACHE_KEY = 'deezcord_pending_cache';
 const MEMBERS_CACHE_PREFIX = 'deezcord_members_cache_';
 const MAX_CACHED_MESSAGES = 50;
 
@@ -122,6 +124,62 @@ export async function loadDMs(): Promise<unknown[]> {
 }
 
 /**
+ * Saves friends to encrypted sessionStorage.
+ */
+export async function saveFriends(friends: unknown[]): Promise<void> {
+  try {
+    const encrypted = await encryptData(friends);
+    sessionStorage.setItem(FRIENDS_CACHE_KEY, encrypted);
+  } catch (err) {
+    console.error('Failed to save friends to cache:', err);
+  }
+}
+
+/**
+ * Loads and decrypts friends from sessionStorage.
+ */
+export async function loadFriends(): Promise<unknown[]> {
+  try {
+    const encrypted = sessionStorage.getItem(FRIENDS_CACHE_KEY);
+    if (!encrypted) return [];
+
+    const decrypted = await decryptData(encrypted);
+    return (decrypted as unknown[]) || [];
+  } catch (err) {
+    console.error('Failed to load friends from cache:', err);
+    return [];
+  }
+}
+
+/**
+ * Saves pending requests to encrypted sessionStorage.
+ */
+export async function savePending(pending: unknown[]): Promise<void> {
+  try {
+    const encrypted = await encryptData(pending);
+    sessionStorage.setItem(PENDING_CACHE_KEY, encrypted);
+  } catch (err) {
+    console.error('Failed to save pending requests to cache:', err);
+  }
+}
+
+/**
+ * Loads and decrypts pending requests from sessionStorage.
+ */
+export async function loadPending(): Promise<unknown[]> {
+  try {
+    const encrypted = sessionStorage.getItem(PENDING_CACHE_KEY);
+    if (!encrypted) return [];
+
+    const decrypted = await decryptData(encrypted);
+    return (decrypted as unknown[]) || [];
+  } catch (err) {
+    console.error('Failed to load pending requests from cache:', err);
+    return [];
+  }
+}
+
+/**
  * Saves members for a specific room to encrypted sessionStorage.
  */
 export async function saveMembers(roomId: string, members: unknown[]): Promise<void> {
@@ -159,7 +217,9 @@ export function clearMessageCache(): void {
       key.startsWith(CHANNELS_CACHE_PREFIX) || 
       key.startsWith(MEMBERS_CACHE_PREFIX) ||
       key === ROOMS_CACHE_KEY ||
-      key === DMS_CACHE_KEY
+      key === DMS_CACHE_KEY ||
+      key === FRIENDS_CACHE_KEY ||
+      key === PENDING_CACHE_KEY
     )
     .forEach(key => sessionStorage.removeItem(key));
 }

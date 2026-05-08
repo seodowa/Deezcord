@@ -91,7 +91,7 @@ router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => 
     return;
   }
 
-  // 6. Combine the data and filter out empty DMs
+  // 6. Combine the data
   const processedRooms = memberships
     .map((m: any) => {
       const room = m.rooms;
@@ -114,10 +114,15 @@ router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => 
         last_message_at: latestMessage?.created_at || null
       };
     })
-    .filter(room => room.last_message_at !== null) // Only show DMs with messages
     .sort((a, b) => {
       // Sort by latest message timestamp (Most Recent First)
-      return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+      // Rooms without messages (null last_message_at) go to the bottom
+      if (a.last_message_at && b.last_message_at) {
+        return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+      }
+      if (a.last_message_at) return -1;
+      if (b.last_message_at) return 1;
+      return 0;
     });
 
   res.json(processedRooms);

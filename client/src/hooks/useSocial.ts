@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types/user';
 import * as friendService from '../services/friendService';
 import * as userService from '../services/userService';
+import { saveFriends, loadFriends, savePending, loadPending } from '../utils/persistence';
 
 export const useSocial = () => {
   const [friendsList, setFriendsList] = useState<User[]>([]);
@@ -15,24 +16,46 @@ export const useSocial = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'friends' | 'search'>('friends');
 
+  // Optimistic Hydration
   useEffect(() => {
-    const fetchFriends = async () => {
-      setIsLoadingFriends(true);
-      try {
-        const [friendsData, pendingData] = await Promise.all([
-          friendService.getFriendsList(),
-          friendService.getPendingFriends()
-        ]);
-        setFriendsList(friendsData);
-        setPendingList(pendingData);
-      } catch (error) {
-        console.error("Failed to load friends", error);
-      } finally {
-        setIsLoadingFriends(false);
-      }
+    const hydrate = async () => {
+      const [cachedFriends, cachedPending] = await Promise.all([
+        loadFriends(),
+        loadPending()
+      ]);
+      if (cachedFriends.length > 0) setFriendsList(cachedFriends as User[]);
+      if (cachedPending.length > 0) setPendingList(cachedPending as User[]);
     };
-    fetchFriends();
+    hydrate();
   }, []);
+
+  const fetchFriends = useCallback(async () => {
+    // Only show loading if we don't have cached data yet
+    setFriendsList(prev => {
+      if (prev.length === 0) setIsLoadingFriends(true);
+      return prev;
+    });
+
+    try {
+      const [friendsData, pendingData] = await Promise.all([
+        friendService.getFriendsList(),
+        friendService.getPendingFriends()
+      ]);
+      setFriendsList(friendsData);
+      setPendingList(pendingData);
+      saveFriends(friendsData);
+      savePending(pendingData);
+    } catch (error) {
+      console.error("Failed to load friends", error);
+    } finally {
+      setIsLoadingFriends(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchFriends();
+  }, [fetchFriends]);
 
   const handleUserSearch = async (query: string) => {
     setSearchQuery(query);
@@ -83,6 +106,7 @@ export const useSocial = () => {
     try {
       const friendsData = await friendService.getFriendsList();
       setFriendsList(friendsData);
+      saveFriends(friendsData);
     } catch (error) {
       console.error("Failed to refresh friends", error);
     }

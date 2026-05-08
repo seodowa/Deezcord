@@ -55,15 +55,14 @@ export default function SocialSection({
   const { isDarkMode, toggleTheme } = useTheme();
 
   // Unified List Logic
-  // 1. Limit to the 3 most recent active conversations
-  const recentDMs = dmList.slice(0, 3);
+  // 1. Limit to the 3 most recent active conversations (must have messages)
+  const recentDMs = dmList
+    .filter(dm => dm.last_message_at !== null)
+    .slice(0, 3);
   
-  // 2. Map of users currently shown in the "Recent" section
-  const recentUserIds = new Set(recentDMs.map(dm => dm.targetUser?.id).filter(Boolean));
-  
-  // 3. Friends who are NOT in the top 3 recent slots (they stay in the status lists)
-  const otherOnlineFriends = friendsList.filter(f => f.isOnline && !recentUserIds.has(f.id));
-  const otherOfflineFriends = friendsList.filter(f => !f.isOnline && !recentUserIds.has(f.id));
+  // 2. Full directory (Online/Offline)
+  const onlineFriends = friendsList.filter(f => f.isOnline);
+  const offlineFriends = friendsList.filter(f => !f.isOnline);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -185,7 +184,7 @@ export default function SocialSection({
                       <div 
                         key={dm.id} 
                         onClick={() => onDMClick(dm)}
-                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5 bg-indigo-500/5 dark:bg-indigo-500/10"
+                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                       >
                         <div className="relative flex-shrink-0">
                           <div 
@@ -215,16 +214,16 @@ export default function SocialSection({
             )}
 
             {/* Active Friends */}
-            {otherOnlineFriends.length > 0 && (
+            {onlineFriends.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                   <h4 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Active Friends</h4>
                   <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    {otherOnlineFriends.length} Online
+                    {onlineFriends.length} Online
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {otherOnlineFriends.map(friend => (
+                  {onlineFriends.map(friend => (
                     <div 
                       key={friend.id} 
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
@@ -262,13 +261,13 @@ export default function SocialSection({
             )}
 
             {/* Offline Friends */}
-            {otherOfflineFriends.length > 0 && (
+            {offlineFriends.length > 0 && (
               <div className="space-y-4 opacity-75 hover:opacity-100 transition-opacity duration-300">
                 <div className="flex items-center justify-between px-1">
                   <h4 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Offline</h4>
                 </div>
                 <div className="space-y-1">
-                  {otherOfflineFriends.map(friend => (
+                  {offlineFriends.map(friend => (
                     <div 
                       key={friend.id} 
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
@@ -306,7 +305,7 @@ export default function SocialSection({
             )}
 
             {/* Empty State */}
-            {!isLoadingFriends && !isLoadingDMs && recentDMs.length === 0 && otherOnlineFriends.length === 0 && otherOfflineFriends.length === 0 && (
+            {!isLoadingFriends && !isLoadingDMs && recentDMs.length === 0 && onlineFriends.length === 0 && offlineFriends.length === 0 && (
               <div className="flex flex-col items-center justify-center h-48 text-center p-6 bg-white/20 dark:bg-slate-900/20 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
                 <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-xl mb-3">👋</div>
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-50">It's quiet here</p>
