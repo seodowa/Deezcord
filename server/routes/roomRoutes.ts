@@ -207,8 +207,8 @@ router.get('/discover', verifyUser, async (req: AuthenticatedRequest, res: Respo
 
   const joinedRoomIds = memberships?.map(m => m.room_id) || [];
 
-  // Fetch rooms not in that list
-  let query = supabase.from('rooms').select('*');
+  // Fetch rooms not in that list, and not DMs
+  let query = supabase.from('rooms').select('*').eq('is_dm', false);
   
   if (joinedRoomIds.length > 0) {
     query = query.not('id', 'in', `(${joinedRoomIds.join(',')})`);
@@ -228,14 +228,15 @@ router.get('/discover', verifyUser, async (req: AuthenticatedRequest, res: Respo
 router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
 
-  // Fetch only rooms where the user has a membership record
+  // Fetch only rooms where the user has a membership record, excluding DMs
   const { data: memberships, error } = await supabase
     .from('room_members')
     .select(`
       role,
-      rooms (*)
+      rooms!inner (*)
     `)
     .eq('user_id', userId)
+    .eq('rooms.is_dm', false)
     .order('created_at', { referencedTable: 'rooms', ascending: true });
 
   if (error) {
