@@ -236,11 +236,10 @@ export default function HomeLayout() {
   };
 
   const handleLogout = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 600));
     logout();
     addToast('You have been signed out.', 'info');
-    window.location.href = '/login';
-  }, [logout, addToast]);
+    navigate('/login');
+  }, [logout, addToast, navigate]);
 
   const outletContext = useMemo(() => ({
     currentRoom,
