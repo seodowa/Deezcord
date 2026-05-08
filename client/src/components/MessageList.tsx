@@ -109,6 +109,13 @@ function MessageListComponent({
             const avatarUrl = getAvatarForUser(msg.user_id, msg.username, msg.avatar_url);
             const displayName = getUsernameForUser(msg.user_id, msg.username);
             const isPickerOpen = activePickerId === msg.id;
+            let avatarMargin = `mt-auto ${isOwn ? '' : 'mb-0.75'}`
+
+            if (msg.reactions?.length && msg.parent_id) {
+              avatarMargin = `mb-auto mt-11.5`
+            } else if (msg.reactions?.length) {
+              avatarMargin = `mb-auto pt-5`
+            } 
 
             return (
               <div 
@@ -117,7 +124,7 @@ function MessageListComponent({
                 className={`flex gap-3 relative group ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 {/* Avatar */}
-                <div className="flex-shrink-0 mt-auto">
+                <div className={`shrink-0 ${avatarMargin}`}>
                   <div 
                     onClick={() => {
                       if (onUserClick && msg.user_id) {
