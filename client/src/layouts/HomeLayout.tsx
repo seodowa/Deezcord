@@ -48,7 +48,7 @@ export default function HomeLayout() {
     isLoadingRooms, 
     isLoadingDiscover, 
     isCreatingRoom, 
-    isJoining, 
+    joiningRoomId, 
     fetchDiscoverRooms, 
     createNewRoom, 
     joinExistingRoom 
@@ -256,9 +256,10 @@ export default function HomeLayout() {
     isLoadingRooms,
     isLoadingDiscover,
     fetchDiscoverRooms,
-    isJoining,
+    joiningRoomId,
     joinExistingRoom,
     setRooms,
+    openCreateModal: () => setIsCreateModalOpen(true),
     navigate,
     onLogout: handleLogout
   }), [
@@ -282,9 +283,10 @@ export default function HomeLayout() {
     isLoadingRooms, 
     isLoadingDiscover, 
     fetchDiscoverRooms, 
-    isJoining, 
+    joiningRoomId, 
     joinExistingRoom, 
     setRooms, 
+    setIsCreateModalOpen,
     navigate,
     handleLogout
   ]);
@@ -313,6 +315,8 @@ export default function HomeLayout() {
         mounted={mounted}
         isOpen={isMobileMenuOpen}
         isCollapsed={isWelcomeMode || isDiscoveryMode}
+        isDiscoveryMode={isDiscoveryMode}
+        isWelcomeMode={isWelcomeMode}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
@@ -345,8 +349,8 @@ export default function HomeLayout() {
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
         
-        {/* Render headers ONLY if not on WelcomePage */}
-        {!isWelcomeMode && (
+        {/* Render headers ONLY if not on WelcomePage or DiscoveryPage */}
+        {!isWelcomeMode && !isDiscoveryMode && (
           <>
             {/* Mobile Header */}
             <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md md:hidden z-20 sticky top-0">

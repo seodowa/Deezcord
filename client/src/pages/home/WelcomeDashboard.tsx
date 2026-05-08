@@ -21,9 +21,10 @@ interface HomeContextType {
   user: User | null;
   rooms: Room[];
   discoverRooms: Room[];
-  joinExistingRoom: (roomId: string) => Promise<void>;
-  isJoining: boolean;
+  joinExistingRoom: (room: Room) => Promise<Room>;
+  joiningRoomId: string | null;
   isLoadingRooms: boolean;
+  openCreateModal: () => void;
   navigate: NavigateFunction;
   onLogout: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ const WelcomeDashboard = () => {
     user: contextUser, 
     rooms,  
     isLoadingRooms, 
+    openCreateModal,
     navigate,
     onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
@@ -84,7 +86,7 @@ const WelcomeDashboard = () => {
                 {isNewUser ? (
                   <NewUserEmptyState 
                     onDiscover={() => navigate('/discovery')}
-                    onCreateRoom={() => navigate('/', { state: { openCreateModal: true } })}
+                    onCreateRoom={() => openCreateModal()}
                   />
                 ) : (
                   <RecentRooms 
@@ -102,7 +104,7 @@ const WelcomeDashboard = () => {
                   onExplore={() => navigate('/discovery')} 
                 />
                 <InviteTeamCard 
-                  onAction={() => navigate('/', { state: { openCreateModal: true } })}
+                  onAction={() => openCreateModal()}
                 />
               </section>
             </div>

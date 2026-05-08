@@ -16,7 +16,7 @@ interface HomeContextType {
   isLoadingDiscover: boolean;
   fetchDiscoverRooms: () => void;
   joinExistingRoom: (room: Room) => Promise<Room>;
-  isJoining: boolean;
+  joiningRoomId: string | null;
   navigate: NavigateFunction;
   onLogout: () => Promise<void>;
 }
@@ -28,7 +28,7 @@ export default function DiscoveryPage() {
     isLoadingDiscover, 
     fetchDiscoverRooms, 
     joinExistingRoom, 
-    isJoining, 
+    joiningRoomId, 
     navigate,
     onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
@@ -104,7 +104,7 @@ export default function DiscoveryPage() {
                 </div>
                 <AsyncButton
                   onClick={() => handleJoinRoom(room)}
-                  isLoading={isJoining}
+                  isLoading={joiningRoomId === room.id}
                   className="w-full bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white py-2.5 rounded-xl font-bold transition-all duration-300"
                 >
                   Join Community

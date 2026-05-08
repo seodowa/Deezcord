@@ -27,6 +27,8 @@ export interface SidebarProps {
   isLoadingRooms: boolean;
   isCreatingRoom: boolean;
   isCreatingChannel?: boolean;
+  isDiscoveryMode?: boolean;
+  isWelcomeMode?: boolean;
 }
 
 /* ── Tiny Tooltip ── */
@@ -119,7 +121,9 @@ function SidebarComponent({
   onOpenProfile,
   isLoadingRooms,
   isCreatingRoom,
-  isCreatingChannel
+  isCreatingChannel,
+  isDiscoveryMode = false,
+  isWelcomeMode = false
 }: SidebarProps) {
   const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
@@ -196,37 +200,41 @@ function SidebarComponent({
           </div>
 
           {/* Action Area */}
-          <div className="flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto">
-            <div className="relative">
-              <AsyncButton
-                ref={createBtnRef}
-                onClick={onCreateRoom}
-                isLoading={isCreatingRoom}
-                onMouseEnter={() => setCreateHovered(true)}
-                onMouseLeave={() => setCreateHovered(false)}
-                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              </AsyncButton>
-              <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
-            </div>
+          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto ${isWelcomeMode ? 'border-t-0' : ''}`}>
+            {!isWelcomeMode && (
+              <div className="relative">
+                <AsyncButton
+                  ref={createBtnRef}
+                  onClick={onCreateRoom}
+                  isLoading={isCreatingRoom}
+                  onMouseEnter={() => setCreateHovered(true)}
+                  onMouseLeave={() => setCreateHovered(false)}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </AsyncButton>
+                <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
+              </div>
+            )}
 
-            <div className="relative">
-              <button
-                ref={discoverBtnRef}
-                onClick={onDiscoverRoom}
-                onMouseEnter={() => setDiscoverHovered(true)}
-                onMouseLeave={() => setDiscoverHovered(false)}
-                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white transition-all duration-200"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-              <Tooltip text="Discover" targetRef={discoverBtnRef} show={discoverHovered} />
-            </div>
+            {!isWelcomeMode && !isDiscoveryMode && (
+              <div className="relative">
+                <button
+                  ref={discoverBtnRef}
+                  onClick={onDiscoverRoom}
+                  onMouseEnter={() => setDiscoverHovered(true)}
+                  onMouseLeave={() => setDiscoverHovered(false)}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+                <Tooltip text="Discover" targetRef={discoverBtnRef} show={discoverHovered} />
+              </div>
+            )}
           </div>
         </div>
         
