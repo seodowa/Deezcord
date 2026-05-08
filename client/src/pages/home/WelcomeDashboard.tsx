@@ -7,9 +7,9 @@ import { useSocial } from '../../hooks/useSocial';
 import WelcomeHeader from './components/WelcomeHeader';
 import HeroFeatureCard from './components/HeroFeatureCard';
 import InviteTeamCard from './components/InviteTeamCard';
+import ProfileSetupCard from './components/ProfileSetupCard';
 import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
-import NewUserEmptyState from './components/NewUserEmptyState';
 import MemberProfileModal from '../../components/MemberProfileModal';
 import UserProfileModal from '../../components/UserProfileModal';
 
@@ -21,9 +21,10 @@ interface HomeContextType {
   user: User | null;
   rooms: Room[];
   discoverRooms: Room[];
-  joinExistingRoom: (roomId: string) => Promise<void>;
-  isJoining: boolean;
+  joinExistingRoom: (room: Room) => Promise<Room>;
+  joiningRoomId: string | null;
   isLoadingRooms: boolean;
+  openCreateModal: () => void;
   navigate: NavigateFunction;
   onLogout: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ const WelcomeDashboard = () => {
     user: contextUser, 
     rooms,  
     isLoadingRooms, 
+    openCreateModal,
     navigate,
     onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
@@ -79,32 +81,35 @@ const WelcomeDashboard = () => {
             />
 
             <div className="space-y-16">
-              {/* Room Access Section */}
-              <section>
-                {isNewUser ? (
-                  <NewUserEmptyState 
-                    onDiscover={() => navigate('/discovery')}
-                    onCreateRoom={() => navigate('/', { state: { openCreateModal: true } })}
-                  />
-                ) : (
-                  <RecentRooms 
-                    rooms={rooms} 
-                    isLoading={isLoadingRooms} 
-                    onNavigate={navigate} 
-                  />
+              {/* Room Content & Actions */}
+              <div className="space-y-12">
+                {!isNewUser && (
+                  <section>
+                    <RecentRooms 
+                      rooms={rooms} 
+                      isLoading={isLoadingRooms} 
+                      onNavigate={navigate} 
+                    />
+                  </section>
                 )}
-              </section>
 
-              {/* CTA Row - High visibility actions */}
-              <section className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <HeroFeatureCard 
-                  isNewUser={isNewUser} 
-                  onExplore={() => navigate('/discovery')} 
-                />
-                <InviteTeamCard 
-                  onAction={() => navigate('/', { state: { openCreateModal: true } })}
-                />
-              </section>
+                {/* CTA Row - Primary actions for both new and returning users */}
+                <section className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <HeroFeatureCard 
+                    isNewUser={isNewUser} 
+                    onExplore={() => navigate('/discovery')} 
+                    className={isNewUser ? 'xl:col-span-2' : ''}
+                  />
+                  <InviteTeamCard 
+                    onAction={() => openCreateModal()}
+                  />
+                  {isNewUser && !user?.avatar_url && (
+                    <ProfileSetupCard 
+                      onSetupProfile={() => setIsUserProfileOpen(true)}
+                    />
+                  )}
+                </section>
+              </div>
             </div>
           </div>
         </div>

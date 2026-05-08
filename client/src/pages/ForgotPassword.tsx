@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
+import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
 
 export default function ForgotPasswordPage() {
@@ -92,7 +93,7 @@ export default function ForgotPasswordPage() {
         
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Reset Password</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your email and we'll send you a link</p>

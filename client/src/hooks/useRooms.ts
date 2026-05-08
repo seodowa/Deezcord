@@ -10,7 +10,7 @@ export const useRooms = () => {
   const [isLoadingRooms, setIsLoadingRooms] = useState(true);
   const [isLoadingDiscover, setIsLoadingDiscover] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const { addToast } = useToast();
 
   const fetchRooms = useCallback(async (showLoading = false) => {
@@ -63,7 +63,7 @@ export const useRooms = () => {
   };
 
   const joinExistingRoom = async (room: Room) => {
-    setIsJoining(true);
+    setJoiningRoomId(room.id);
     try {
       await apiJoinRoom(room.id);
       const updatedRoom: Room = { ...room, isMember: true, role: 'member' };
@@ -82,7 +82,7 @@ export const useRooms = () => {
       addToast(error.message || 'Failed to join room', 'error');
       throw error;
     } finally {
-      setIsJoining(false);
+      setJoiningRoomId(null);
     }
   };
 
@@ -113,7 +113,7 @@ export const useRooms = () => {
     isLoadingRooms,
     isLoadingDiscover,
     isCreatingRoom,
-    isJoining,
+    joiningRoomId,
     fetchRooms,
     fetchDiscoverRooms,
     createNewRoom,
