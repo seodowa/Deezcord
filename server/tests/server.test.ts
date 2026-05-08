@@ -44,7 +44,7 @@ test('Socket.IO Connection', async (t) => {
     const password = process.env.PASSWORD;
 
     if (!email || !password) {
-        console.warn('Skipping Socket.io test because process.env.email or process.env.password is missing');
+        console.warn('Skipping Socket.io test because process.env.EMAIL or process.env.PASSWORD is missing');
         return;
     }
 

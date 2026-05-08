@@ -1,26 +1,5 @@
 """
 Deezcord WebSocket Stress Test — Locust
-========================================
-Faithful port of the k6 script. Replicates:
-  - Same load shape  (30s → 100 VUs, 60s → 500 VUs, 30s → 0)
-  - Auth token on namespace connect
-  - join_room on connect
-  - send_message every 5 s with an embedded user ID + timestamp
-  - RTT measured by matching receive_message back to this user's sent timestamp
-  - Same metric categories surfaced via Locust's request event
-
-Prerequisites:
-    pip install locust "python-socketio[msgpack]"
-
-Run:
-    locust -f <filename>.py \\
-        --headless \\
-        -e TOKEN=<token> \\
-        -e ROOM_ID=<uuid> \\
-        -e CHANNEL_ID=<uuid> \\
-        -e BASE_URL=http://localhost:3001
-
-Or open the web UI (omit --headless) and start from http://localhost:8089
 """
 
 import os
@@ -225,12 +204,3 @@ class ChatUser(User):
         except Exception:
             pass
         raise StopUser()
-
-
-# ---------------------------------------------------------------------------
-# Load shape — mirrors k6 stages exactly
-#
-#   { duration: '30s', target: 100 }   ramp up
-#   { duration: '1m',  target: 500 }   hold / ramp up
-#   { duration: '30s', target: 0   }   ramp down
-# ---------------------------------------------------------------------------
