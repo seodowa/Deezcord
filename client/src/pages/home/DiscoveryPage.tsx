@@ -6,6 +6,8 @@ import { generateSlug } from '../../utils/slug';
 import type { Room } from '../../types/room';
 import type { User } from '../../types/user';
 import { useSocial } from '../../hooks/useSocial';
+import { useDMs } from '../../hooks/useDMs';
+import { useToast } from '../../hooks/useToast';
 import SocialSection from './components/SocialSection';
 import MemberProfileModal from '../../components/MemberProfileModal';
 import UserProfileModal from '../../components/UserProfileModal';
@@ -33,6 +35,9 @@ export default function DiscoveryPage() {
     onLogout: contextLogout
   } = useOutletContext<HomeContextType>();
 
+  const { createDM } = useDMs();
+  const { addToast } = useToast();
+
   const {
     friendsList,
     pendingList,
@@ -53,6 +58,21 @@ export default function DiscoveryPage() {
     handleUserClick,
     handleRefreshFriends
   } = useSocial();
+
+  const handleMessageClick = async (u: { id: string; username: string }) => {
+    try {
+      const result = await createDM(u.id);
+      if (result) {
+        navigate(`/${generateSlug(result.room.name)}/${generateSlug('chat')}`, { 
+          state: { roomId: result.room.id, channelId: result.channelId } 
+        });
+      } else {
+        addToast('Failed to start conversation.', 'error');
+      }
+    } catch (error) {
+      addToast('An error occurred.', 'error');
+    }
+  };
 
   useEffect(() => {
     fetchDiscoverRooms();
@@ -132,6 +152,7 @@ export default function DiscoveryPage() {
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
           onUserClick={handleUserClick}
+          onMessageClick={handleMessageClick}
           onNavigate={navigate}
           activeTab={activeSidebarTab}
           onTabChange={setActiveSidebarTab}

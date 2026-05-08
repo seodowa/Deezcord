@@ -14,6 +14,7 @@ interface SocialSectionProps {
   onAcceptRequest: (id: string) => Promise<void>;
   onDeclineRequest: (id: string) => Promise<void>;
   onUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+  onMessageClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
   onNavigate: (path: string, options?: NavigateOptions) => void;
   activeTab: 'friends' | 'search';
   onTabChange: (tab: 'friends' | 'search') => void;
@@ -34,6 +35,7 @@ export default function SocialSection({
   onAcceptRequest,
   onDeclineRequest,
   onUserClick,
+  onMessageClick,
   onNavigate,
   activeTab,
   onTabChange,
@@ -185,7 +187,13 @@ export default function SocialSection({
                         <p className="text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-500 transition-colors">{friend.username}</p>
                         <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate uppercase tracking-widest">{friend.isOnline ? 'Online' : 'Offline'}</p>
                       </div>
-                      <button className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
+                        }}
+                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white"
+                      >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>

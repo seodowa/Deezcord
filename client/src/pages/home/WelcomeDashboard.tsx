@@ -2,6 +2,9 @@ import { useOutletContext } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSocial } from '../../hooks/useSocial';
+import { useDMs } from '../../hooks/useDMs';
+import { useToast } from '../../hooks/useToast';
+import { generateSlug } from '../../utils/slug';
 
 // Sub-components
 import WelcomeHeader from './components/WelcomeHeader';
@@ -41,6 +44,8 @@ const WelcomeDashboard = () => {
 
   const { user: authUser } = useAuth();
   const user = authUser || contextUser;
+  const { createDM } = useDMs();
+  const { addToast } = useToast();
 
   const {
     friendsList,
@@ -62,6 +67,21 @@ const WelcomeDashboard = () => {
     handleUserClick,
     handleRefreshFriends
   } = useSocial();
+
+  const handleMessageClick = async (u: { id: string; username: string }) => {
+    try {
+      const result = await createDM(u.id);
+      if (result) {
+        navigate(`/${generateSlug(result.room.name)}/${generateSlug('chat')}`, { 
+          state: { roomId: result.room.id, channelId: result.channelId } 
+        });
+      } else {
+        addToast('Failed to start conversation.', 'error');
+      }
+    } catch (error) {
+      addToast('An error occurred.', 'error');
+    }
+  };
 
   const isNewUser = !isLoadingRooms && rooms.length === 0;
 
@@ -122,6 +142,7 @@ const WelcomeDashboard = () => {
                     onAcceptRequest={handleAcceptRequest}
                     onDeclineRequest={handleDeclineRequest}
                     onUserClick={handleUserClick}
+                    onMessageClick={handleMessageClick}
                     onNavigate={navigate}
                     activeTab={activeSidebarTab}
                     onTabChange={setActiveSidebarTab}
@@ -149,6 +170,7 @@ const WelcomeDashboard = () => {
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
           onUserClick={handleUserClick}
+          onMessageClick={handleMessageClick}
           onNavigate={navigate}
           activeTab={activeSidebarTab}
           onTabChange={setActiveSidebarTab}
