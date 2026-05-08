@@ -73,17 +73,16 @@ export const searchUsers = async (query: string): Promise<User[]> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
-  const response = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query)}`, {
+  const response = await fetch(`${API_URL}/api/friends/search?q=${encodeURIComponent(query)}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to search users');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to search users');
   }
 
-  return data;
+  return response.json();
 };

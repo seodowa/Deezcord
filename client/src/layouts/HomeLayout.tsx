@@ -312,7 +312,7 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isWelcomeMode}
+        isCollapsed={isWelcomeMode || isDiscoveryMode}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}

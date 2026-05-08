@@ -13,13 +13,12 @@ export const getFriendsList = async (): Promise<User[]> => {
     },
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch friends list');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch friends (Status: ${response.status})`);
   }
 
-  return data;
+  return response.json();
 };
 
 export const getPendingFriends = async (): Promise<User[]> => {
@@ -32,13 +31,12 @@ export const getPendingFriends = async (): Promise<User[]> => {
     },
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch pending requests');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch pending requests (Status: ${response.status})`);
   }
 
-  return data;
+  return response.json();
 };
 
 export const getFriendStatus = async (targetId: string): Promise<string> => {

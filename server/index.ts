@@ -41,7 +41,7 @@ app.get('/api', (req: Request, res: Response) => {
   res.redirect('/api/rooms');
 });
 
-app.get('/{*splat}', (req, res) => {
+app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
