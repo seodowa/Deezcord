@@ -1,10 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useSocial } from '../../hooks/useSocial';
-import { useDMs } from '../../hooks/useDMs';
-import { useToast } from '../../hooks/useToast';
-import { generateSlug } from '../../utils/slug';
 
 // Sub-components
 import WelcomeHeader from './components/WelcomeHeader';
@@ -13,7 +8,6 @@ import InviteTeamCard from './components/InviteTeamCard';
 import ProfileSetupCard from './components/ProfileSetupCard';
 import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
-import MemberProfileModal from '../../components/MemberProfileModal';
 import UserProfileModal from '../../components/UserProfileModal';
 
 // Types
@@ -30,64 +24,43 @@ interface HomeContextType {
   openCreateModal: () => void;
   navigate: NavigateFunction;
   onLogout: () => Promise<void>;
+  // Lifted Social Context
+  social: {
+    friendsList: User[];
+    pendingList: User[];
+    isLoadingFriends: boolean;
+    handleAcceptRequest: (id: string) => Promise<void>;
+    handleDeclineRequest: (id: string) => Promise<void>;
+    handleUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+    setIsUserProfileOpen: (open: boolean) => void;
+    isUserProfileOpen: boolean;
+    activeSidebarTab: 'friends' | 'search';
+    setActiveSidebarTab: (tab: 'friends' | 'search') => void;
+    handleUserSearch: (query: string) => void;
+    searchResults: User[];
+    isSearching: boolean;
+    searchQuery: string;
+  };
+  dms: Room[];
+  isLoadingDMs: boolean;
+  handleMessageClick: (u: { id: string; username: string }) => Promise<void>;
+  handleDMClick: (dm: Room) => void;
 }
 
 const WelcomeDashboard = () => {
   const { 
-    user: contextUser, 
+    user, 
     rooms,  
     isLoadingRooms, 
     openCreateModal,
     navigate,
-    onLogout: contextLogout
+    onLogout,
+    social,
+    dms,
+    isLoadingDMs,
+    handleMessageClick,
+    handleDMClick
   } = useOutletContext<HomeContextType>();
-
-  const { user: authUser } = useAuth();
-  const user = authUser || contextUser;
-  const { createDM, dms, isLoading: isLoadingDMs } = useDMs();
-  const { addToast } = useToast();
-
-  const {
-    friendsList,
-    pendingList,
-    isLoadingFriends,
-    selectedFriendProfile,
-    isFriendProfileOpen,
-    setIsFriendProfileOpen,
-    isUserProfileOpen,
-    setIsUserProfileOpen,
-    searchResults,
-    isSearching,
-    searchQuery,
-    activeSidebarTab,
-    setActiveSidebarTab,
-    handleUserSearch,
-    handleAcceptRequest,
-    handleDeclineRequest,
-    handleUserClick,
-    handleRefreshFriends
-  } = useSocial();
-
-  const handleMessageClick = async (u: { id: string; username: string }) => {
-    try {
-      const result = await createDM(u.id);
-      if (result) {
-        navigate(`/${generateSlug(result.room.name)}/${generateSlug('chat')}`, { 
-          state: { roomId: result.room.id, channelId: result.channelId } 
-        });
-      } else {
-        addToast('Failed to start conversation.', 'error');
-      }
-    } catch {
-      addToast('An error occurred.', 'error');
-    }
-  };
-
-  const handleDMClick = (dm: Room) => {
-    navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
-      state: { roomId: dm.id, channelId: dm.defaultChannelId } 
-    });
-  };
 
   const isNewUser = !isLoadingRooms && rooms.length === 0;
 
@@ -131,7 +104,7 @@ const WelcomeDashboard = () => {
                   />
                   {isNewUser && !user?.avatar_url && (
                     <ProfileSetupCard 
-                      onSetupProfile={() => setIsUserProfileOpen(true)}
+                      onSetupProfile={() => social.setIsUserProfileOpen(true)}
                     />
                   )}
                 </section>
@@ -140,22 +113,22 @@ const WelcomeDashboard = () => {
                 <section className="2xl:hidden bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden h-[600px] flex flex-col mb-8">
                   <SocialSection 
                     user={user}
-                    onLogout={contextLogout}
-                    onOpenProfile={() => setIsUserProfileOpen(true)}
-                    friendsList={friendsList}
-                    pendingList={pendingList}
-                    isLoadingFriends={isLoadingFriends}
-                    onAcceptRequest={handleAcceptRequest}
-                    onDeclineRequest={handleDeclineRequest}
-                    onUserClick={handleUserClick}
+                    onLogout={onLogout}
+                    onOpenProfile={() => social.setIsUserProfileOpen(true)}
+                    friendsList={social.friendsList}
+                    pendingList={social.pendingList}
+                    isLoadingFriends={social.isLoadingFriends}
+                    onAcceptRequest={social.handleAcceptRequest}
+                    onDeclineRequest={social.handleDeclineRequest}
+                    onUserClick={social.handleUserClick}
                     onMessageClick={handleMessageClick}
                     onNavigate={navigate}
-                    activeTab={activeSidebarTab}
-                    onTabChange={setActiveSidebarTab}
-                    onSearch={handleUserSearch}
-                    searchResults={searchResults}
-                    isSearching={isSearching}
-                    searchQuery={searchQuery}
+                    activeTab={social.activeSidebarTab}
+                    onTabChange={social.setActiveSidebarTab}
+                    onSearch={social.handleUserSearch}
+                    searchResults={social.searchResults}
+                    isSearching={social.isSearching}
+                    searchQuery={social.searchQuery}
                     dmList={dms}
                     isLoadingDMs={isLoadingDMs}
                     onDMClick={handleDMClick}
@@ -171,40 +144,31 @@ const WelcomeDashboard = () => {
       <aside className="hidden 2xl:flex fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] h-[90vh] flex-col z-40 bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 border-r-0 rounded-l-[2.5rem] shadow-2xl shadow-slate-900/5 overflow-hidden">
         <SocialSection 
           user={user}
-          onLogout={contextLogout}
-          onOpenProfile={() => setIsUserProfileOpen(true)}
-          friendsList={friendsList}
-          pendingList={pendingList}
-          isLoadingFriends={isLoadingFriends}
-          onAcceptRequest={handleAcceptRequest}
-          onDeclineRequest={handleDeclineRequest}
-          onUserClick={handleUserClick}
+          onLogout={onLogout}
+          onOpenProfile={() => social.setIsUserProfileOpen(true)}
+          friendsList={social.friendsList}
+          pendingList={social.pendingList}
+          isLoadingFriends={social.isLoadingFriends}
+          onAcceptRequest={social.handleAcceptRequest}
+          onDeclineRequest={social.handleDeclineRequest}
+          onUserClick={social.handleUserClick}
           onMessageClick={handleMessageClick}
           onNavigate={navigate}
-          activeTab={activeSidebarTab}
-          onTabChange={setActiveSidebarTab}
-          onSearch={handleUserSearch}
-          searchResults={searchResults}
-          isSearching={isSearching}
-          searchQuery={searchQuery}
+          activeTab={social.activeSidebarTab}
+          onTabChange={social.setActiveSidebarTab}
+          onSearch={social.handleUserSearch}
+          searchResults={social.searchResults}
+          isSearching={social.isSearching}
+          searchQuery={social.searchQuery}
           dmList={dms}
           isLoadingDMs={isLoadingDMs}
           onDMClick={handleDMClick}
         />
       </aside>
 
-      <MemberProfileModal
-        isOpen={isFriendProfileOpen}
-        onClose={() => {
-          setIsFriendProfileOpen(false);
-          handleRefreshFriends();
-        }}
-        user={selectedFriendProfile}
-      />
-
       <UserProfileModal
-        isOpen={isUserProfileOpen}
-        onClose={() => setIsUserProfileOpen(false)}
+        isOpen={social.isUserProfileOpen}
+        onClose={() => social.setIsUserProfileOpen(false)}
       />
     </div>
   );

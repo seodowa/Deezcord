@@ -14,71 +14,58 @@ import UserProfileModal from '../../components/UserProfileModal';
 
 interface HomeContextType {
   user: User | null;
+  rooms: Room[];
   discoverRooms: Room[];
+  isLoadingRooms: boolean;
   isLoadingDiscover: boolean;
   fetchDiscoverRooms: () => void;
   joinExistingRoom: (room: Room) => Promise<Room>;
   joiningRoomId: string | null;
   navigate: NavigateFunction;
   onLogout: () => Promise<void>;
+  // Lifted Social Context
+  social: {
+    friendsList: User[];
+    pendingList: User[];
+    isLoadingFriends: boolean;
+    handleAcceptRequest: (id: string) => Promise<void>;
+    handleDeclineRequest: (id: string) => Promise<void>;
+    handleUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+    setIsUserProfileOpen: (open: boolean) => void;
+    isUserProfileOpen: boolean;
+    activeSidebarTab: 'friends' | 'search';
+    setActiveSidebarTab: (tab: 'friends' | 'search') => void;
+    handleUserSearch: (query: string) => void;
+    searchResults: User[];
+    isSearching: boolean;
+    searchQuery: string;
+    handleRefreshFriends: () => void;
+    isFriendProfileOpen: boolean;
+    setIsFriendProfileOpen: (open: boolean) => void;
+    selectedFriendProfile: User | null;
+  };
+  dms: Room[];
+  isLoadingDMs: boolean;
+  handleMessageClick: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void>;
+  handleDMClick: (dm: Room) => void;
 }
 
 export default function DiscoveryPage() {
   const { 
-    user: contextUser,
+    user,
     discoverRooms, 
     isLoadingDiscover, 
     fetchDiscoverRooms, 
     joinExistingRoom, 
     joiningRoomId, 
     navigate,
-    onLogout: contextLogout
+    onLogout,
+    social,
+    dms,
+    isLoadingDMs,
+    handleMessageClick,
+    handleDMClick
   } = useOutletContext<HomeContextType>();
-
-  const { createDM, dms, isLoading: isLoadingDMs } = useDMs();
-  const { addToast } = useToast();
-
-  const {
-    friendsList,
-    pendingList,
-    isLoadingFriends,
-    selectedFriendProfile,
-    isFriendProfileOpen,
-    setIsFriendProfileOpen,
-    isUserProfileOpen,
-    setIsUserProfileOpen,
-    searchResults,
-    isSearching,
-    searchQuery,
-    activeSidebarTab,
-    setActiveSidebarTab,
-    handleUserSearch,
-    handleAcceptRequest,
-    handleDeclineRequest,
-    handleUserClick,
-    handleRefreshFriends
-  } = useSocial();
-
-  const handleMessageClick = async (u: { id: string; username: string }) => {
-    try {
-      const result = await createDM(u.id);
-      if (result) {
-        navigate(`/${generateSlug(result.room.name)}/${generateSlug('chat')}`, { 
-          state: { roomId: result.room.id, channelId: result.channelId } 
-        });
-      } else {
-        addToast('Failed to start conversation.', 'error');
-      }
-    } catch {
-      addToast('An error occurred.', 'error');
-    }
-  };
-
-  const handleDMClick = (dm: Room) => {
-    navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
-      state: { roomId: dm.id, channelId: dm.defaultChannelId } 
-    });
-  };
 
   useEffect(() => {
     fetchDiscoverRooms();
@@ -149,23 +136,23 @@ export default function DiscoveryPage() {
       {/* Right Sidebar - Unified Command Center (Social + Search) */}
       <aside className="hidden 2xl:flex fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] h-[90vh] flex-col z-40 bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 border-r-0 rounded-l-[2.5rem] shadow-2xl shadow-slate-900/5 overflow-hidden">
         <SocialSection 
-          user={contextUser}
-          onLogout={contextLogout}
-          onOpenProfile={() => setIsUserProfileOpen(true)}
-          friendsList={friendsList}
-          pendingList={pendingList}
-          isLoadingFriends={isLoadingFriends}
-          onAcceptRequest={handleAcceptRequest}
-          onDeclineRequest={handleDeclineRequest}
-          onUserClick={handleUserClick}
+          user={user}
+          onLogout={onLogout}
+          onOpenProfile={() => social.setIsUserProfileOpen(true)}
+          friendsList={social.friendsList}
+          pendingList={social.pendingList}
+          isLoadingFriends={social.isLoadingFriends}
+          onAcceptRequest={social.handleAcceptRequest}
+          onDeclineRequest={social.handleDeclineRequest}
+          onUserClick={social.handleUserClick}
           onMessageClick={handleMessageClick}
           onNavigate={navigate}
-          activeTab={activeSidebarTab}
-          onTabChange={setActiveSidebarTab}
-          onSearch={handleUserSearch}
-          searchResults={searchResults}
-          isSearching={isSearching}
-          searchQuery={searchQuery}
+          activeTab={social.activeSidebarTab}
+          onTabChange={social.setActiveSidebarTab}
+          onSearch={social.handleUserSearch}
+          searchResults={social.searchResults}
+          isSearching={social.isSearching}
+          searchQuery={social.searchQuery}
           dmList={dms}
           isLoadingDMs={isLoadingDMs}
           onDMClick={handleDMClick}
@@ -173,17 +160,17 @@ export default function DiscoveryPage() {
       </aside>
 
       <MemberProfileModal
-        isOpen={isFriendProfileOpen}
+        isOpen={social.isFriendProfileOpen}
         onClose={() => {
-          setIsFriendProfileOpen(false);
-          handleRefreshFriends();
+          social.setIsFriendProfileOpen(false);
+          social.handleRefreshFriends();
         }}
-        user={selectedFriendProfile}
+        user={social.selectedFriendProfile}
       />
 
       <UserProfileModal
-        isOpen={isUserProfileOpen}
-        onClose={() => setIsUserProfileOpen(false)}
+        isOpen={social.isUserProfileOpen}
+        onClose={() => social.setIsUserProfileOpen(false)}
       />
     </div>
   );

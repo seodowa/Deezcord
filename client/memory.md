@@ -77,6 +77,6 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
 - [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
 - [x] Create a reusable modal component that can be used for anything.
-- [ ] Add Direct Messages (DMs).
-- [ ] Redesign the home page (needs more polish).
+- [x] Add Direct Messages (DMs).
+- [x] Redesign the home page (needs more polish).
 - [x] Modularize API services and separate domain logic.

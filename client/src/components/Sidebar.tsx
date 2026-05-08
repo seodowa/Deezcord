@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import AsyncButton from './AsyncButton';
 import Logo from './Logo';
+import SocialSection from '../pages/home/components/SocialSection';
 import type { Room, Channel } from '../types/room';
+import type { User } from '../types/user';
 import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
@@ -17,7 +19,7 @@ export interface SidebarProps {
   isCollapsed?: boolean;
   userRole?: string | null;
   onToggleTheme: () => void;
-  onLogout: () => void;
+  onLogout: () => Promise<void>;
   onClose: () => void;
   onHomeClick: () => void;
   onSelectRoom: (room: Room) => void;
@@ -32,6 +34,28 @@ export interface SidebarProps {
   isCreatingChannel?: boolean;
   isDiscoveryMode?: boolean;
   isWelcomeMode?: boolean;
+  isHomeDashboard?: boolean;
+  // Social Drawer Props
+  isSocialOpen?: boolean;
+  onToggleSocial?: () => void;
+  social?: {
+    friendsList: User[];
+    pendingList: User[];
+    isLoadingFriends: boolean;
+    handleAcceptRequest: (id: string) => Promise<void>;
+    handleDeclineRequest: (id: string) => Promise<void>;
+    handleUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+    activeSidebarTab: 'friends' | 'search';
+    setActiveSidebarTab: (tab: 'friends' | 'search') => void;
+    handleUserSearch: (query: string) => void;
+    searchResults: User[];
+    isSearching: boolean;
+    searchQuery: string;
+  };
+  isLoadingDMs?: boolean;
+  onMessageClick?: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+  onDMClick?: (dm: Room) => void;
+  onNavigate?: (path: string) => void;
 }
 
 /* ── Tiny Tooltip ── */
@@ -128,7 +152,16 @@ function SidebarComponent({
   isCreatingRoom,
   isCreatingChannel,
   isDiscoveryMode = false,
-  isWelcomeMode = false
+  isWelcomeMode = false,
+  isHomeDashboard = false,
+  // Social Drawer Props
+  isSocialOpen = false,
+  onToggleSocial,
+  social,
+  isLoadingDMs = false,
+  onMessageClick,
+  onDMClick,
+  onNavigate
 }: SidebarProps) {
   const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
@@ -139,6 +172,8 @@ function SidebarComponent({
   const [createHovered, setCreateHovered] = useState(false);
   const discoverBtnRef = useRef<HTMLButtonElement>(null);
   const [discoverHovered, setDiscoverHovered] = useState(false);
+  const socialBtnRef = useRef<HTMLButtonElement>(null);
+  const [socialHovered, setSocialHovered] = useState(false);
 
   const currentRoom = rooms.find(r => r.id === currentRoomId);
 
@@ -176,14 +211,15 @@ function SidebarComponent({
         {/* ── UNIFIED RAIL (Utility Area) ── */}
         <div className="w-[68px] flex flex-col items-center py-4 flex-shrink-0 bg-slate-900/5 dark:bg-white/5 h-full border-r border-slate-200/30 dark:border-white/5">
           {/* Brand Mark */}
-          <div 
+          <button
+            type="button"
             onClick={onHomeClick}
             className={`relative w-12 h-12 flex items-center justify-center mb-6 group cursor-pointer transition-transform hover:scale-105 active:scale-95 ${
               !currentRoomId ? 'ring-2 ring-indigo-500 rounded-xl ring-offset-2 dark:ring-offset-slate-900' : ''
             }`}
           >
             <Logo className="w-9 h-9" />
-          </div>
+          </button>
 
           <div className="flex-1 w-full overflow-y-auto scrollbar-none flex flex-col items-center gap-1">
             {isLoadingRooms ? (
@@ -205,33 +241,68 @@ function SidebarComponent({
           </div>
 
           {/* Action Area */}
-          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto ${isWelcomeMode ? 'border-t-0' : ''}`}>
-            {!isWelcomeMode && (
-              <div className="relative">
-                <AsyncButton
-                  ref={createBtnRef}
-                  onClick={onCreateRoom}
-                  isLoading={isCreatingRoom}
-                  onMouseEnter={() => setCreateHovered(true)}
-                  onMouseLeave={() => setCreateHovered(false)}
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
-                </AsyncButton>
-                <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
-              </div>
+          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto ${isHomeDashboard ? 'border-t-0' : ''}`}>
+            {!isHomeDashboard && (
+              <>
+                {/* Social Toggle Button */}
+                {!isDiscoveryMode && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      ref={socialBtnRef}
+                      onClick={onToggleSocial}
+                      onMouseEnter={() => setSocialHovered(true)}
+                      onMouseLeave={() => setSocialHovered(false)}
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                        isSocialOpen
+                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white'
+                      }`}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </button>
+                    <Tooltip text="Friends & Social" targetRef={socialBtnRef} show={socialHovered} />
+                  </div>
+                )}
+
+                <div className="relative">
+                  <AsyncButton
+                    type="button"
+                    ref={createBtnRef}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      await onCreateRoom();
+                    }}
+                    isLoading={isCreatingRoom}
+                    onMouseEnter={() => setCreateHovered(true)}
+                    onMouseLeave={() => setCreateHovered(false)}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </AsyncButton>
+                  <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
+                </div>
+              </>
             )}
 
-            {!isWelcomeMode && !isDiscoveryMode && (
+            {!isHomeDashboard && !isDiscoveryMode && (
               <div className="relative">
                 <button
+                  type="button"
                   ref={discoverBtnRef}
-                  onClick={onDiscoverRoom}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDiscoverRoom();
+                  }}
                   onMouseEnter={() => setDiscoverHovered(true)}
                   onMouseLeave={() => setDiscoverHovered(false)}
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white transition-all duration-200"
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white`}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -243,8 +314,44 @@ function SidebarComponent({
           </div>
         </div>
         
-        {/* ── SECONDARY PANEL AREA (Channels or DMs) ── */}
-        <div className={`flex-1 flex flex-col min-w-0 transition-opacity duration-300 ${isCollapsed ? 'opacity-0 invisible hidden' : 'opacity-100 visible'}`}>
+        {/* ── SECONDARY PANEL AREA (Channels, DMs, or Social Overlay) ── */}
+        <div className={`flex-1 relative flex flex-col min-w-0 transition-all duration-300 ${
+          isCollapsed && !isSocialOpen 
+            ? 'opacity-0 invisible hidden' 
+            : 'opacity-100 visible'
+        }`}>
+          {/* Social Drawer Overlay */}
+          <div 
+            className={`absolute inset-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl transition-all duration-500 ease-expo transform ${
+              isSocialOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-12 opacity-0 pointer-events-none'
+            }`}
+          >
+            {social && (
+              <SocialSection 
+                user={user}
+                onLogout={onLogout}
+                onOpenProfile={onOpenProfile}
+                friendsList={social.friendsList}
+                pendingList={social.pendingList}
+                isLoadingFriends={social.isLoadingFriends}
+                onAcceptRequest={social.handleAcceptRequest}
+                onDeclineRequest={social.handleDeclineRequest}
+                onUserClick={social.handleUserClick}
+                onMessageClick={(u) => onMessageClick?.(u)}
+                onNavigate={(path) => onNavigate?.(path)}
+                activeTab={social.activeSidebarTab}
+                onTabChange={social.setActiveSidebarTab}
+                onSearch={social.handleUserSearch}
+                searchResults={social.searchResults}
+                isSearching={social.isSearching}
+                searchQuery={social.searchQuery}
+                dmList={dms}
+                isLoadingDMs={isLoadingDMs}
+                onDMClick={(dm) => onDMClick?.(dm)}
+              />
+            )}
+          </div>
+
           {/* Header */}
           <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/30 dark:border-white/5">
             <h2 className="text-[17px] font-bold text-slate-900 dark:text-white truncate tracking-tight">
