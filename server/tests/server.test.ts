@@ -5,7 +5,7 @@ import * as parser from 'socket.io-msgpack-parser';
 import signIn from '../utils/auth';
 
 import dotenv from 'dotenv';
-dotenv.config({path: `${__dirname}/.env`});
+dotenv.config({path: `${__dirname}/.env.stresstest`});
 
 const SERVER_URL = process.env.VITE_API_URL;
 
