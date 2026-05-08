@@ -224,8 +224,8 @@ function MessageListComponent({
                     </div>
 
                     {/* Hover Actions Container */}
-                    <div className={`absolute top-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
-                      isOwn ? (onDeleteMessage ? '-left-[6.75rem]' : '-left-20') : '-right-20'
+                    <div className={`absolute top-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
+                      isOwn ? (onDeleteMessage ? '-left-[7rem]' : '-left-20') : '-right-20'
                     }`}>
                       {onReplyMessage && (
                         <button

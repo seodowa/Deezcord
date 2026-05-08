@@ -350,62 +350,62 @@ export default function HomeLayout() {
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
         
-        {/* Render headers ONLY if not on WelcomePage or DiscoveryPage */}
+        {/* Mobile Header - Always render on mobile to allow access to sidebar */}
+        <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md md:hidden z-20 sticky top-0">
+          <div className="flex items-center gap-3">
+             <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+             >
+                <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+             </button>
+             
+             {currentRoom && !isDiscoveryMode && !isWelcomeMode ? (
+               <div className="flex items-center gap-2 overflow-hidden">
+                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 ${
+                   currentRoom.room_profile ? '' : 'bg-blue-500'
+                 }`}>
+                   {currentRoom.room_profile ? (
+                     <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
+                   ) : (
+                     <span>#</span>
+                   )}
+                 </div>
+                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
+                   {currentChannel ? `#${currentChannel.name}` : currentRoom.name}
+                 </h2>
+               </div>
+               ) : (
+               <div className="flex items-center gap-2">
+                 <Logo className="w-8 h-8" />
+                 <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">
+                   {isDiscoveryMode ? 'Discovery' : 'Deezcord'}
+                 </h2>
+               </div>
+               )}              </div>
+
+          {currentRoom?.isMember && !isDiscoveryMode && !isWelcomeMode && (
+            <button
+              onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                isSettingsView 
+                  ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
+                  : 'bg-white/50 dark:bg-slate-700/50 border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:scale-105'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
+        </header>
+
+        {/* Render desktop header ONLY if not on WelcomePage or DiscoveryPage */}
         {!isWelcomeMode && !isDiscoveryMode && (
           <>
-            {/* Mobile Header */}
-            <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md md:hidden z-20 sticky top-0">
-              <div className="flex items-center gap-3">
-                 <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                 >
-                    <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                 </button>
-                 
-                 {currentRoom && !isDiscoveryMode ? (
-                   <div className="flex items-center gap-2 overflow-hidden">
-                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 ${
-                       currentRoom.room_profile ? '' : 'bg-blue-500'
-                     }`}>
-                       {currentRoom.room_profile ? (
-                         <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
-                       ) : (
-                         <span>#</span>
-                       )}
-                     </div>
-                     <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
-                       {currentChannel ? `#${currentChannel.name}` : currentRoom.name}
-                     </h2>
-                   </div>
-                   ) : (
-                   <div className="flex items-center gap-2">
-                     <Logo className="w-8 h-8" />
-                     <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">
-                       {isDiscoveryMode ? 'Discovery' : 'Deezcord'}
-                     </h2>
-                   </div>
-                   )}              </div>
-
-              {currentRoom?.isMember && !isDiscoveryMode && (
-                <button
-                  onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
-                    isSettingsView 
-                      ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
-                      : 'bg-white/50 dark:bg-slate-700/50 border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:scale-105'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-              )}
-            </header>
-
             {/* Desktop Header */}
             <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
               <div className="flex items-center gap-4">
