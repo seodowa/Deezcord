@@ -32,7 +32,8 @@ import socketio # type: ignore
 from locust import User, task, constant, events, LoadTestShape # type: ignore
 from locust.exception import StopUser # type: ignore
 
-load_dotenv()
+dir_path = os.path.dirname(os.path.realpath(__file__))
+load_dotenv(os.path.join(dir_path, ".env.stresstest"))
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -233,23 +234,3 @@ class ChatUser(User):
 #   { duration: '1m',  target: 500 }   hold / ramp up
 #   { duration: '30s', target: 0   }   ramp down
 # ---------------------------------------------------------------------------
-
-class DeezcordShape(LoadTestShape):
-    """
-    Locust shapes work on cumulative elapsed time.
-    spawn_rate is users/second added (or removed) to reach the target.
-    """
-
-    stages = [
-        # (cumulative end time s, target users, spawn_rate users/s)
-        (30,  10, 10 / 30),   # 0–30 s:   ramp 0 → 10
-        (90,  200, 40 / 60),   # 30–90 s:  ramp 10 → 200
-        (120,   0, 50 / 30),   # 90–120 s: ramp 200 → 0
-    ]
-
-    def tick(self):
-        elapsed = self.get_run_time()
-        for end_time, users, rate in self.stages:
-            if elapsed <= end_time:
-                return (users, rate)
-        return None   # stop the test
