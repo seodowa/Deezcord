@@ -109,6 +109,28 @@ const WelcomeDashboard = () => {
                     />
                   )}
                 </section>
+
+                {/* Mobile/Tablet Social Section (Visible < 2xl) */}
+                <section className="2xl:hidden bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden h-[600px] flex flex-col mb-8">
+                  <SocialSection 
+                    user={user}
+                    onLogout={contextLogout}
+                    onOpenProfile={() => setIsUserProfileOpen(true)}
+                    friendsList={friendsList}
+                    pendingList={pendingList}
+                    isLoadingFriends={isLoadingFriends}
+                    onAcceptRequest={handleAcceptRequest}
+                    onDeclineRequest={handleDeclineRequest}
+                    onUserClick={handleUserClick}
+                    onNavigate={navigate}
+                    activeTab={activeSidebarTab}
+                    onTabChange={setActiveSidebarTab}
+                    onSearch={handleUserSearch}
+                    searchResults={searchResults}
+                    isSearching={isSearching}
+                    searchQuery={searchQuery}
+                  />
+                </section>
               </div>
             </div>
           </div>

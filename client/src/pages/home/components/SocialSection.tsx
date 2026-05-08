@@ -46,8 +46,15 @@ export default function SocialSection({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Sidebar Header */}
+      <div className="shrink-0 p-4 pb-2">
+        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex justify-center items-center gap-2">
+          Social
+        </h2>
+      </div>
+
       {/* Sidebar Top Section - Toggles */}
-      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/5 p-3">
+      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/5 p-3 pt-0">
         {/* Tab Header - Switch Style (Narrower Width) */}
         <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-[260px] mx-auto">
           {/* Sliding Background Indicator */}
