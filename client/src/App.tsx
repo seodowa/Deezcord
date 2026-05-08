@@ -2,11 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
+import LoadingScreen from './components/LoadingScreen';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
 import HomeLayout from './layouts/HomeLayout';
-import WelcomePage from './pages/home/WelcomePage';
+import WelcomeDashboard from './pages/home/WelcomeDashboard';
 import DiscoveryPage from './pages/home/DiscoveryPage';
 import RoomPage from './pages/home/RoomPage';
 import ChatPage from './pages/home/ChatPage';
@@ -18,11 +19,7 @@ const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingScreen message="Verifying session..." />;
   }
 
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
@@ -32,18 +29,14 @@ const AppRoutes = () => {
   const { isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingScreen message="Starting Deezcord..." />;
   }
 
   return (
     <Routes>
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomeLayout />}>
-          <Route index element={<WelcomePage />} />
+          <Route index element={<WelcomeDashboard />} />
           <Route path="discovery" element={<DiscoveryPage />} />
           <Route path=":roomSlug" element={<RoomPage />} />
           <Route path=":roomSlug/settings" element={<SettingsPage />} />

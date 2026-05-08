@@ -10,6 +10,8 @@ import msgpackParser from "socket.io-msgpack-parser";
 // 1. Import our separated modules
 import supabase from './config/supabaseClient';
 import roomRoutes from './routes/roomRoutes';
+import friendRoutes from './routes/friendRoutes';
+import userRoutes from './routes/userRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
 import { ReceiveMessagePayload } from './types/socket';
@@ -20,12 +22,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, '../../client/dist')));
+// Determine if we are running from the compiled 'dist' folder or the root 'server' folder
+const clientDistPath = __dirname.endsWith('dist') 
+  ? path.join(__dirname, '../../client/dist') 
+  : path.join(__dirname, '../client/dist');
+
+app.use(express.static(clientDistPath));
 
 // 2. Tell Express to use the routes we separated
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Redirect root to /rooms
 app.get('/api', (req: Request, res: Response) => {
@@ -33,7 +42,7 @@ app.get('/api', (req: Request, res: Response) => {
 });
 
 app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../client/dist', 'index.html'));
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 const server = http.createServer(app);
@@ -212,7 +221,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           file_url: data.file_url,
           file_name: data.file_name,
           parent_id: data.parent_id,
-          parent_message: parentMessage
+          parent_message: parentMessage,
+          temp_id: data.temp_id
       };
 
       io.to(`channel:${data.channel_id}`).emit('receive_message', broadcastData);
@@ -288,37 +298,38 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const userId = socket.user?.id;
       if (!userId || !data.message_id || !data.emoji || !data.channel_id) return;
 
-      // Insert reaction
-      const { error } = await supabase
+      // Fetch user profile to get username
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+
+      // Insert reaction and fetch the inserted row
+      const { data: insertedReaction, error } = await supabase
         .from('message_reactions')
         .insert([{
           message_id: data.message_id,
           user_id: userId,
           emoji: data.emoji
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error && error.code !== '23505') throw error; // Ignore unique constraint violation (already reacted)
-
-      // Fetch all reactions for this message to broadcast the updated state
-      const { data: reactions, error: fetchError } = await supabase
-        .from('message_reactions')
-        .select('id, message_id, user_id, emoji, profiles(username)')
-        .eq('message_id', data.message_id);
-
-      if (fetchError) throw fetchError;
-
-      const formattedReactions = reactions.map((r: any) => ({
-        id: r.id,
-        message_id: r.message_id,
-        user_id: r.user_id,
-        emoji: r.emoji,
-        username: r.profiles?.username
-      }));
-
-      io.to(`channel:${data.channel_id}`).emit('reaction_update', {
-        message_id: data.message_id,
-        reactions: formattedReactions
-      });
+      
+      if (insertedReaction) {
+        io.to(`channel:${data.channel_id}`).emit('reaction_added', {
+          message_id: data.message_id,
+          reaction: {
+            id: insertedReaction.id,
+            message_id: data.message_id,
+            user_id: userId,
+            emoji: data.emoji,
+            username: profile?.username
+          }
+        });
+      }
     } catch (error) {
       console.error("Error adding reaction:", error);
     }
@@ -338,25 +349,10 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       if (error) throw error;
 
-      // Fetch updated reactions
-      const { data: reactions, error: fetchError } = await supabase
-        .from('message_reactions')
-        .select('id, message_id, user_id, emoji, profiles(username)')
-        .eq('message_id', data.message_id);
-
-      if (fetchError) throw fetchError;
-
-      const formattedReactions = reactions.map((r: any) => ({
-        id: r.id,
-        message_id: r.message_id,
-        user_id: r.user_id,
-        emoji: r.emoji,
-        username: r.profiles?.username
-      }));
-
-      io.to(`channel:${data.channel_id}`).emit('reaction_update', {
+      io.to(`channel:${data.channel_id}`).emit('reaction_removed', {
         message_id: data.message_id,
-        reactions: formattedReactions
+        user_id: userId,
+        emoji: data.emoji
       });
     } catch (error) {
       console.error("Error removing reaction:", error);

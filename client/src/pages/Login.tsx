@@ -4,47 +4,16 @@ import AsyncButton from '../components/AsyncButton';
 import { useToast } from '../hooks/useToast';
 import { loginUser } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [mounted, setMounted] = useState(false);
 
+  const { isDarkMode, toggleTheme, mounted } = useTheme();
   const { login } = useAuth();
-
-  useEffect(() => {
-    setTimeout(() => setMounted(true), 0);
-    // On mount, read from local storage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setTimeout(() => setIsDarkMode(true), 0);
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      setTimeout(() => setIsDarkMode(false), 0);
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      localStorage.setItem('theme', 'light');
-      setIsDarkMode(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-      localStorage.setItem('theme', 'dark');
-      setIsDarkMode(true);
-    }
-  };
 
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -56,7 +25,7 @@ export default function LoginPage() {
       const data = await loginUser(identifier, password);
       addToast('Successfully signed in!', 'success');
       
-      login(data.token, rememberMe);
+      await login(data.token, rememberMe);
       
       navigate('/');
     } catch (error: unknown) {
@@ -68,7 +37,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       {/* Deezcord Server Status Feature - Top Left */}
       <div className="absolute top-6 left-6 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 text-slate-900 dark:text-slate-50 px-4 py-2 rounded-full flex items-center gap-2.5 z-50 shadow-sm transition-colors duration-500">
@@ -151,14 +120,14 @@ export default function LoginPage() {
           </div>
 
           <div className="flex justify-between items-center mb-8">
-            <label className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 cursor-pointer group">
               <input
                 type="checkbox"
-                className="accent-blue-500 w-[18px] h-[18px] cursor-pointer"
+                className="cursor-pointer transition-transform duration-200 group-hover:scale-110"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              Remember me
+              <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-200">Remember me</span>
             </label>
             <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
               Forgot password?

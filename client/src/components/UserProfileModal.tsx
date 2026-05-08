@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { updateProfile, updatePassword } from '../services/authService';
+import { updateProfile, updatePassword } from '../services/userService';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
 

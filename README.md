@@ -10,4 +10,3 @@ This project serves as our Performance Innovative Task in the course Parallel an
 - seodowa - Theodore Pagalan
 - Peruereee  - Carl Dominic Rejas
 
-test commit to see if runner works

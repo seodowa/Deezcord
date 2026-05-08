@@ -22,7 +22,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     removeReaction: socketRemoveReaction,
     onMessage,
     onMessageDeleted,
-    onReactionUpdate,
+    onReactionAdded,
+    onReactionRemoved,
     onTyping,
     onPresenceUpdate,
     onRoomCreated,
@@ -88,15 +89,22 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
           const exists = prev.some(m => m.id === newMessage.id);
           if (exists) return prev;
           
-          const filtered = prev.filter(m => 
-            !(m.id.startsWith('temp-') && m.content === newMessage.content && m.username === newMessage.username)
-          );
+          const filtered = prev.filter(m => {
+            if (newMessage.temp_id && m.id === newMessage.temp_id) {
+               return false; // Remove the exact temporary message
+            }
+            // Fallback for older messages or if temp_id isn't available
+            return !(m.id.startsWith('temp-') && m.content === newMessage.content && m.username === newMessage.username);
+          });
 
-          return [...filtered, {
+          const updated = [...filtered, {
             ...newMessage,
-            id: newMessage.id || Date.now().toString(),
-            created_at: newMessage.created_at || new Date().toISOString()
+            id: newMessage.id,
+            created_at: newMessage.created_at
           }];
+
+          // Ensure sorted by creation time
+          return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         });
       }
     });
@@ -113,16 +121,34 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   }, [onMessageDeleted, channelId]);
 
   useEffect(() => {
-    const unsubscribe = onReactionUpdate((data) => {
+    const unsubscribeAdded = onReactionAdded((data) => {
       setMessages(prev => prev.map(msg => {
         if (msg.id === data.message_id) {
-          return { ...msg, reactions: data.reactions };
+          const currentReactions = msg.reactions || [];
+          const exists = currentReactions.some(r => r.id === data.reaction.id);
+          if (!exists) {
+            return { ...msg, reactions: [...currentReactions, data.reaction] };
+          }
         }
         return msg;
       }));
     });
-    return unsubscribe;
-  }, [onReactionUpdate]);
+
+    const unsubscribeRemoved = onReactionRemoved((data) => {
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === data.message_id) {
+          const currentReactions = msg.reactions || [];
+          return { ...msg, reactions: currentReactions.filter(r => !(r.user_id === data.user_id && r.emoji === data.emoji)) };
+        }
+        return msg;
+      }));
+    });
+
+    return () => {
+      unsubscribeAdded();
+      unsubscribeRemoved();
+    };
+  }, [onReactionAdded, onReactionRemoved]);
 
   useEffect(() => {
     const unsubscribe = onTyping((data) => {
@@ -154,10 +180,10 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
 
   const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => {
     if (roomId && channelId && isMember) {
-      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId });
+      const tempId = `temp-${crypto.randomUUID()}`;
+      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId, temp_id: tempId });
       
       const parentMessage = parentId ? messages.find(m => m.id === parentId) : null;
-      const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
         id: tempId,
         user_id: user?.id || null,
@@ -173,7 +199,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         parent_message: parentMessage ? {
           username: parentMessage.username,
           content: parentMessage.content
-        } : null
+        } : null,
+        temp_id: tempId
       };
       setMessages(prev => [...prev, newMessage]);
       socketStopTyping({ room_id: roomId, channel_id: channelId });

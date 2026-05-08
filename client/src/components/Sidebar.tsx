@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import AsyncButton from './AsyncButton';
 import type { Room, Channel } from '../types/room';
-import UserProfileModal from './UserProfileModal';
 import { useAuth } from '../hooks/useAuth';
 
 export interface SidebarProps {
@@ -23,6 +23,7 @@ export interface SidebarProps {
   onCreateRoom: () => void;
   onCreateChannel: (name: string) => void;
   onDiscoverRoom: () => void;
+  onOpenProfile: () => void;
   isLoadingRooms: boolean;
   isCreatingRoom: boolean;
   isCreatingChannel?: boolean;
@@ -41,14 +42,15 @@ function Tooltip({ text, targetRef, show }: { text: string; targetRef: React.Ref
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed z-[200] px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap animate-tooltip-in"
+      className="fixed z-[9999] px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap animate-tooltip-in"
       style={{ top: pos.top, left: pos.left, transform: 'translateY(-50%)' }}
     >
       {text}
       <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 rotate-45 bg-slate-900 dark:bg-slate-100" />
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -108,11 +110,11 @@ export default function Sidebar({
   onCreateRoom,
   onCreateChannel,
   onDiscoverRoom,
+  onOpenProfile,
   isLoadingRooms,
   isCreatingRoom,
   isCreatingChannel
 }: SidebarProps) {
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [isChannelsCategoryOpen, setIsChannelsCategoryOpen] = useState(true);
@@ -337,7 +339,7 @@ export default function Sidebar({
           <div className="p-4 border-t border-slate-200/30 dark:border-white/5 bg-slate-50/30 dark:bg-black/10">
             <div className="flex items-center justify-between p-2 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm">
               <button
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={onOpenProfile}
                 className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity"
               >
                 <div className="relative flex-shrink-0">
@@ -391,11 +393,6 @@ export default function Sidebar({
           </div>
         </div>
       </aside>
-
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-      />
     </>
   );
 }

@@ -49,7 +49,7 @@ export const useSocket = () => {
     }
   }, []);
 
-  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; parent_id?: string | null }) => {
+  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; parent_id?: string | null; temp_id?: string }) => {
     if (socketRef.current) {
       socketRef.current.emit('send_message', data);
     }
@@ -94,7 +94,7 @@ export const useSocket = () => {
         socketRef.current.off('receive_message', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onMessageDeleted = useCallback((callback: (data: { message_id: string; channel_id: string }) => void) => {
     if (socketRef.current) {
@@ -106,17 +106,29 @@ export const useSocket = () => {
       }
     };
   }, []);
-
-  const onReactionUpdate = useCallback((callback: (data: { message_id: string; reactions: MessageReaction[] }) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on('reaction_update', callback);
-    }
+const onReactionAdded = useCallback((callback: (data: { message_id: string; reaction: MessageReaction }) => void) => {
+  if (socketRef.current) {
+    socketRef.current.on('reaction_added', callback);
     return () => {
       if (socketRef.current) {
-        socketRef.current.off('reaction_update', callback);
+        socketRef.current.off('reaction_added', callback);
       }
     };
-  }, []);
+  }
+  return () => {};
+}, []);
+
+const onReactionRemoved = useCallback((callback: (data: { message_id: string; user_id: string; emoji: string }) => void) => {
+  if (socketRef.current) {
+    socketRef.current.on('reaction_removed', callback);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('reaction_removed', callback);
+      }
+    };
+  }
+  return () => {};
+}, []);
 
   const onTyping = useCallback((callback: (data: { room_id: string; channel_id?: string; username: string; isTyping: boolean }) => void) => {
     if (socketRef.current) {
@@ -127,7 +139,7 @@ export const useSocket = () => {
         socketRef.current.off('user_typing', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onPresenceUpdate = useCallback((callback: (data: { userId: string; status: 'online' | 'offline' }) => void) => {
     if (socketRef.current) {
@@ -138,7 +150,7 @@ export const useSocket = () => {
         socketRef.current.off('presence_update', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onRoomCreated = useCallback((callback: (data: unknown) => void) => {
     if (socketRef.current) {
@@ -149,7 +161,7 @@ export const useSocket = () => {
         socketRef.current.off('room_created', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onRoomDeleted = useCallback((callback: (roomId: string) => void) => {
     if (socketRef.current) {
@@ -160,7 +172,7 @@ export const useSocket = () => {
         socketRef.current.off('room_deleted', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onChannelCreated = useCallback((callback: (data: unknown) => void) => {
     if (socketRef.current) {
@@ -171,7 +183,7 @@ export const useSocket = () => {
         socketRef.current.off('channel_created', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onFriendRequestReceived = useCallback((callback: (data: { requesterId: string }) => void) => {
     if (socketRef.current) {
@@ -182,7 +194,7 @@ export const useSocket = () => {
         socketRef.current.off('friend_request_received', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onFriendRequestAccepted = useCallback((callback: (data: { addresseeId: string }) => void) => {
     if (socketRef.current) {
@@ -193,7 +205,7 @@ export const useSocket = () => {
         socketRef.current.off('friend_request_accepted', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   const onFriendRemoved = useCallback((callback: (data: { removedBy: string }) => void) => {
     if (socketRef.current) {
@@ -204,7 +216,7 @@ export const useSocket = () => {
         socketRef.current.off('friend_removed', callback);
       }
     };
-  }, []);
+  }, [socketRef.current]);
 
   return { 
     isConnected, 
@@ -218,7 +230,8 @@ export const useSocket = () => {
     removeReaction,
     onMessage,
     onMessageDeleted,
-    onReactionUpdate,
+    onReactionAdded,
+    onReactionRemoved,
     onTyping, 
     onPresenceUpdate, 
     onRoomCreated, 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import CreateRoomModal from '../components/CreateRoomModal';
+import UserProfileModal from '../components/UserProfileModal';
+import LoadingScreen from '../components/LoadingScreen';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -14,6 +16,7 @@ import { generateSlug } from '../utils/slug';
 export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
 
@@ -190,6 +193,15 @@ export default function HomeLayout() {
     window.location.href = '/login';
   };
 
+  // Show a full-page loading screen until both user and initial rooms are loaded
+  if (!user || (isLoadingRooms && rooms.length === 0)) {
+    return (
+      <LoadingScreen 
+        message={!user ? "Syncing your profile..." : "Getting your rooms ready..."} 
+      />
+    );
+  }
+
   const outletContext = {
     currentRoom,
     currentChannel,
@@ -213,11 +225,12 @@ export default function HomeLayout() {
     isJoining,
     joinExistingRoom,
     setRooms,
-    navigate
+    navigate,
+    onLogout: handleLogout
   };
 
   return (
-    <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
@@ -243,6 +256,7 @@ export default function HomeLayout() {
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
+        onOpenProfile={() => setIsUserProfileOpen(true)}
         isLoadingRooms={isLoadingRooms}
         isCreatingRoom={isCreatingRoom}
         isCreatingChannel={isCreatingChannel}
@@ -253,6 +267,11 @@ export default function HomeLayout() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateRoom}
+      />
+
+      <UserProfileModal
+        isOpen={isUserProfileOpen}
+        onClose={() => setIsUserProfileOpen(false)}
       />
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
