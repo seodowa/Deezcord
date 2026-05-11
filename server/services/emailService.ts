@@ -19,7 +19,7 @@ const smtpConfig = {
   secure: (process.env.SMTP_PORT === '465'), // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    pass: (process.env.SMTP_PASS || '').replace(/\s/g, ''), // Remove spaces from app password
   },
 };
 
@@ -65,6 +65,29 @@ export async function sendFriendRequestEmail(toEmail: string, requesterUsername:
       <h2 style="color: #4f46e5;">Hello!</h2>
       <p><strong>${requesterUsername}</strong> sent you a friend request on Deezcord.</p>
       <p>Log in to your account to accept or decline the request.</p>
+      <br />
+      <hr />
+      <p style="font-size: 0.8em; color: #666;">This is an automated notification. Please do not reply to this email.</p>
+    </div>
+  `;
+  return sendEmail(toEmail, subject, html);
+}
+
+/**
+ * Template: Password Reset Link
+ */
+export async function sendPasswordResetEmail(toEmail: string, resetLink: string) {
+  const subject = `Reset Your Deezcord Password`;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+      <h2 style="color: #4f46e5;">Password Reset Request</h2>
+      <p>We received a request to reset your password for your Deezcord account.</p>
+      <p>Click the button below to set a new password:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+      </div>
+      <p>If you didn't request this, you can safely ignore this email.</p>
+      <p>This link will expire soon.</p>
       <br />
       <hr />
       <p style="font-size: 0.8em; color: #666;">This is an automated notification. Please do not reply to this email.</p>

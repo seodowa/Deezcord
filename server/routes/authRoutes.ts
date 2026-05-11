@@ -3,7 +3,7 @@ import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
-import signIn, { signUp } from '../utils/auth';
+import signIn, { signUp, forgotPassword, resetPassword } from '../utils/auth';
 
 const router = express.Router();
 
@@ -55,6 +55,47 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (error: any) {
     res.status(401).json({ error: error.message || "Failed to login" });
+  }
+});
+
+// POST /auth/forgot-password - Request a password reset email
+router.post('/forgot-password', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ error: "Email is required." });
+      return;
+    }
+
+    await forgotPassword(email);
+    
+    res.status(200).json({
+      message: "If an account exists, a reset link has been sent."
+    });
+  } catch (error: any) {
+    console.error("[AuthRoute] Forgot Password Error:", error);
+    res.status(400).json({ error: error.message || "Failed to send reset link" });
+  }
+});
+
+// POST /auth/reset-password - Reset password using a code
+router.post('/reset-password', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code, password } = req.body;
+
+    if (!code || !password) {
+      res.status(400).json({ error: "Code and new password are required." });
+      return;
+    }
+
+    await resetPassword(code, password);
+    
+    res.status(200).json({
+      message: "Password reset successful"
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to reset password" });
   }
 });
 
