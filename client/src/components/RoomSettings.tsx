@@ -3,9 +3,11 @@ import type { Room, Member } from '../types/room';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
 import MemberProfileModal from './MemberProfileModal';
+import MFAChallengeModal from './MFAChallengeModal';
 import { useToast } from '../hooks/useToast';
 import { updateRoom, addMember, kickMember, leaveRoom, deleteRoom } from '../services/roomService';
 import { useAuth } from '../hooks/useAuth';
+import { useMFAChallenge } from '../hooks/useMFAChallenge';
 
 interface RoomSettingsProps {
   room: Room;
@@ -32,6 +34,8 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
 
   const [selectedProfile, setSelectedProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const { isChallengeOpen, factorId, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
@@ -127,8 +131,12 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
       addToast('Room deleted successfully', 'success');
       setConfirmAction(null);
       onLeave(); // We can reuse onLeave to navigate away
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
+    } catch (err: any) {
+      if (err.message === 'MFA_REQUIRED') {
+        startChallenge(() => handleDeleteRoom());
+      } else {
+        addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -485,6 +493,16 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         onClose={() => setIsProfileModalOpen(false)}
         user={selectedProfile}
       />
+
+      {/* MFA Challenge Modal */}
+      {factorId && (
+        <MFAChallengeModal
+          isOpen={isChallengeOpen}
+          factorId={factorId}
+          onClose={closeChallenge}
+          onSuccess={handleVerified}
+        />
+      )}
 
     </div>
   );

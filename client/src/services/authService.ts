@@ -71,3 +71,60 @@ export const resetPassword = async (code: string, password: string) => {
 
   return data;
 };
+
+/**
+ * MFA SERVICES (Calling Express Backend)
+ */
+
+export const mfaEnroll = async (token: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/enroll`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to start MFA enrollment');
+  }
+
+  return data;
+};
+
+export const mfaListFactors = async (token: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/factors`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to list MFA factors');
+  }
+
+  return data;
+};
+
+export const mfaVerify = async (token: string, factorId: string, code: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ factorId, code }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to verify MFA');
+  }
+
+  return data;
+};

@@ -4,6 +4,7 @@ import { useToast } from '../hooks/useToast';
 import { updateProfile, updatePassword } from '../services/userService';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
+import MFASetupModal from './MFASetupModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isMFAModalOpen, setIsMFAModalOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -166,7 +168,20 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           </h3>
           
           <div className="space-y-4">
-            <div className="space-y-1.5">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Two-Factor Authentication</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Add an extra layer of security to your account.</p>
+              </div>
+              <button
+                onClick={() => setIsMFAModalOpen(true)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors"
+              >
+                Setup MFA
+              </button>
+            </div>
+
+            <div className="space-y-1.5 pt-2">
               <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">NEW PASSWORD</label>
               <input
                 type="password"
@@ -196,6 +211,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           </div>
         </section>
       </div>
+
+      <MFASetupModal 
+        isOpen={isMFAModalOpen} 
+        onClose={() => setIsMFAModalOpen(false)} 
+      />
     </Modal>
   );
 }
