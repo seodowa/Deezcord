@@ -1,7 +1,7 @@
 import express, { Response } from 'express';
 import multer from 'multer';
 import supabase from '../config/supabaseClient';
-import { verifyUser, verifyRoomMember, verifyRoomOwner, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { verifyUser, verifyRoomMember, verifyRoomOwner, verifyAAL2, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { isUserOnline } from '../utils/presence';
 import channelRoutes from './channelRoutes';
 
@@ -410,7 +410,7 @@ router.delete('/:roomId/leave', verifyUser, verifyRoomMember, async (req: Authen
 });
 
 // DELETE /rooms/:roomId - Delete a room (OWNER ONLY)
-router.delete('/:roomId', verifyUser, verifyRoomOwner, async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:roomId', verifyUser, verifyRoomOwner, verifyAAL2, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
 
   // 1. Manually delete all room members first (due to ON DELETE NO ACTION constraint)
