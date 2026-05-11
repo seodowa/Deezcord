@@ -54,24 +54,32 @@ export default signIn;
 
 export async function signUp(email: string, password: string, username: string) {
     try {
-        // Use the Admin API because we are on a secure backend using the Service Key
-        const { data, error } = await supabase.auth.admin.createUser({
+        console.log(`[Auth] Attempting to register user: ${email} (${username})`);
+        
+        // Use the standard signUp method to trigger the auto-verification email flow.
+        // admin.createUser bypasses the email flow by design.
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            user_metadata: {
-                username: username,
-            },
-            email_confirm: true // This auto-verifies the email so they can log in immediately
+            options: {
+                data: {
+                    username: username,
+                },
+                // Redirect user to the /verify page after they click the link
+                emailRedirectTo: `${process.env.APP_URL}/verify`
+            }
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('[Auth] Supabase registration error:', error.message);
+            throw error;
+        }
 
-        // NOTE: The public.profiles entry is now created automatically by a 
-        // Postgres trigger (handle_new_user_profile) on the auth.users table.
+        console.log(`[Auth] Registration successful for ${email}. Verification email should be triggered.`);
         
         return data;
     } catch (error: any) {
-        console.log("Registration failed.", error.message);
+        console.error("[Auth] Registration exception:", error.message);
         throw error;
     }
 }

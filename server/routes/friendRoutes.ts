@@ -2,6 +2,7 @@ import express, { Response } from 'express';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { isUserOnline } from '../utils/presence';
+import { sendFriendRequestEmail } from '../services/emailService';
 
 const router = express.Router();
 
@@ -188,6 +189,29 @@ router.post('/request/:addresseeId', verifyUser, async (req: AuthenticatedReques
   const io = req.app.get('io');
   if (io) {
     io.to(addresseeId).emit('friend_request_received', { requesterId });
+  }
+
+  // 1. Fetch the requester's username and the addressee's email for the notification
+  try {
+    const { data: requesterProfile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', requesterId)
+      .single();
+
+    const { data: addresseeProfile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', addresseeId)
+      .single();
+
+    if (requesterProfile && addresseeProfile?.email) {
+      // 2. Send the email notification (Fire and forget, don't await to avoid blocking the response)
+      sendFriendRequestEmail(addresseeProfile.email, requesterProfile.username)
+        .catch(err => console.error('[FriendRoutes] Failed to send notification email:', err));
+    }
+  } catch (emailError) {
+    console.error('[FriendRoutes] Error preparing email notification:', emailError);
   }
 
   res.status(200).json({ message: "Friend request sent" });

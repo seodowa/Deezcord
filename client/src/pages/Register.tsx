@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { registerUser } from '../services/authService';
 import Logo from '../components/Logo';
+import VerificationModal from '../components/VerificationModal';
 import { useTheme } from '../hooks/useTheme';
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const { isDarkMode, toggleTheme, mounted } = useTheme();
 
@@ -35,12 +36,11 @@ export default function RegisterPage() {
     
     try {
       await registerUser(username, email, password);
-      // Registration successful, redirect to login
-      navigate('/login', { state: { message: "Account created successfully. Please sign in." }});
+      // Show verification modal instead of immediate redirect
+      setShowVerificationModal(true);
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || 'An error occurred during registration.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -48,6 +48,13 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
+      {/* Verification Modal Component */}
+      <VerificationModal 
+        isOpen={showVerificationModal} 
+        email={email} 
+        onClose={() => setShowVerificationModal(false)} 
+      />
+
       {/* Deezcord Server Status Feature - Top Left */}
       <div className="absolute top-6 left-6 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 text-slate-900 dark:text-slate-50 px-4 py-2 rounded-full flex items-center gap-2.5 z-50 shadow-sm transition-colors duration-500">
         <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
