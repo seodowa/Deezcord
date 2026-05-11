@@ -244,20 +244,31 @@ export const leaveRoom = async (roomId: string): Promise<void> => {
   }
 };
 
-export const deleteRoom = async (roomId: string): Promise<void> => {
+export const deleteRoom = async (roomId: string, mfaCode?: string): Promise<void> => {
   const token = getToken();
   if (!token) throw new Error('Not authenticated');
 
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${token}`,
+  };
+
+  if (mfaCode) {
+    headers['x-mfa-code'] = mfaCode;
+  }
+
   const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers,
   });
 
   if (!response.ok) {
     const data = await response.json();
-    throw new Error(data.error || 'Failed to delete room');
+    const error = new Error(data.error || 'Failed to delete room');
+    // Attach error code for transactional MFA interception
+    if (data.error === 'MFA_REQUIRED_TRANSACTIONAL') {
+      (error as any).code = 'MFA_REQUIRED_TRANSACTIONAL';
+    }
+    throw error;
   }
 };
 

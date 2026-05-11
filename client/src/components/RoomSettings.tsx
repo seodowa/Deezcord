@@ -5,6 +5,7 @@ import Modal from './Modal';
 import MemberProfileModal from './MemberProfileModal';
 import MFAChallengeModal from './MFAChallengeModal';
 import { useToast } from '../hooks/useToast';
+import MfaTransactionModal from './MfaTransactionModal';
 import { updateRoom, addMember, kickMember, leaveRoom, deleteRoom } from '../services/roomService';
 import { useAuth } from '../hooks/useAuth';
 import { useMFAChallenge } from '../hooks/useMFAChallenge';
@@ -28,6 +29,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
   const [isInviting, setIsInviting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showMfaTransaction, setShowMfaTransaction] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<'delete_room' | 'leave_room' | 'kick_member' | null>(null);
   const [targetMember, setTargetMember] = useState<{ id: string; username: string } | null>(null);
@@ -123,19 +125,26 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
     }
   };
 
-  const handleDeleteRoom = async () => {
+  const handleDeleteRoom = async (mfaCode?: string) => {
     if (!isOwner) return;
     setIsDeleting(true);
     try {
-      await deleteRoom(room.id);
+      await deleteRoom(room.id, mfaCode);
       addToast('Room deleted successfully', 'success');
       setConfirmAction(null);
+      setShowMfaTransaction(false);
       onLeave(); // We can reuse onLeave to navigate away
     } catch (err: any) {
-      if (err.message === 'MFA_REQUIRED') {
+      if (err.code === 'MFA_REQUIRED_TRANSACTIONAL') {
+        setConfirmAction(null); // Close the initial confirm modal
+        setShowMfaTransaction(true);
+      } else if (err.message === 'MFA_REQUIRED') {
+        // Fallback for old session-level MFA if still used
         startChallenge(() => handleDeleteRoom());
       } else {
         addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
+        // Re-throw so the AsyncButton in the transaction modal can handle error state
+        if (mfaCode) throw err;
       }
     } finally {
       setIsDeleting(false);
@@ -391,7 +400,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
               Cancel
             </button>
             <AsyncButton
-              onClick={handleDeleteRoom}
+              onClick={() => handleDeleteRoom()}
               isLoading={isDeleting}
               loadingText="Deleting..."
               className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
@@ -492,6 +501,16 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         user={selectedProfile}
+      />
+
+      {/* MFA Transaction Modal for Room Deletion */}
+      <MfaTransactionModal
+        isOpen={showMfaTransaction}
+        onClose={() => setShowMfaTransaction(false)}
+        onConfirm={handleDeleteRoom}
+        title="Confirm Room Deletion"
+        description={`Please enter your 6-digit security code to permanently delete "${room.name}".`}
+        actionLabel="Verify & Delete Room"
       />
 
       {/* MFA Challenge Modal */}
