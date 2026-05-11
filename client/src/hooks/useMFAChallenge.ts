@@ -12,12 +12,13 @@ import { useToast } from './useToast';
 export function useMFAChallenge() {
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
   const [factorId, setFactorId] = useState<string | null>(null);
+  const [overrideToken, setOverrideToken] = useState<string | null>(null);
   const [onSuccessCallback, setOnSuccessCallback] = useState<{ fn: (token: string) => void } | null>(null);
   const { addToast } = useToast();
 
-  const startChallenge = useCallback(async (onSuccess: (token: string) => void) => {
+  const startChallenge = useCallback(async (onSuccess: (token: string) => void, tokenOverride?: string) => {
     try {
-      const token = getToken();
+      const token = tokenOverride || getToken();
       if (!token) throw new Error("Not authenticated");
 
       // 1. Fetch factors to find a TOTP factor
@@ -32,6 +33,7 @@ export function useMFAChallenge() {
       }
 
       setFactorId(totpFactor.id);
+      setOverrideToken(tokenOverride || null);
       setOnSuccessCallback({ fn: onSuccess });
       setIsChallengeOpen(true);
     } catch (err: any) {
@@ -43,6 +45,7 @@ export function useMFAChallenge() {
   const closeChallenge = useCallback(() => {
     setIsChallengeOpen(false);
     setFactorId(null);
+    setOverrideToken(null);
     setOnSuccessCallback(null);
   }, []);
 
@@ -56,6 +59,7 @@ export function useMFAChallenge() {
   return {
     isChallengeOpen,
     factorId,
+    overrideToken,
     startChallenge,
     closeChallenge,
     handleVerified

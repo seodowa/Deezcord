@@ -8,6 +8,7 @@ import { getToken, setToken } from '../utils/auth';
 interface MFAChallengeModalProps {
   isOpen: boolean;
   factorId: string;
+  token?: string; // Optional token for verification (e.g. during login)
   onClose: () => void;
   onSuccess: (newToken: string) => void;
 }
@@ -18,7 +19,7 @@ interface MFAChallengeModalProps {
  * Displayed when an action requires AAL2 (MFA).
  * Prompts for the 6-digit TOTP code and upgrades the session.
  */
-export default function MFAChallengeModal({ isOpen, factorId, onClose, onSuccess }: MFAChallengeModalProps) {
+export default function MFAChallengeModal({ isOpen, factorId, token, onClose, onSuccess }: MFAChallengeModalProps) {
   const { addToast } = useToast();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -31,21 +32,21 @@ export default function MFAChallengeModal({ isOpen, factorId, onClose, onSuccess
 
     try {
       setError(null);
-      const token = getToken();
-      if (!token) throw new Error("Session expired. Please log in again.");
+      const activeToken = token || getToken();
+      if (!activeToken) throw new Error("Session expired. Please log in again.");
 
-      const data = await mfaVerify(token, factorId, code);
+      const data = await mfaVerify(activeToken, factorId, code);
       
-      // Upgrade local token
-      setToken(data.access_token, true);
+      // If we're not using an override token, it means we're upgrading an existing session
+      // So we update the local storage token.
+      if (!token) {
+        setToken(data.access_token, true);
+      }
       
       addToast("Identity verified!", "success");
       onSuccess(data.access_token);
     } catch (err: any) {
       setError(err.message || "Invalid code. Please try again.");
-      // Rethrow so AsyncButton keeps loading state if needed, 
-      // though here we probably want to stop loading to let user try again.
-      // AsyncButton stops loading after the promise settles (resolve or reject).
       throw err; 
     }
   };
