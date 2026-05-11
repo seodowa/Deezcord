@@ -1,34 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
 import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
-import { forgotPassword } from '../services/authService';
+import { resetPassword } from '../services/authService';
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+export default function ResetPasswordPage() {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [mounted, setMounted] = useState(false);
   
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const hasCheckedCode = useRef(false);
+
+  // Handle both PKCE (code in query) and Implicit (access_token in hash)
+  const getCode = () => {
+    // 1. Try query parameter 'code' (standard PKCE)
+    const queryCode = searchParams.get('code');
+    if (queryCode) return queryCode;
+
+    // 2. Try hash fragment (Implicit flow)
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+    const hashToken = hashParams.get('access_token');
+    if (hashToken) return hashToken;
+
+    // 3. Fallback to 'token' in query (sometimes used)
+    const queryToken = searchParams.get('token');
+    if (queryToken) return queryToken;
+
+    return null;
+  };
+
+  const code = getCode();
 
   useEffect(() => {
-    setTimeout(() => setMounted(true), 0);
+    setMounted(true);
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setTimeout(() => setIsDarkMode(true), 0);
+      setIsDarkMode(true);
       document.documentElement.classList.add('dark');
       document.documentElement.classList.remove('light');
     } else {
-      setTimeout(() => setIsDarkMode(false), 0);
+      setIsDarkMode(false);
       document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  useEffect(() => {
+    if (!mounted || hasCheckedCode.current) return;
+
+    // Check for error parameters from Supabase
+    const error = searchParams.get('error') || new URLSearchParams(window.location.hash.replace('#', '?')).get('error');
+    if (error) {
+      const errorDescription = searchParams.get('error_description') || new URLSearchParams(window.location.hash.replace('#', '?')).get('error_description');
+      addToast(errorDescription || 'Authentication error occurred.', 'error');
+      hasCheckedCode.current = true;
+      navigate('/login');
+      return;
+    }
+
+    if (!code) {
+      console.warn('[ResetPassword] No code found in URL. Query:', window.location.search, 'Hash:', window.location.hash);
+      addToast('Invalid or missing reset code. Please try the link from your email again.', 'error');
+      hasCheckedCode.current = true;
+      navigate('/login');
+    } else {
+      hasCheckedCode.current = true;
+    }
+  }, [code, navigate, addToast, searchParams, mounted]);
 
   const toggleTheme = () => {
     if (isDarkMode) {
@@ -46,14 +92,26 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      addToast('Passwords do not match.', 'error');
+      return;
+    }
+
+    if (password.length < 6) {
+      addToast('Password must be at least 6 characters long.', 'error');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      await forgotPassword(email);
-      addToast('If an account exists, a reset link has been sent.', 'success');
+      if (!code) throw new Error('Missing reset code.');
+      await resetPassword(code, password);
+      addToast('Password has been reset successfully.', 'success');
       navigate('/login');
     } catch (error: any) {
-      addToast(error.message || 'Failed to send reset link', 'error');
+      addToast(error.message || 'Failed to reset password', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -99,43 +157,53 @@ export default function ForgotPasswordPage() {
           <div className="flex justify-center mb-6">
             <Logo className="w-16 h-16" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Reset Password</h1>
-          <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your email and we'll send you a link</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">New Password</h1>
+          <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Set your new account password</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-8">
-            <label className="block text-sm font-semibold mb-2 text-slate-900 dark:text-slate-50" htmlFor="email">
-              Email Address
+          <div className="mb-4">
+            <label className="block text-sm font-semibold mb-2 text-slate-900 dark:text-slate-50" htmlFor="password">
+              New Password
             </label>
-            <div className="relative">
-              <input
-                id="email"
-                type="email"
-                className="w-full px-4 py-3.5 bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-xl text-base text-slate-900 dark:text-slate-50 transition-all duration-200 outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:-translate-y-[1px] placeholder:text-slate-500/70 dark:placeholder:text-slate-400/70"
-                placeholder="user@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            <input
+              id="password"
+              type="password"
+              className="w-full px-4 py-3.5 bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-xl text-base text-slate-900 dark:text-slate-50 transition-all duration-200 outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:-translate-y-[1px] placeholder:text-slate-500/70 dark:placeholder:text-slate-400/70"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="mb-8">
+            <label className="block text-sm font-semibold mb-2 text-slate-900 dark:text-slate-50" htmlFor="confirmPassword">
+              Confirm New Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              className="w-full px-4 py-3.5 bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-xl text-base text-slate-900 dark:text-slate-50 transition-all duration-200 outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 focus:-translate-y-[1px] placeholder:text-slate-500/70 dark:placeholder:text-slate-400/70"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
           </div>
 
           <AsyncButton 
             type="submit" 
             className="w-full p-4 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 relative overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_10px_20px_-10px_rgba(59,130,246,1)] active:translate-y-0"
             isLoading={isLoading}
-            loadingText="Sending link..."
+            loadingText="Resetting password..."
           >
-            Send Reset Link
+            Reset Password
           </AsyncButton>
         </form>
 
         <div className="mt-8 text-center text-sm">
           <Link to="/login" className="text-slate-500 dark:text-slate-400 font-medium transition-colors duration-200 hover:text-slate-900 dark:hover:text-slate-50 flex items-center justify-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
             Back to Sign In
           </Link>
         </div>
