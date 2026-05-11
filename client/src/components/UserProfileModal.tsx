@@ -7,6 +7,7 @@ import { getToken, getAAL } from '../utils/auth';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
 import MFASetupModal from './MFASetupModal';
+import MFADisableModal from './MFADisableModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const [isCheckingMFA, setIsCheckingMFA] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [isDisablingMFA, setIsDisablingMFA] = useState(false);
+  const [isConfirmDisableMFAOpen, setIsConfirmDisableMFAOpen] = useState(false);
   const [currentAAL, setCurrentAAL] = useState<'aal1' | 'aal2' | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,9 +60,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   const handleDisableMFA = async () => {
     if (!mfaFactorId) return;
-    
-    const confirm = window.confirm("Are you sure you want to disable multi-factor authentication? This will make your account less secure.");
-    if (!confirm) return;
 
     setIsDisablingMFA(true);
     try {
@@ -72,6 +71,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       setMfaFactorId(null);
       setCurrentAAL(getAAL());
       addToast("Multi-factor authentication disabled", "success");
+      setIsConfirmDisableMFAOpen(false);
     } catch (err: any) {
       addToast(err.message || "Failed to disable MFA", "error");
     } finally {
@@ -257,7 +257,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               </div>
               {isMFAEnabled ? (
                 <AsyncButton
-                  onClick={handleDisableMFA}
+                  onClick={() => setIsConfirmDisableMFAOpen(true)}
                   isLoading={isDisablingMFA}
                   className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-xl transition-all"
                 >
@@ -312,6 +312,13 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           setCurrentAAL(getAAL());
           setIsMFAModalOpen(false);
         }}
+      />
+
+      <MFADisableModal
+        isOpen={isConfirmDisableMFAOpen}
+        onClose={() => setIsConfirmDisableMFAOpen(false)}
+        onConfirm={handleDisableMFA}
+        isLoading={isDisablingMFA}
       />
     </Modal>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { mfaEnroll, mfaVerify } from '../services/authService';
@@ -27,7 +27,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
     }
   }, [isOpen, enrollData, step]);
 
-  const handleEnroll = async () => {
+  const handleEnroll = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -37,13 +37,13 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
       setEnrollData(data);
     } catch (err: any) {
       console.error("MFA Enroll Error:", err);
-      setError("Failed to start MFA setup. Please try again.");
+      setError(err.message || "Failed to start MFA setup. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleVerify = async () => {
+  const handleVerify = useCallback(async () => {
     if (code.length !== 6) {
       setError("Please enter a 6-digit code.");
       return;
@@ -66,16 +66,16 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
     } catch (err: any) {
       setError(err.message || "Invalid code. Please try again.");
     }
-  };
+  }, [code, enrollData, addToast, onSuccess]);
 
-  const resetAndClose = () => {
+  const resetAndClose = useCallback(() => {
     setStep('qr');
     setEnrollData(null);
     setCode('');
     setError(null);
     setIsLoading(false);
     onClose();
-  };
+  }, [onClose]);
 
   if (isOpen && isLoading && !enrollData && !error) {
     return null;

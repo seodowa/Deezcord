@@ -36,26 +36,37 @@ export default function Modal({
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleEscape);
       
-      // Simple focus trap: focus the modal container or the first interactive element
-      if (modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length > 0) {
-          (focusableElements[0] as HTMLElement).focus();
-        } else {
-          modalRef.current.focus();
+      // Focus the modal or its first element only when it first opens
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length > 0) {
+            (focusableElements[0] as HTMLElement).focus();
+          } else {
+            modalRef.current.focus();
+          }
         }
-      }
-    }
+      }, 50); // Small delay to ensure content is rendered
 
-    return () => {
-      document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleEscape);
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus();
-      }
-    };
+      return () => {
+        clearTimeout(timer);
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleEscape);
+        if (previousFocusRef.current) {
+          previousFocusRef.current.focus();
+        }
+      };
+    }
+  }, [isOpen]); // Only run when isOpen changes
+
+  // Separate effect for the escape key listener to keep it updated without re-running focus logic
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleEscape);
+      return () => window.removeEventListener('keydown', handleEscape);
+    }
   }, [isOpen, handleEscape]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
