@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 
 // Extend Express Request type
@@ -33,6 +34,7 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
 /**
  * Middleware to enforce Authenticator Assurance Level 2 (AAL2).
  * This ensures the user has successfully completed an MFA challenge.
+ * (Session-level MFA)
  */
 export const verifyAAL2 = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
@@ -54,8 +56,6 @@ export const verifyAAL2 = async (req: AuthenticatedRequest, res: Response, next:
 
     const { currentLevel, nextLevel } = data;
 
-    // If the user has MFA enrolled (nextLevel is aal2) but hasn't verified (currentLevel is aal1)
-    // Or if we simply require aal2 for this route.
     if (currentLevel !== 'aal2') {
       res.status(403).json({ 
         error: "MFA_REQUIRED", 
@@ -69,6 +69,80 @@ export const verifyAAL2 = async (req: AuthenticatedRequest, res: Response, next:
   } catch (err) {
     console.error("MFA Verification Error:", err);
     res.status(500).json({ error: "Internal server error during MFA verification" });
+  }
+};
+
+/**
+ * Middleware to enforce Transactional MFA (Code-per-action).
+ * This requires a fresh TOTP code to be verified for this specific request.
+ */
+export const verifyTransactionalMfa = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+  const mfaCode = req.headers['x-mfa-code'] as string;
+
+  try {
+    // Create a client authenticated as the user
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    // 1. Check if the user has a verified TOTP factor
+    const { data: factors, error: factorsError } = await userClient.auth.mfa.listFactors();
+    
+    if (factorsError) throw factorsError;
+
+    const totpFactor = factors.all.find(f => f.factor_type === 'totp' && f.status === 'verified');
+
+    // If no MFA is enabled, allow the action
+    if (!totpFactor) {
+      return next();
+    }
+
+    // 2. If MFA is enabled, check for a valid code format
+    if (!mfaCode || !/^\d{6}$/.test(mfaCode)) {
+      res.status(403).json({ 
+        error: "MFA_REQUIRED_TRANSACTIONAL", 
+        message: "This action requires a fresh 6-digit verification code.",
+        factorId: totpFactor.id
+      });
+      return;
+    }
+
+    // 3. Verify the code
+    // challenge -> verify
+    const { data: challenge, error: challengeError } = await userClient.auth.mfa.challenge({ factorId: totpFactor.id });
+    if (challengeError) throw challengeError;
+
+    const { error: verifyError } = await userClient.auth.mfa.verify({
+      factorId: totpFactor.id,
+      challengeId: challenge.id,
+      code: mfaCode
+    });
+
+    if (verifyError) {
+      res.status(401).json({ error: "INVALID_MFA_CODE", message: "The verification code is incorrect or has expired." });
+      return;
+    }
+
+    // Code verified successfully!
+    next();
+  } catch (err: any) {
+    console.error("Transactional MFA Error:", err.message);
+    res.status(500).json({ error: "Failed to verify transaction security" });
   }
 };
 
@@ -124,5 +198,3 @@ export const verifyRoomOwner = async (req: AuthenticatedRequest, res: Response, 
 
   next();
 };
-
-
