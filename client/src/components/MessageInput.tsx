@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { uploadFile } from '../services/fileService';
 import { useToast } from '../hooks/useToast';
+import AsyncButton from './AsyncButton';
 
 interface MessageInputProps {
   onSendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => void;
@@ -225,19 +226,16 @@ function MessageInputComponent({
             className="flex-1 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-slate-50 transition-all duration-300 disabled:opacity-50"
           />
           
-          <button
+          <AsyncButton
             type="submit"
-            disabled={(!content.trim() && !selectedFile) || isDisabled || isUploading}
-            className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-blue-500/30 active:scale-95"
+            disabled={(!content.trim() && !selectedFile) || isDisabled}
+            isLoading={isUploading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-blue-500/30 active:scale-95 shrink-0"
           >
-            {isUploading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            )}
-          </button>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </AsyncButton>
         </form>
       </div>
     </div>

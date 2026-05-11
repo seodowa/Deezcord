@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { registerUser } from '../services/authService';
 import Logo from '../components/Logo';
 import VerificationModal from '../components/VerificationModal';
+import AsyncButton from '../components/AsyncButton';
 import { useTheme } from '../hooks/useTheme';
 
 export default function RegisterPage() {
@@ -168,13 +169,14 @@ export default function RegisterPage() {
             />
           </div>
 
-          <button 
+          <AsyncButton 
             type="submit" 
             className="w-full p-4 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 relative overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_10px_20px_-10px_rgba(59,130,246,1)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            isLoading={isLoading}
+            loadingText="Creating account..."
           >
-            {isLoading ? 'Creating account...' : 'Create Account'}
-          </button>
+            Create Account
+          </AsyncButton>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">

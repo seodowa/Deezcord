@@ -30,6 +30,47 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
   next(); // Proceed to the actual route (e.g., creating a room)
 };
 
+/**
+ * Middleware to enforce Authenticator Assurance Level 2 (AAL2).
+ * This ensures the user has successfully completed an MFA challenge.
+ */
+export const verifyAAL2 = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    // Check the Authenticator Assurance Level using Supabase
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(token);
+
+    if (error || !data) {
+      res.status(401).json({ error: "Unauthorized: Failed to verify assurance level" });
+      return;
+    }
+
+    const { currentLevel, nextLevel } = data;
+
+    // If the user has MFA enrolled (nextLevel is aal2) but hasn't verified (currentLevel is aal1)
+    // Or if we simply require aal2 for this route.
+    if (currentLevel !== 'aal2') {
+      res.status(403).json({ 
+        error: "MFA_REQUIRED", 
+        message: "This action requires secondary authentication.",
+        nextLevel 
+      });
+      return;
+    }
+
+    next(); // AAL2 confirmed!
+  } catch (err) {
+    console.error("MFA Verification Error:", err);
+    res.status(500).json({ error: "Internal server error during MFA verification" });
+  }
+};
 
 export const verifyRoomMember = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { roomId } = req.params;

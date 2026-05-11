@@ -99,4 +99,152 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
   }
 });
 
+/**
+ * MFA ROUTES
+ */
+
+// GET /auth/mfa/enroll - Start the enrollment process
+router.get('/mfa/enroll', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization!;
+    const token = authHeader.split(' ')[1];
+
+    // Create a client authenticated as the user
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    // 1. Clean up any existing factors to prevent collisions
+    const { data: factors, error: factorsError } = await userClient.auth.mfa.listFactors();
+    if (!factorsError && factors && factors.all.length > 0) {
+      for (const factor of factors.all) {
+        console.log(`[MFA Enroll] Cleaning up existing factor: ${factor.id} (${factor.status})`);
+        await userClient.auth.mfa.unenroll({ factorId: factor.id });
+      }
+    }
+
+    // 2. Start new enrollment with a friendly name
+    const { data, error } = await userClient.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'Deezcord MFA'
+    });
+
+    if (error) throw error;
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.error("[MFA Enroll] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to start MFA enrollment" });
+  }
+});
+
+// GET /auth/mfa/factors - List enrolled MFA factors
+router.get('/mfa/factors', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization!;
+    const token = authHeader.split(' ')[1];
+
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
+    const { data, error } = await userClient.auth.mfa.listFactors();
+
+    if (error) throw error;
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.error("[MFA Factors] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to list MFA factors" });
+  }
+});
+
+// POST /auth/mfa/challenge - Verify an MFA code
+router.post('/mfa/verify', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { factorId, code } = req.body;
+    const authHeader = req.headers.authorization!;
+    const token = authHeader.split(' ')[1];
+
+    if (!factorId || !code) {
+      res.status(400).json({ error: "Factor ID and code are required." });
+      return;
+    }
+
+    // Create a client authenticated as the user
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    // 1. Create a challenge
+    const { data: challengeData, error: challengeError } = await userClient.auth.mfa.challenge({
+      factorId
+    });
+
+    if (challengeError) throw challengeError;
+
+    // 2. Verify the challenge
+    const { data: verifyData, error: verifyError } = await userClient.auth.mfa.verify({
+      factorId,
+      challengeId: challengeData.id,
+      code
+    });
+
+    if (verifyError) throw verifyError;
+
+    res.status(200).json({
+      message: "MFA verified successfully",
+      ...verifyData
+    });
+  } catch (error: any) {
+    console.error("[MFA Verify] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to verify MFA code" });
+  }
+});
+
+// DELETE /auth/mfa/unenroll - Remove an MFA factor
+router.delete('/mfa/unenroll', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { factorId } = req.body;
+    const authHeader = req.headers.authorization!;
+    const token = authHeader.split(' ')[1];
+
+    if (!factorId) {
+      res.status(400).json({ error: "Factor ID is required." });
+      return;
+    }
+
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
+    const { data, error } = await userClient.auth.mfa.unenroll({ factorId });
+
+    if (error) throw error;
+
+    res.status(200).json({ message: "MFA factor removed successfully", ...data });
+  } catch (error: any) {
+    console.error("[MFA Unenroll] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to remove MFA factor" });
+  }
+});
+
 export default router;

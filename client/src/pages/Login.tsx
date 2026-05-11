@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
 import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
-import { loginUser } from '../services/authService';
+import { loginUser, mfaListFactors } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useMFAChallenge } from '../hooks/useMFAChallenge';
+import MFAChallengeModal from '../components/MFAChallengeModal';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -15,20 +17,35 @@ export default function LoginPage() {
 
   const { isDarkMode, toggleTheme, mounted } = useTheme();
   const { login } = useAuth();
+  const { isChallengeOpen, factorId, overrideToken, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
   const navigate = useNavigate();
   const { addToast } = useToast();
+
+  const completeLogin = async (token: string) => {
+    await login(token, rememberMe);
+    addToast('Successfully signed in!', 'success');
+    navigate('/');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const data = await loginUser(identifier, password);
-      addToast('Successfully signed in!', 'success');
       
-      await login(data.token, rememberMe);
+      // Check if user has MFA enabled
+      const factors = await mfaListFactors(data.token);
+      const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
       
-      navigate('/');
+      if (verifiedFactor) {
+        // Trigger MFA challenge with the token we just received
+        startChallenge((newToken) => {
+          completeLogin(newToken);
+        }, data.token);
+      } else {
+        await completeLogin(data.token);
+      }
     } catch (error: unknown) {
       const err = error as Error;
       addToast(err.message || 'Login failed', 'error');
@@ -152,6 +169,14 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
+
+      <MFAChallengeModal
+        isOpen={isChallengeOpen}
+        factorId={factorId || ''}
+        token={overrideToken || undefined}
+        onClose={closeChallenge}
+        onSuccess={handleVerified}
+      />
     </div>
   );
 }
