@@ -219,4 +219,32 @@ router.post('/mfa/verify', verifyUser, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+// DELETE /auth/mfa/unenroll - Remove an MFA factor
+router.delete('/mfa/unenroll', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { factorId } = req.body;
+    const authHeader = req.headers.authorization!;
+    const token = authHeader.split(' ')[1];
+
+    if (!factorId) {
+      res.status(400).json({ error: "Factor ID is required." });
+      return;
+    }
+
+    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
+    const { data, error } = await userClient.auth.mfa.unenroll({ factorId });
+
+    if (error) throw error;
+
+    res.status(200).json({ message: "MFA factor removed successfully", ...data });
+  } catch (error: any) {
+    console.error("[MFA Unenroll] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to remove MFA factor" });
+  }
+});
+
 export default router;

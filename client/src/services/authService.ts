@@ -128,3 +128,22 @@ export const mfaVerify = async (token: string, factorId: string, code: string) =
 
   return data;
 };
+
+export const mfaUnenroll = async (token: string, factorId: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/unenroll`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ factorId }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to remove MFA');
+  }
+
+  return data;
+};

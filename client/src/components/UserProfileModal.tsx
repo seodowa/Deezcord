@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { updateProfile, updatePassword } from '../services/userService';
+import { mfaListFactors, mfaUnenroll } from '../services/authService';
+import { getToken, getAAL } from '../utils/auth';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
 import MFASetupModal from './MFASetupModal';
@@ -24,8 +26,58 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isMFAModalOpen, setIsMFAModalOpen] = useState(false);
+  const [isMFAEnabled, setIsMFAEnabled] = useState(false);
+  const [isCheckingMFA, setIsCheckingMFA] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [isDisablingMFA, setIsDisablingMFA] = useState(false);
+  const [currentAAL, setCurrentAAL] = useState<'aal1' | 'aal2' | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const checkMFAStatus = async () => {
+    const token = getToken();
+    if (!token) return;
+
+    setIsCheckingMFA(true);
+    try {
+      const factors = await mfaListFactors(token);
+      const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
+      if (verifiedFactor) {
+        setIsMFAEnabled(true);
+        setMfaFactorId(verifiedFactor.id);
+      } else {
+        setIsMFAEnabled(false);
+        setMfaFactorId(null);
+      }
+    } catch (err) {
+      console.error("Failed to check MFA status:", err);
+    } finally {
+      setIsCheckingMFA(false);
+    }
+  };
+
+  const handleDisableMFA = async () => {
+    if (!mfaFactorId) return;
+    
+    const confirm = window.confirm("Are you sure you want to disable multi-factor authentication? This will make your account less secure.");
+    if (!confirm) return;
+
+    setIsDisablingMFA(true);
+    try {
+      const token = getToken();
+      if (!token) throw new Error("Not authenticated");
+      
+      await mfaUnenroll(token, mfaFactorId);
+      setIsMFAEnabled(false);
+      setMfaFactorId(null);
+      setCurrentAAL(getAAL());
+      addToast("Multi-factor authentication disabled", "success");
+    } catch (err: any) {
+      addToast(err.message || "Failed to disable MFA", "error");
+    } finally {
+      setIsDisablingMFA(false);
+    }
+  };
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   if (isOpen !== prevIsOpen) {
@@ -35,6 +87,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       setNewPassword('');
       setNewConfirmPassword('');
       setSelectedFile(null);
+      checkMFAStatus();
+      setCurrentAAL(getAAL());
     }
     setPrevIsOpen(isOpen);
   }
@@ -162,23 +216,61 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
         {/* Security Section */}
         <section className="space-y-6">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            Security
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              Security
+            </h3>
+            {currentAAL && (
+              <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${currentAAL === 'aal2' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${currentAAL === 'aal2' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                Session: {currentAAL.toUpperCase()}
+              </div>
+            )}
+          </div>
           
           <div className="space-y-4">
             <div className="p-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50">Two-Factor Authentication</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Add an extra layer of security to your account.</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isMFAEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
+                  {isCheckingMFA ? (
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                    Two-Factor Authentication
+                    {isMFAEnabled && (
+                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] uppercase tracking-wider rounded-md">Active</span>
+                    )}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {isMFAEnabled 
+                      ? "Your account is protected with an additional security layer." 
+                      : "Add an extra layer of security to your account."}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setIsMFAModalOpen(true)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors"
-              >
-                Setup MFA
-              </button>
+              {isMFAEnabled ? (
+                <AsyncButton
+                  onClick={handleDisableMFA}
+                  isLoading={isDisablingMFA}
+                  className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-xl transition-all"
+                >
+                  Disable MFA
+                </AsyncButton>
+              ) : (
+                <button
+                  onClick={() => setIsMFAModalOpen(true)}
+                  className="px-4 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-slate-900/10"
+                >
+                  Setup MFA
+                </button>
+              )}
             </div>
 
             <div className="space-y-1.5 pt-2">
@@ -215,6 +307,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       <MFASetupModal 
         isOpen={isMFAModalOpen} 
         onClose={() => setIsMFAModalOpen(false)} 
+        onSuccess={() => {
+          checkMFAStatus();
+          setCurrentAAL(getAAL());
+          setIsMFAModalOpen(false);
+        }}
       />
     </Modal>
   );
