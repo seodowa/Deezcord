@@ -122,19 +122,19 @@ router.get('/mfa/enroll', verifyUser, async (req: AuthenticatedRequest, res: Res
       }
     });
 
-    // 1. Clean up any existing unverified factors
+    // 1. Clean up any existing factors to prevent collisions
     const { data: factors, error: factorsError } = await userClient.auth.mfa.listFactors();
-    if (!factorsError && factors) {
-      const unverifiedFactors = factors.all.filter(f => f.status === 'unverified');
-      for (const factor of unverifiedFactors) {
-        console.log(`[MFA Enroll] Cleaning up unverified factor: ${factor.id}`);
+    if (!factorsError && factors && factors.all.length > 0) {
+      for (const factor of factors.all) {
+        console.log(`[MFA Enroll] Cleaning up existing factor: ${factor.id} (${factor.status})`);
         await userClient.auth.mfa.unenroll({ factorId: factor.id });
       }
     }
 
-    // 2. Start new enrollment
+    // 2. Start new enrollment with a friendly name
     const { data, error } = await userClient.auth.mfa.enroll({
-      factorType: 'totp'
+      factorType: 'totp',
+      friendlyName: 'Deezcord MFA'
     });
 
     if (error) throw error;
