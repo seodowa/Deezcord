@@ -1,17 +1,10 @@
-import { getToken } from '../utils/auth';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import type { User } from '../types/user';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const getCurrentUser = async () => {
-  const token = getToken();
-  if (!token) throw new Error('No token found');
-
-  const response = await fetch(`${API_URL}/api/users/me`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/users/me`);
 
   const data = await response.json();
 
@@ -23,18 +16,12 @@ export const getCurrentUser = async () => {
 };
 
 export const updateProfile = async (username?: string, file?: File | null) => {
-  const token = getToken();
-  if (!token) throw new Error('No token found');
-
   const formData = new FormData();
   if (username) formData.append('username', username);
   if (file) formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/api/users/profile`, {
+  const response = await fetchWithAuth(`${API_URL}/api/users/profile`, {
     method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
     body: formData,
   });
 
@@ -48,14 +35,10 @@ export const updateProfile = async (username?: string, file?: File | null) => {
 };
 
 export const updatePassword = async (password: string) => {
-  const token = getToken();
-  if (!token) throw new Error('No token found');
-
-  const response = await fetch(`${API_URL}/api/users/password`, {
+  const response = await fetchWithAuth(`${API_URL}/api/users/password`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ password }),
   });
@@ -70,14 +53,7 @@ export const updatePassword = async (password: string) => {
 };
 
 export const searchUsers = async (query: string): Promise<User[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/search?q=${encodeURIComponent(query)}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/friends/search?q=${encodeURIComponent(query)}`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

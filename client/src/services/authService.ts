@@ -1,3 +1,5 @@
+import { getAuthHeaders, getDeviceId } from '../utils/auth';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const registerUser = async (username: string, email: string, password: string) => {
@@ -5,6 +7,7 @@ export const registerUser = async (username: string, email: string, password: st
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     body: JSON.stringify({ username, email, password }),
   });
@@ -19,12 +22,14 @@ export const registerUser = async (username: string, email: string, password: st
 };
 
 export const loginUser = async (identifier: string, password: string) => {
+  const deviceId = getDeviceId();
   const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password, deviceId }),
   });
 
   const data = await response.json();
@@ -36,11 +41,32 @@ export const loginUser = async (identifier: string, password: string) => {
   return data;
 };
 
+export const refreshSession = async (refreshToken: string) => {
+  const deviceId = getDeviceId();
+  const response = await fetch(`${API_URL}/api/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ refreshToken, deviceId }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to refresh session');
+  }
+
+  return data;
+};
+
 export const forgotPassword = async (email: string) => {
   const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     body: JSON.stringify({ email }),
   });
@@ -59,6 +85,7 @@ export const resetPassword = async (code: string, password: string) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
     },
     body: JSON.stringify({ code, password }),
   });
@@ -76,11 +103,11 @@ export const resetPassword = async (code: string, password: string) => {
  * MFA SERVICES (Calling Express Backend)
  */
 
-export const mfaEnroll = async (token: string) => {
+export const mfaEnroll = async (token?: string) => {
   const response = await fetch(`${API_URL}/api/auth/mfa/enroll`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      ...getAuthHeaders(token),
     },
   });
 
@@ -93,11 +120,11 @@ export const mfaEnroll = async (token: string) => {
   return data;
 };
 
-export const mfaListFactors = async (token: string) => {
+export const mfaListFactors = async (token?: string) => {
   const response = await fetch(`${API_URL}/api/auth/mfa/factors`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      ...getAuthHeaders(token),
     },
   });
 
@@ -110,14 +137,30 @@ export const mfaListFactors = async (token: string) => {
   return data;
 };
 
-export const mfaVerify = async (token: string, factorId: string, code: string) => {
+export const mfaVerify = async (tokenOrFactorId: string, factorIdOrCode: string, code?: string) => {
+  // Overloaded handle: 
+  // 1. (factorId, code) - uses stored token
+  // 2. (token, factorId, code) - uses provided token
+  let token: string | undefined;
+  let factorId: string;
+  let actualCode: string;
+
+  if (code) {
+    token = tokenOrFactorId;
+    factorId = factorIdOrCode;
+    actualCode = code;
+  } else {
+    factorId = tokenOrFactorId;
+    actualCode = factorIdOrCode;
+  }
+
   const response = await fetch(`${API_URL}/api/auth/mfa/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      ...getAuthHeaders(token),
     },
-    body: JSON.stringify({ factorId, code }),
+    body: JSON.stringify({ factorId, code: actualCode }),
   });
 
   const data = await response.json();
@@ -129,14 +172,24 @@ export const mfaVerify = async (token: string, factorId: string, code: string) =
   return data;
 };
 
-export const mfaUnenroll = async (token: string, factorId: string) => {
+export const mfaUnenroll = async (tokenOrFactorId: string, factorId?: string) => {
+  let token: string | undefined;
+  let actualFactorId: string;
+
+  if (factorId) {
+    token = tokenOrFactorId;
+    actualFactorId = factorId;
+  } else {
+    actualFactorId = tokenOrFactorId;
+  }
+
   const response = await fetch(`${API_URL}/api/auth/mfa/unenroll`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      ...getAuthHeaders(token),
     },
-    body: JSON.stringify({ factorId }),
+    body: JSON.stringify({ factorId: actualFactorId }),
   });
 
   const data = await response.json();
@@ -147,3 +200,5 @@ export const mfaUnenroll = async (token: string, factorId: string) => {
 
   return data;
 };
+
+

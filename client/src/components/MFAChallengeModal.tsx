@@ -3,14 +3,14 @@ import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { mfaVerify } from '../services/authService';
 import { useToast } from '../hooks/useToast';
-import { getToken, setToken } from '../utils/auth';
+import { getToken, setTokens, getRefreshToken } from '../utils/auth';
 
 interface MFAChallengeModalProps {
   isOpen: boolean;
   factorId: string;
   token?: string; // Optional token for verification (e.g. during login)
   onClose: () => void;
-  onSuccess: (newToken: string) => void;
+  onSuccess: (newToken: string, newRefreshToken: string) => void;
 }
 
 /**
@@ -38,13 +38,15 @@ export default function MFAChallengeModal({ isOpen, factorId, token, onClose, on
       const data = await mfaVerify(activeToken, factorId, code);
       
       // If we're not using an override token, it means we're upgrading an existing session
-      // So we update the local storage token.
+      // So we update the local storage tokens.
       if (!token) {
-        setToken(data.access_token, true);
+        const refreshToken = data.refresh_token || getRefreshToken() || '';
+        const rememberMe = !!localStorage.getItem('sb-refresh-token');
+        setTokens(data.access_token, refreshToken, rememberMe);
       }
       
       addToast("Identity verified!", "success");
-      onSuccess(data.access_token);
+      onSuccess(data.access_token, data.refresh_token || getRefreshToken() || '');
     } catch (err: any) {
       setError(err.message || "Invalid code. Please try again.");
       throw err; 

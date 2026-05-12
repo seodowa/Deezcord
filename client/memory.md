@@ -65,8 +65,8 @@ The client frontend is under active development, focusing heavily on a responsiv
 ## Task List
 - [x] Integrate Login/Register pages with the backend.
 - [x] Setup protected routes and global 404 handling.
-- [ ] Create email verification page.
-- [ ] Create MFA modal.
+- [x] Create email verification page.
+- [x] Create MFA modal.
 - [x] Implement full message persistence on the frontend.
 - [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
 - [x] Implement user profiles, avatars, and presence tracking.

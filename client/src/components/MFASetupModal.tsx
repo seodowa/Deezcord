@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { mfaEnroll, mfaVerify } from '../services/authService';
-import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { getToken, setToken } from '../utils/auth';
+import { getToken, setTokens, getRefreshToken } from '../utils/auth';
 
 interface MFASetupModalProps {
   isOpen: boolean;
@@ -13,7 +12,6 @@ interface MFASetupModalProps {
 }
 
 export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupModalProps) {
-  const { user } = useAuth();
   const { addToast } = useToast();
   const [step, setStep] = useState<'qr' | 'verify' | 'success'>('qr');
   const [enrollData, setEnrollData] = useState<{ id: string; totp: { qr_code: string; secret: string; uri: string } } | null>(null);
@@ -56,8 +54,10 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
 
       const data = await mfaVerify(token, enrollData.id, code);
       
-      // Update the local token with the new AAL2 token
-      setToken(data.access_token, true); 
+      // Update the local tokens with the new AAL2 token
+      const rememberMe = !!localStorage.getItem('sb-refresh-token');
+      const refreshToken = data.refresh_token || getRefreshToken() || '';
+      setTokens(data.access_token, refreshToken, rememberMe); 
       
       setStep('success');
       addToast("Multi-factor authentication enabled successfully!", "success");

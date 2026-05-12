@@ -22,8 +22,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const completeLogin = async (token: string) => {
-    await login(token, rememberMe);
+  const completeLogin = async (token: string, refreshToken: string) => {
+    await login(token, refreshToken, rememberMe);
     addToast('Successfully signed in!', 'success');
     navigate('/');
   };
@@ -41,10 +41,11 @@ export default function LoginPage() {
       if (verifiedFactor) {
         // Trigger MFA challenge with the token we just received
         startChallenge((newToken) => {
-          completeLogin(newToken);
+          // Note: newToken from MFA verify also includes refreshToken if it's a full session
+          completeLogin(newToken, data.refreshToken);
         }, data.token);
       } else {
-        await completeLogin(data.token);
+        await completeLogin(data.token, data.refreshToken);
       }
     } catch (error: unknown) {
       const err = error as Error;

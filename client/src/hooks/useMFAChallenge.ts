@@ -13,10 +13,10 @@ export function useMFAChallenge() {
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [overrideToken, setOverrideToken] = useState<string | null>(null);
-  const [onSuccessCallback, setOnSuccessCallback] = useState<{ fn: (token: string) => void } | null>(null);
+  const [onSuccessCallback, setOnSuccessCallback] = useState<{ fn: (token: string, refreshToken: string) => void } | null>(null);
   const { addToast } = useToast();
 
-  const startChallenge = useCallback(async (onSuccess: (token: string) => void, tokenOverride?: string) => {
+  const startChallenge = useCallback(async (onSuccess: (token: string, refreshToken: string) => void, tokenOverride?: string) => {
     try {
       const token = tokenOverride || getToken();
       if (!token) throw new Error("Not authenticated");
@@ -49,9 +49,9 @@ export function useMFAChallenge() {
     setOnSuccessCallback(null);
   }, []);
 
-  const handleVerified = useCallback((newToken: string) => {
+  const handleVerified = useCallback((newToken: string, newRefreshToken: string) => {
     if (onSuccessCallback) {
-      onSuccessCallback.fn(newToken);
+      onSuccessCallback.fn(newToken, newRefreshToken);
     }
     closeChallenge();
   }, [onSuccessCallback, closeChallenge]);

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { getToken } from '../utils/auth';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { saveDMs, loadDMs } from '../utils/persistence';
 import type { Room } from '../types/room';
 
@@ -27,9 +28,7 @@ export function useDMs() {
 
     try {
       setError(null);
-      const response = await fetch(`${API_URL}/api/dms`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetchWithAuth(`${API_URL}/api/dms`);
       if (!response.ok) throw new Error('Failed to fetch DMs');
       const data = await response.json();
       setDms(data);
@@ -56,9 +55,8 @@ export function useDMs() {
   const createDM = async (targetUserId: string): Promise<{ room: Room, channelId: string } | null> => {
     if (!token) return null;
     try {
-      const response = await fetch(`${API_URL}/api/dms/${targetUserId}`, {
+      const response = await fetchWithAuth(`${API_URL}/api/dms/${targetUserId}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to create DM');
       const data = await response.json();
