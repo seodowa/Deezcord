@@ -1,4 +1,4 @@
-import React, { useState, useCallback, forwardRef } from 'react';
+import React, { useState, useCallback, forwardRef, memo } from 'react';
 
 export interface AsyncButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
@@ -7,7 +7,7 @@ export interface AsyncButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLBu
   isLoading?: boolean;
 }
 
-const AsyncButton = forwardRef<HTMLButtonElement, AsyncButtonProps>(({
+const AsyncButton = memo(forwardRef<HTMLButtonElement, AsyncButtonProps>(({
   children,
   onClick,
   disabled,
@@ -47,7 +47,7 @@ const AsyncButton = forwardRef<HTMLButtonElement, AsyncButtonProps>(({
       ref={ref}
       onClick={handleClick}
       disabled={isPending || disabled}
-      className={`relative inline-flex items-center justify-center transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden ${className}`}
+      className={`relative inline-flex items-center justify-center transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden ${className} cursor-pointer`}
       {...props}
     >
       <span className={`flex items-center gap-2 ${isPending && loadingText ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>
@@ -68,7 +68,7 @@ const AsyncButton = forwardRef<HTMLButtonElement, AsyncButtonProps>(({
       )}
     </button>
   );
-});
+}));
 
 AsyncButton.displayName = 'AsyncButton';
 

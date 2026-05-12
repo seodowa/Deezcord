@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Room } from '../types/room';
 import { getRooms, getDiscoverRooms, createRoom as apiCreateRoom, joinRoom as apiJoinRoom } from '../services/roomService';
 import { useToast } from './useToast';
+import { loadRooms, saveRooms } from '../utils/persistence';
 
 export const useRooms = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -9,14 +10,17 @@ export const useRooms = () => {
   const [isLoadingRooms, setIsLoadingRooms] = useState(true);
   const [isLoadingDiscover, setIsLoadingDiscover] = useState(false);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const { addToast } = useToast();
 
-  const fetchRooms = useCallback(async () => {
-    setIsLoadingRooms(true);
+  const fetchRooms = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setIsLoadingRooms(true);
+    }
     try {
       const data = await getRooms();
       setRooms(data);
+      saveRooms(data);
     } catch (err) {
       const error = err as Error;
       addToast(error.message || 'Failed to load rooms', 'error');
@@ -42,7 +46,11 @@ export const useRooms = () => {
     try {
       const newRoom = await apiCreateRoom(name, file);
       const roomWithMembership: Room = { ...newRoom, isMember: true, role: 'owner' };
-      setRooms(prev => [...prev, roomWithMembership]);
+      setRooms(prev => {
+        const updated = [...prev, roomWithMembership];
+        saveRooms(updated);
+        return updated;
+      });
       addToast(`Room "${name}" created successfully!`, 'success');
       return roomWithMembership;
     } catch (err) {
@@ -55,12 +63,16 @@ export const useRooms = () => {
   };
 
   const joinExistingRoom = async (room: Room) => {
-    setIsJoining(true);
+    setJoiningRoomId(room.id);
     try {
       await apiJoinRoom(room.id);
       const updatedRoom: Room = { ...room, isMember: true, role: 'member' };
       
-      setRooms(prev => [...prev, updatedRoom]);
+      setRooms(prev => {
+        const updated = [...prev, updatedRoom];
+        saveRooms(updated);
+        return updated;
+      });
       setDiscoverRooms(prev => prev.filter(r => r.id !== room.id));
       
       addToast(`Joined room "${room.name}"`, 'success');
@@ -70,13 +82,27 @@ export const useRooms = () => {
       addToast(error.message || 'Failed to join room', 'error');
       throw error;
     } finally {
-      setIsJoining(false);
+      setJoiningRoomId(null);
     }
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRooms();
+    let isMounted = true;
+    
+    // Try to load from cache first
+    loadRooms().then(cached => {
+      if (!isMounted) return;
+      
+      if (cached && cached.length > 0) {
+        setRooms(cached as Room[]);
+        setIsLoadingRooms(false);
+        fetchRooms(false); // Silent sync
+      } else {
+        fetchRooms(true); // Full loading
+      }
+    });
+
+    return () => { isMounted = false; };
   }, [fetchRooms]);
 
   return {
@@ -87,7 +113,7 @@ export const useRooms = () => {
     isLoadingRooms,
     isLoadingDiscover,
     isCreatingRoom,
-    isJoining,
+    joiningRoomId,
     fetchRooms,
     fetchDiscoverRooms,
     createNewRoom,

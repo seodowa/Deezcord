@@ -13,7 +13,7 @@ async function main() {
   }
 
   try {
-    const { token } = await signIn(email, password);
+    const { token } = await signIn(email, password, 'test-device-id');
     
     // Get a room and channel to test with
     const { data: room } = await supabase.from('rooms').select('id').limit(1).single();

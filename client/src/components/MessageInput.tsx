@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { uploadFile } from '../services/fileService';
 import { useToast } from '../hooks/useToast';
+import AsyncButton from './AsyncButton';
 
 interface MessageInputProps {
   onSendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => void;
@@ -15,7 +16,7 @@ interface MessageInputProps {
   onClearReply?: () => void;
 }
 
-export default function MessageInput({ 
+function MessageInputComponent({ 
   onSendMessage, 
   onStartTyping, 
   onStopTyping, 
@@ -168,7 +169,7 @@ export default function MessageInput({
             <button 
               type="button"
               onClick={onClearReply}
-              className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+              className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -186,7 +187,7 @@ export default function MessageInput({
             <button 
               type="button"
               onClick={removeSelectedFile}
-              className="hover:text-blue-800 dark:hover:text-blue-200"
+              className="hover:text-blue-800 dark:hover:text-blue-200 cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -207,7 +208,7 @@ export default function MessageInput({
             type="button"
             disabled={isDisabled || isUploading}
             onClick={() => fileInputRef.current?.click()}
-            className="bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50"
+            className="bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -225,21 +226,20 @@ export default function MessageInput({
             className="flex-1 bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-slate-50 transition-all duration-300 disabled:opacity-50"
           />
           
-          <button
+          <AsyncButton
             type="submit"
-            disabled={(!content.trim() && !selectedFile) || isDisabled || isUploading}
-            className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-blue-500/30 active:scale-95"
+            disabled={(!content.trim() && !selectedFile) || isDisabled}
+            isLoading={isUploading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-blue-500/30 active:scale-95 shrink-0"
           >
-            {isUploading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            )}
-          </button>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </AsyncButton>
         </form>
       </div>
     </div>
   );
 }
+
+export default memo(MessageInputComponent);

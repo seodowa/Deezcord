@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { registerUser } from '../services/authService';
+import Logo from '../components/Logo';
+import VerificationModal from '../components/VerificationModal';
+import AsyncButton from '../components/AsyncButton';
 import { useTheme } from '../hooks/useTheme';
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const { isDarkMode, toggleTheme, mounted } = useTheme();
 
@@ -34,12 +37,11 @@ export default function RegisterPage() {
     
     try {
       await registerUser(username, email, password);
-      // Registration successful, redirect to login
-      navigate('/login', { state: { message: "Account created successfully. Please sign in." }});
+      // Show verification modal instead of immediate redirect
+      setShowVerificationModal(true);
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || 'An error occurred during registration.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -47,6 +49,13 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
+      {/* Verification Modal Component */}
+      <VerificationModal 
+        isOpen={showVerificationModal} 
+        email={email} 
+        onClose={() => setShowVerificationModal(false)} 
+      />
+
       {/* Deezcord Server Status Feature - Top Left */}
       <div className="absolute top-6 left-6 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 text-slate-900 dark:text-slate-50 px-4 py-2 rounded-full flex items-center gap-2.5 z-50 shadow-sm transition-colors duration-500">
         <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
@@ -86,7 +95,7 @@ export default function RegisterPage() {
       <div className="relative z-10 w-full max-w-[420px] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Create Account</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Join the Deezcord community today</p>
@@ -160,18 +169,19 @@ export default function RegisterPage() {
             />
           </div>
 
-          <button 
+          <AsyncButton 
             type="submit" 
             className="w-full p-4 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 relative overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_10px_20px_-10px_rgba(59,130,246,1)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            isLoading={isLoading}
+            loadingText="Creating account..."
           >
-            {isLoading ? 'Creating account...' : 'Create Account'}
-          </button>
+            Create Account
+          </AsyncButton>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Already have an account? 
-          <Link to="/login" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+          <Link to="/login" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
             Sign In
           </Link>
         </div>

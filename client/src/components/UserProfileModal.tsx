@@ -1,9 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { updateProfile, updatePassword } from '../services/userService';
+import { updateProfile } from '../services/userService';
+import { mfaListFactors, mfaUnenroll } from '../services/authService';
+import { getToken, getAAL } from '../utils/auth';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
+import MFASetupModal from './MFASetupModal';
+import MFADisableModal from './MFADisableModal';
+import SecuritySettings from './SecuritySettings';
+import MfaTransactionModal from './MfaTransactionModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -15,24 +21,97 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const { addToast } = useToast();
   
   const [username, setUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setNewConfirmPassword] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isMFAModalOpen, setIsMFAModalOpen] = useState(false);
+  const [isMFAEnabled, setIsMFAEnabled] = useState(false);
+  const [isCheckingMFA, setIsCheckingMFA] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaMethod, setMfaMethod] = useState<'totp' | 'email' | 'none'>('none');
+  const [isDisablingMFA, setIsDisablingMFA] = useState(false);
+  const [isConfirmDisableMFAOpen, setIsConfirmDisableMFAOpen] = useState(false);
+  const [isUnenrollChallengeOpen, setIsUnenrollChallengeOpen] = useState(false);
+  const [currentAAL, setCurrentAAL] = useState<'aal1' | 'aal2' | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const checkMFAStatus = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
+    setIsCheckingMFA(true);
+    try {
+      // 1. Check local user metadata (covers both, especially Email)
+      const preference = user?.app_metadata?.mfa_preference || 'none';
+      
+      if (preference === 'email') {
+        setIsMFAEnabled(true);
+        setMfaMethod('email');
+        setMfaFactorId(null);
+      } else {
+        // 2. Double check Supabase factors for TOTP
+        const factors = await mfaListFactors(token);
+        const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
+        if (verifiedFactor) {
+          setIsMFAEnabled(true);
+          setMfaMethod('totp');
+          setMfaFactorId(verifiedFactor.id);
+        } else {
+          setIsMFAEnabled(false);
+          setMfaMethod('none');
+          setMfaFactorId(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check MFA status:", err);
+    } finally {
+      setIsCheckingMFA(false);
+    }
+  }, [user]);
+
+  const handleDisableMFA = async (verificationCode?: string) => {
+    setIsDisablingMFA(true);
+    try {
+      const token = getToken();
+      if (!token) throw new Error("Not authenticated");
+      
+      // For Email MFA, we don't have a factorId, so we pass null/undefined
+      // For TOTP, we pass the specific factorId
+      await mfaUnenroll(token, mfaFactorId || undefined, verificationCode);
+      
+      // Update local user state immediately on success
+      if (user) {
+        setUser({
+          ...user,
+          app_metadata: { ...user.app_metadata, mfa_preference: 'none' }
+        });
+      }
+      
+      setIsMFAEnabled(false);
+      setMfaMethod('none');
+      setMfaFactorId(null);
+      setCurrentAAL(getAAL());
+      
+      addToast("Multi-factor authentication disabled", "success");
+      setIsConfirmDisableMFAOpen(false);
+      setIsUnenrollChallengeOpen(false);
+    } catch (err: any) {
+      addToast(err.message || "Failed to disable MFA", "error");
+    } finally {
+      setIsDisablingMFA(false);
+    }
+  };
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   if (isOpen !== prevIsOpen) {
     if (isOpen && user) {
       setUsername(user.username || '');
       setPreviewUrl(user.avatar_url || null);
-      setNewPassword('');
-      setNewConfirmPassword('');
       setSelectedFile(null);
+      checkMFAStatus();
+      setCurrentAAL(getAAL());
     }
     setPrevIsOpen(isOpen);
   }
@@ -69,29 +148,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     }
   };
 
-  const handleUpdatePassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      addToast('Password must be at least 6 characters', 'error');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      addToast('Passwords do not match', 'error');
-      return;
-    }
-
-    setIsUpdatingPassword(true);
-    try {
-      await updatePassword(newPassword);
-      addToast('Password updated successfully!', 'success');
-      setNewPassword('');
-      setNewConfirmPassword('');
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to update password', 'error');
-    } finally {
-      setIsUpdatingPassword(false);
-    }
-  };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -99,7 +155,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       title="Account Settings"
       description="Manage your identity and security."
       maxWidth="max-w-lg"
-      isLoading={isUpdatingProfile || isUpdatingPassword}
+      isLoading={isUpdatingProfile}
     >
       <div className="space-y-10">
         {/* Profile Section */}
@@ -148,7 +204,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               <AsyncButton
                 onClick={handleUpdateProfile}
                 isLoading={isUpdatingProfile}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
               >
                 Save Profile
               </AsyncButton>
@@ -158,44 +214,45 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
         <hr className="border-slate-200/50 dark:border-white/5" />
 
-        {/* Security Section */}
-        <section className="space-y-6">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            Security
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">NEW PASSWORD</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">CONFIRM PASSWORD</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setNewConfirmPassword(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
-                placeholder="••••••••"
-              />
-            </div>
-            <AsyncButton
-              onClick={handleUpdatePassword}
-              isLoading={isUpdatingPassword}
-              className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300"
-            >
-              Update Password
-            </AsyncButton>
-          </div>
-        </section>
+        <SecuritySettings 
+          currentAAL={currentAAL}
+          isMFAEnabled={isMFAEnabled}
+          mfaMethod={mfaMethod}
+          isCheckingMFA={isCheckingMFA}
+          isDisablingMFA={isDisablingMFA}
+          onSetupMFA={() => setIsMFAModalOpen(true)}
+          onDisableMFA={() => setIsConfirmDisableMFAOpen(true)}
+        />
       </div>
+
+      <MFASetupModal 
+        isOpen={isMFAModalOpen} 
+        onClose={() => setIsMFAModalOpen(false)} 
+        onSuccess={() => {
+          checkMFAStatus();
+          setCurrentAAL(getAAL());
+          setIsMFAModalOpen(false);
+        }}
+      />
+
+      <MFADisableModal
+        isOpen={isConfirmDisableMFAOpen}
+        onClose={() => setIsConfirmDisableMFAOpen(false)}
+        onConfirm={async () => {
+          setIsConfirmDisableMFAOpen(false);
+          setIsUnenrollChallengeOpen(true);
+        }}
+        isLoading={isDisablingMFA}
+      />
+
+      <MfaTransactionModal
+        isOpen={isUnenrollChallengeOpen}
+        onClose={() => setIsUnenrollChallengeOpen(false)}
+        onConfirm={handleDisableMFA}
+        title="Verify Identity to Disable MFA"
+        description="Please provide a security code to confirm you want to disable two-factor authentication."
+        actionLabel="Confirm Disable"
+      />
     </Modal>
   );
 }

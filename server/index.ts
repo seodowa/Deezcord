@@ -14,6 +14,7 @@ import friendRoutes from './routes/friendRoutes';
 import userRoutes from './routes/userRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
+import dmRoutes from './routes/dmRoutes';
 import { ReceiveMessagePayload } from './types/socket';
 import { addUser, removeUser } from './utils/presence';
 
@@ -21,7 +22,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 // Determine if we are running from the compiled 'dist' folder or the root 'server' folder
 const clientDistPath = __dirname.endsWith('dist') 
   ? path.join(__dirname, '../../client/dist') 
@@ -35,13 +35,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/dms', dmRoutes);
 
 // Redirect root to /rooms
 app.get('/api', (req: Request, res: Response) => {
   res.redirect('/api/rooms');
 });
 
-app.get('/{*splat}', (req, res) => {
+app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
@@ -68,9 +69,14 @@ io.use(async (socket: AuthenticatedSocket, next) => {
   try {
     // The frontend must pass the token when initializing the socket connection
     const token = socket.handshake.auth?.token;
+    const deviceId = socket.handshake.auth?.deviceId;
 
     if (!token) {
       return next(new Error("Unauthorized: No token provided"));
+    }
+
+    if (!deviceId) {
+      return next(new Error("Unauthorized: No device ID provided"));
     }
 
     // Verify the token with Supabase
@@ -78,6 +84,12 @@ io.use(async (socket: AuthenticatedSocket, next) => {
 
     if (error || !user) {
       return next(new Error("Unauthorized: Invalid token"));
+    }
+
+    // Fingerprint Check
+    const registeredDevices = user.app_metadata?.devices || [];
+    if (!registeredDevices.includes(deviceId)) {
+      return next(new Error("Unauthorized: Device not recognized"));
     }
 
     // Attach the verified user object to the socket for future use

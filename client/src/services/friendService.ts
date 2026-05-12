@@ -1,55 +1,32 @@
-import { getToken } from '../utils/auth';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import type { User } from '../types/user';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const getFriendsList = async (): Promise<User[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/list`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  const data = await response.json();
+  const response = await fetchWithAuth(`${API_URL}/api/friends/list`);
 
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch friends list');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch friends (Status: ${response.status})`);
   }
 
-  return data;
+  return response.json();
 };
 
 export const getPendingFriends = async (): Promise<User[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/pending`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  const data = await response.json();
+  const response = await fetchWithAuth(`${API_URL}/api/friends/pending`);
 
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch pending requests');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch pending requests (Status: ${response.status})`);
   }
 
-  return data;
+  return response.json();
 };
 
 export const getFriendStatus = async (targetId: string): Promise<string> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/status/${targetId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/friends/status/${targetId}`);
 
   const data = await response.json();
 
@@ -61,14 +38,8 @@ export const getFriendStatus = async (targetId: string): Promise<string> => {
 };
 
 export const requestFriend = async (addresseeId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/request/${addresseeId}`, {
+  const response = await fetchWithAuth(`${API_URL}/api/friends/request/${addresseeId}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -78,14 +49,8 @@ export const requestFriend = async (addresseeId: string): Promise<void> => {
 };
 
 export const acceptFriend = async (requesterId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/accept/${requesterId}`, {
+  const response = await fetchWithAuth(`${API_URL}/api/friends/accept/${requesterId}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -95,14 +60,8 @@ export const acceptFriend = async (requesterId: string): Promise<void> => {
 };
 
 export const removeFriend = async (targetId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/friends/${targetId}`, {
+  const response = await fetchWithAuth(`${API_URL}/api/friends/${targetId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {

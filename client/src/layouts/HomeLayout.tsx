@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import CreateRoomModal from '../components/CreateRoomModal';
 import UserProfileModal from '../components/UserProfileModal';
+import MemberProfileModal from '../components/MemberProfileModal';
 import LoadingScreen from '../components/LoadingScreen';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useRooms } from '../hooks/useRooms';
+import { useDMs } from '../hooks/useDMs';
+import { useSocial } from '../hooks/useSocial';
 import { useChat } from '../hooks/useChat';
 import { getChannels, createChannel } from '../services/roomService';
+import { loadChannels, saveChannels } from '../utils/persistence';
 import type { Room, Channel } from '../types/room';
 import { generateSlug } from '../utils/slug';
 
@@ -17,8 +21,10 @@ export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+  const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,16 +52,22 @@ export default function HomeLayout() {
     isLoadingRooms, 
     isLoadingDiscover, 
     isCreatingRoom, 
-    isJoining, 
+    joiningRoomId, 
     fetchDiscoverRooms, 
     createNewRoom, 
     joinExistingRoom 
   } = useRooms();
 
-  const currentRoom = rooms.find(r => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
+  const { dms, createDM, isLoading: isLoadingDMs } = useDMs();
+  const social = useSocial();
+
+  const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
+                      dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
   const roomId = currentRoom?.id;
   const currentChannel = channels.find(c => stateChannelId ? c.id === stateChannelId : generateSlug(c.name) === channelSlug);
   const channelId = currentChannel?.id;
+
+  const isHomeView = isWelcomeMode || currentRoom?.is_dm;
 
   const {
     messages,
@@ -103,26 +115,66 @@ export default function HomeLayout() {
   }, [onRoomDeleted, roomId, setRooms, setDiscoverRooms, addToast, navigate]);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (currentRoom?.isMember) {
-      getChannels(currentRoom.id).then(rawData => {
-        const data = rawData as Channel[];
-        setChannels(data);
-        // If we navigated to a room without a channel, redirect to the first available channel
-        if (!channelId && !isSettingsView && data.length > 0) {
-          navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(data[0].name)}`, { 
-            replace: true,
-            state: { roomId: currentRoom.id, channelId: data[0].id }
-          });
+      const fetchAndCacheChannels = async (showLoading: boolean) => {
+        if (showLoading) {
+          setIsLoadingChannels(true);
         }
-      }).catch(err => {
-        console.error('Failed to load channels', err);
-        setChannels([]);
+
+        try {
+          const rawData = await getChannels(currentRoom.id);
+          if (!isMounted) return;
+
+          const data = rawData as Channel[];
+          setChannels(data);
+          saveChannels(currentRoom.id, data);
+          
+          // Only redirect if still on the room root and not settings
+          if (!channelId && !isSettingsView && data.length > 0) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(data[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: data[0].id }
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load channels', err);
+          if (isMounted) setChannels([]);
+        } finally {
+          if (isMounted) setIsLoadingChannels(false);
+        }
+      };
+
+      // Try to load from cache first
+      loadChannels(currentRoom.id).then(cached => {
+        if (!isMounted) return;
+
+        if (cached && cached.length > 0) {
+          const cachedChannels = cached as Channel[];
+          setChannels(cachedChannels);
+          setIsLoadingChannels(false);
+          
+          // Immediate redirect on cache hit if needed
+          if (!channelId && !isSettingsView) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(cachedChannels[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: cachedChannels[0].id }
+            });
+          }
+          fetchAndCacheChannels(false); // Silent sync
+        } else {
+          fetchAndCacheChannels(true); // Full loading
+        }
       });
     } else {
-      // Defer state update to avoid cascading renders warning
-      const timeoutId = setTimeout(() => setChannels([]), 0);
-      return () => clearTimeout(timeoutId);
+      queueMicrotask(() => {
+        setIsLoadingChannels(false);
+        setChannels([]);
+      });
     }
+
+    return () => { isMounted = false; };
   }, [currentRoom?.id, currentRoom?.isMember, currentRoom?.name, channelId, isSettingsView, navigate]);
 
   useEffect(() => {
@@ -141,6 +193,7 @@ export default function HomeLayout() {
 
   const handleSelectRoom = (room: Room) => {
     setIsMobileMenuOpen(false);
+    setIsSocialOpen(false);
     navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
   };
 
@@ -155,6 +208,7 @@ export default function HomeLayout() {
 
   const handleDiscoverRoom = () => {
     setIsMobileMenuOpen(false);
+    setIsSocialOpen(false);
     navigate('/discovery');
   };
 
@@ -186,12 +240,101 @@ export default function HomeLayout() {
     }
   };
 
-  const handleLogout = async () => {
-    await new Promise(resolve => setTimeout(resolve, 600));
+  const handleLogout = useCallback(async () => {
     logout();
     addToast('You have been signed out.', 'info');
-    window.location.href = '/login';
+    navigate('/login');
+  }, [logout, addToast, navigate]);
+
+  const handleMessageClick = async (u: { id: string; username: string; avatar_url?: string | null }) => {
+    try {
+      const result = await createDM(u.id);
+      if (result) {
+        setIsSocialOpen(false);
+        navigate(`/${generateSlug(result.room.name)}/${generateSlug('chat')}`, { 
+          state: { roomId: result.room.id, channelId: result.channelId } 
+        });
+      } else {
+        addToast('Failed to start conversation.', 'error');
+      }
+    } catch {
+      addToast('An error occurred.', 'error');
+    }
   };
+
+  const handleDMClick = (dm: Room) => {
+    setIsSocialOpen(false);
+    navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
+      state: { roomId: dm.id, channelId: dm.defaultChannelId } 
+    });
+  };
+
+  const outletContext = useMemo(() => ({
+    currentRoom,
+    currentChannel,
+    channels,
+    isLoadingChannels,
+    messages,
+    members,
+    user,
+    typingUsers,
+    isLoadingMessages,
+    sendMessage,
+    unsendMessage,
+    startTyping,
+    stopTyping,
+    toggleReaction,
+    fetchMembers,
+    rooms,
+    discoverRooms,
+    isLoadingRooms,
+    isLoadingDiscover,
+    fetchDiscoverRooms,
+    joiningRoomId,
+    joinExistingRoom,
+    setRooms,
+    openCreateModal: () => setIsCreateModalOpen(true),
+    navigate,
+    onLogout: handleLogout,
+    // Add social context for WelcomeDashboard to use lifted state
+    social,
+    dms,
+    isLoadingDMs,
+    handleMessageClick,
+    handleDMClick
+  }), [
+    currentRoom, 
+    currentChannel, 
+    channels, 
+    isLoadingChannels, 
+    messages, 
+    members, 
+    user, 
+    typingUsers, 
+    isLoadingMessages, 
+    sendMessage, 
+    unsendMessage, 
+    startTyping, 
+    stopTyping, 
+    toggleReaction, 
+    fetchMembers, 
+    rooms, 
+    discoverRooms, 
+    isLoadingRooms, 
+    isLoadingDiscover, 
+    fetchDiscoverRooms, 
+    joiningRoomId, 
+    joinExistingRoom, 
+    setRooms, 
+    setIsCreateModalOpen,
+    navigate,
+    handleLogout,
+    social,
+    dms,
+    isLoadingDMs,
+    handleMessageClick,
+    handleDMClick
+  ]);
 
   // Show a full-page loading screen until both user and initial rooms are loaded
   if (!user || (isLoadingRooms && rooms.length === 0)) {
@@ -202,33 +345,6 @@ export default function HomeLayout() {
     );
   }
 
-  const outletContext = {
-    currentRoom,
-    currentChannel,
-    channels,
-    messages,
-    members,
-    typingUsers,
-    isLoadingMessages,
-    sendMessage,
-    unsendMessage,
-    startTyping,
-    stopTyping,
-    toggleReaction,
-    fetchMembers,
-    user,
-    rooms,
-    discoverRooms,
-    isLoadingRooms,
-    isLoadingDiscover,
-    fetchDiscoverRooms,
-    isJoining,
-    joinExistingRoom,
-    setRooms,
-    navigate,
-    onLogout: handleLogout
-  };
-
   return (
     <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
@@ -237,22 +353,34 @@ export default function HomeLayout() {
 
       <Sidebar 
         rooms={rooms}
+        dms={dms}
         channels={channels}
         currentRoomId={roomId}
         currentChannelId={channelId}
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isWelcomeMode}
+        isCollapsed={isDiscoveryMode || isWelcomeMode}
+        isDiscoveryMode={isDiscoveryMode}
+        isWelcomeMode={isHomeView}
+        isHomeDashboard={isWelcomeMode}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
         onHomeClick={() => {
           setIsMobileMenuOpen(false);
+          setIsSocialOpen(false);
           navigate('/');
         }}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
+        onSelectDM={(dm) => {
+          setIsMobileMenuOpen(false);
+          setIsSocialOpen(false);
+          navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
+            state: { roomId: dm.id, channelId: dm.defaultChannelId } 
+          });
+        }}
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
@@ -261,6 +389,14 @@ export default function HomeLayout() {
         isCreatingRoom={isCreatingRoom}
         isCreatingChannel={isCreatingChannel}
         userRole={currentRoom?.role || null}
+        // Social Drawer Props
+        isSocialOpen={isSocialOpen}
+        onToggleSocial={() => setIsSocialOpen(!isSocialOpen)}
+        social={social}
+        isLoadingDMs={isLoadingDMs}
+        onMessageClick={handleMessageClick}
+        onDMClick={handleDMClick}
+        onNavigate={navigate}
       />
 
       <CreateRoomModal
@@ -274,98 +410,72 @@ export default function HomeLayout() {
         onClose={() => setIsUserProfileOpen(false)}
       />
 
-      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
-        
-        {/* Render headers ONLY if not on WelcomePage */}
-        {!isWelcomeMode && (
-          <>
-            {/* Mobile Header */}
-            <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md md:hidden z-20 sticky top-0">
-              <div className="flex items-center gap-3">
-                 <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                 >
-                    <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                 </button>
-                 
-                 {currentRoom && !isDiscoveryMode ? (
-                   <div className="flex items-center gap-2 overflow-hidden">
-                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 ${
-                       currentRoom.room_profile ? '' : 'bg-blue-500'
-                     }`}>
-                       {currentRoom.room_profile ? (
-                         <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
-                       ) : (
-                         <span>#</span>
-                       )}
-                     </div>
-                     <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
-                       {currentChannel ? `#${currentChannel.name}` : currentRoom.name}
-                     </h2>
-                   </div>
-                 ) : (
-                   <div className="flex items-center gap-2">
-                     <img src="/Logo.png" alt="Deezcord" className="w-8 h-8 object-contain rounded-lg" />
-                     <h2 className="text-lg font-extrabold tracking-tight text-blue-500 dark:text-blue-400">
-                       {isDiscoveryMode ? 'Discovery' : 'Deezcord'}
-                     </h2>
-                   </div>
-                 )}
-              </div>
+      <MemberProfileModal
+        isOpen={social.isFriendProfileOpen}
+        onClose={() => {
+          social.setIsFriendProfileOpen(false);
+          social.handleRefreshFriends();
+        }}
+        user={social.selectedFriendProfile}
+      />
 
-              {currentRoom?.isMember && !isDiscoveryMode && (
+      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
+
+        {(
+          <>
+            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/40 dark:bg-slate-800/40 md:bg-transparent backdrop-blur-md z-20 sticky top-0 md:h-20`}>
+              <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
-                  onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
-                    isSettingsView 
-                      ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
-                      : 'bg-white/50 dark:bg-slate-700/50 border-slate-200/50 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:scale-105'
-                  }`}
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className="md:hidden shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-              )}
-            </header>
 
-            {/* Desktop Header */}
-            <header className="hidden md:flex h-20 items-center justify-between px-8 bg-transparent z-10">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
-                  currentRoom?.room_profile ? '' : 'bg-blue-500'
+                {!isWelcomeMode ? (<div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
+                  currentRoom?.is_dm ? 'bg-slate-200 dark:bg-slate-700' : (currentRoom?.room_profile ? '' : 'bg-blue-500')
                 }`}>
-                  {currentRoom?.room_profile ? (
+                  {currentRoom?.is_dm ? (
+                    currentRoom.targetUser?.avatar_url ? (
+                      <img src={currentRoom.targetUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-slate-600 dark:text-slate-300">{(currentRoom.targetUser?.username || 'U').substring(0,1).toUpperCase()}</span>
+                    )
+                  ) : currentRoom?.room_profile ? (
                     <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
                   ) : (
-                    <span>#</span>
+                    <span>#</span>    
                   )}
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
-                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom ? currentRoom.name : 'Select a Room')}
+                </div>) : <></>}
+
+                <div className="flex flex-col min-w-0">
+                  {/* display room name if on desktop */}
+                  <h1 className="hidden md:block text-lg font-bold text-slate-900 dark:text-slate-50 truncate">
+                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? currentRoom.name : (isWelcomeMode ? 'Deezcord' : 'Select a Room')))}
                   </h1>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    {isDiscoveryMode ? 'Find new communities to join' : (currentRoom ? (currentRoom.isMember ? (
+                  {/* display channel name in header if on mobile */}
+                  <h1 className="md:hidden text-lg font-bold text-slate-900 dark:text-slate-50 truncate">
+                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? (currentChannel ? `#${currentChannel.name}` : currentRoom.name) : (isWelcomeMode ? 'Deezcord' : 'Select a Room')))}
+                  </h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 truncate">
+                    {isDiscoveryMode ? 'Find new communities to join' : (currentRoom?.is_dm ? 'Direct Message' : (currentRoom ? (currentRoom.isMember ? (
                       <>
-                        <span>Chatting in</span>
+                        <span className='hidden md:inline'>Chatting in</span>
                         {currentChannel && (
-                          <span className="font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">#{currentChannel.name}</span>
+                          <span className="hidden md:inline font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">#{currentChannel.name}</span>
                         )}
                       </>
-                    ) : `Not a member of ${currentRoom.name}`) : 'Join the conversation')}
+                    ) : `Not a member of ${currentRoom.name}`) : ('Join the conversation')))}
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-6">
-                {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && (
+              <div className="flex items-center gap-6 shrink-0">
+                {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && !currentRoom?.is_dm && (
                   <div className="group relative">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm cursor-help transition-all hover:bg-emerald-500/20">
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm cursor-help transition-all hover:bg-emerald-500/20">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -406,17 +516,19 @@ export default function HomeLayout() {
                 {currentRoom?.isMember && !isDiscoveryMode && (
                   <button
                     onClick={() => isSettingsView ? navigate(`/${generateSlug(currentRoom.name)}`, { state: { roomId: currentRoom.id, channelId: currentChannel?.id } }) : navigate(`/${generateSlug(currentRoom.name)}/settings`, { state: { roomId: currentRoom.id } })}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 font-bold text-sm ${
-                      isSettingsView 
-                        ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
-                        : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md'
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 font-bold text-sm ${
+                                          isSettingsView 
+                                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                                            : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md'
+                                        } cursor-pointer`}
                   >
                     <svg className={`w-4 h-4 transition-transform duration-500 ${isSettingsView ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    {isSettingsView ? 'Back to Chat' : 'Settings'}
+                    <span className="hidden md:inline">
+                      {isSettingsView ? 'Back to Chat' : 'Settings'}
+                    </span>
                   </button>
                 )}
               </div>

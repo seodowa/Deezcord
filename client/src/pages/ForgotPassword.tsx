@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
+import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
+import { forgotPassword } from '../services/authService';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -42,16 +44,19 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate sending password reset email
-    setTimeout(() => {
-      setIsLoading(false);
-      addToast('If an account exists, a reset link has been sent.', 'info');
+    try {
+      await forgotPassword(email);
+      addToast('If an account exists, a reset link has been sent.', 'success');
       navigate('/login');
-    }, 1500);
+    } catch (error: any) {
+      addToast(error.message || 'Failed to send reset link', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -92,7 +97,7 @@ export default function ForgotPasswordPage() {
         
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Reset Password</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your email and we'll send you a link</p>
@@ -127,7 +132,7 @@ export default function ForgotPasswordPage() {
         </form>
 
         <div className="mt-8 text-center text-sm">
-          <Link to="/login" className="text-slate-500 dark:text-slate-400 font-medium transition-colors duration-200 hover:text-slate-900 dark:hover:text-slate-50 flex items-center justify-center gap-2">
+          <Link to="/login" className="text-slate-500 dark:text-slate-400 font-medium transition-colors duration-200 hover:text-slate-900 dark:hover:text-slate-50 flex items-center justify-center gap-2 cursor-pointer">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>

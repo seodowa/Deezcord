@@ -3,9 +3,12 @@ import type { Room, Member } from '../types/room';
 import AsyncButton from './AsyncButton';
 import Modal from './Modal';
 import MemberProfileModal from './MemberProfileModal';
+import MFAChallengeModal from './MFAChallengeModal';
 import { useToast } from '../hooks/useToast';
+import MfaTransactionModal from './MfaTransactionModal';
 import { updateRoom, addMember, kickMember, leaveRoom, deleteRoom } from '../services/roomService';
 import { useAuth } from '../hooks/useAuth';
+import { useMFAChallenge } from '../hooks/useMFAChallenge';
 
 interface RoomSettingsProps {
   room: Room;
@@ -26,12 +29,15 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
   const [isInviting, setIsInviting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showMfaTransaction, setShowMfaTransaction] = useState(false);
   const [kickingId, setKickingId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<'delete_room' | 'leave_room' | 'kick_member' | null>(null);
   const [targetMember, setTargetMember] = useState<{ id: string; username: string } | null>(null);
 
   const [selectedProfile, setSelectedProfile] = useState<{ id: string; username: string; avatar_url?: string | null } | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const { isChallengeOpen, factorId, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addToast } = useToast();
@@ -119,16 +125,27 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
     }
   };
 
-  const handleDeleteRoom = async () => {
+  const handleDeleteRoom = async (mfaCode?: string) => {
     if (!isOwner) return;
     setIsDeleting(true);
     try {
-      await deleteRoom(room.id);
+      await deleteRoom(room.id, mfaCode);
       addToast('Room deleted successfully', 'success');
       setConfirmAction(null);
+      setShowMfaTransaction(false);
       onLeave(); // We can reuse onLeave to navigate away
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
+    } catch (err: any) {
+      if (err.code === 'MFA_REQUIRED_TRANSACTIONAL') {
+        setConfirmAction(null); // Close the initial confirm modal
+        setShowMfaTransaction(true);
+      } else if (err.message === 'MFA_REQUIRED') {
+        // Fallback for old session-level MFA if still used
+        startChallenge(() => handleDeleteRoom());
+      } else {
+        addToast(err instanceof Error ? err.message : 'Failed to delete room', 'error');
+        // Re-throw so the AsyncButton in the transaction modal can handle error state
+        if (mfaCode) throw err;
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -205,7 +222,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                       <AsyncButton
                         onClick={handleUpdateRoom}
                         isLoading={isUpdating}
-                        className="w-full md:w-auto px-8 bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-2.5 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
+                        className="w-full md:w-auto px-8 bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-2.5 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
                       >
                         Save Changes
                       </AsyncButton>
@@ -275,7 +292,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                             setTargetMember({ id: member.user_id, username: profile.username || 'this user' });
                             setConfirmAction('kick_member');
                           }}
-                          className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                          className="p-2 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                           title="Remove member"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -341,7 +358,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                 </div>
                 <button
                   onClick={() => setConfirmAction('leave_room')}
-                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap"
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap cursor-pointer"
                 >
                   Leave Room
                 </button>
@@ -354,7 +371,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                 </div>
                 <button
                   onClick={() => setConfirmAction('delete_room')}
-                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap"
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap cursor-pointer"
                 >
                   Delete Room
                 </button>
@@ -378,15 +395,15 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
             <button
               onClick={() => setConfirmAction(null)}
               disabled={isDeleting}
-              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <AsyncButton
-              onClick={handleDeleteRoom}
+              onClick={() => handleDeleteRoom()}
               isLoading={isDeleting}
               loadingText="Deleting..."
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all cursor-pointer"
             >
               Delete Permanently
             </AsyncButton>
@@ -416,7 +433,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
             <button
               onClick={() => setConfirmAction(null)}
               disabled={isLeaving}
-              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -424,7 +441,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
               onClick={handleLeaveRoom}
               isLoading={isLeaving}
               loadingText="Leaving..."
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all cursor-pointer"
             >
               Leave Room
             </AsyncButton>
@@ -454,7 +471,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
             <button
               onClick={() => { setConfirmAction(null); setTargetMember(null); }}
               disabled={!!kickingId}
-              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="px-6 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -462,7 +479,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
               onClick={handleKickMember}
               isLoading={!!kickingId}
               loadingText="Removing..."
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all cursor-pointer"
             >
               Remove Member
             </AsyncButton>
@@ -485,6 +502,26 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         onClose={() => setIsProfileModalOpen(false)}
         user={selectedProfile}
       />
+
+      {/* MFA Transaction Modal for Room Deletion */}
+      <MfaTransactionModal
+        isOpen={showMfaTransaction}
+        onClose={() => setShowMfaTransaction(false)}
+        onConfirm={handleDeleteRoom}
+        title="Confirm Room Deletion"
+        description={`Please enter your 6-digit security code to permanently delete "${room.name}".`}
+        actionLabel="Verify & Delete Room"
+      />
+
+      {/* MFA Challenge Modal */}
+      {factorId && (
+        <MFAChallengeModal
+          isOpen={isChallengeOpen}
+          factorId={factorId}
+          onClose={closeChallenge}
+          onSuccess={handleVerified}
+        />
+      )}
 
     </div>
   );

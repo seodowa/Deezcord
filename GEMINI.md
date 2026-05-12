@@ -80,8 +80,11 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 ## TODOs / Future Enhancements
 - [x] Integrate Login/Register pages with the backend.
 - [x] Setup protected routes and global 404 handling.
-- [ ] Create email verification page.
-- [ ] Create MFA modal.
+- [x] Create email verification page.
+- [x] Create MFA challenge and setup modals.
+- [x] Implement Transactional MFA (Code-per-action) for sensitive operations.
+- [x] Implement User Choice MFA (Authenticator App or Email Fallback).
+- [x] Ensure build readiness (Client & Server).
 - [x] Implement full message persistence on the frontend.
 - [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
 - [x] Implement user profiles, avatars, and presence tracking.
@@ -92,9 +95,18 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
 - [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
 - [x] Create a reusable modal component that can be used for anything.
-- [ ] Add Direct Messages (DMs).
-- [ ] Redesign the home page (needs more polish).
-    - [ ] Add recent direct messages to dashboard/homepage.
+- [x] Add Direct Messages (DMs).
+- [x] Redesign the home page (needs more polish).
+    - [x] Add recent direct messages to dashboard/homepage.
 - [x] Server: Refactor roomRoutes.ts (Separate domain routes into specialized files).
-- [ ] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
+- [x] Room persistence. Solve the issue where after refreshing the page, the user is kicked out of the room and must rejoin.
 
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
+- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

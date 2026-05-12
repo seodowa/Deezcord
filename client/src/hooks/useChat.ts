@@ -4,6 +4,7 @@ import type { Member } from '../types/room';
 import { getRoomMembers, getMessages } from '../services/roomService';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
+import { loadMessages, saveMessages, loadMembers, saveMembers } from '../utils/persistence';
 
 export const useChat = (roomId: string | undefined, channelId: string | undefined, isMember: boolean | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,19 +35,28 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   const fetchMembers = useCallback(async (id: string) => {
     try {
       const data = await getRoomMembers(id);
-      setMembers(data as Member[]);
+      const memberData = data as Member[];
+      setMembers(memberData);
+      saveMembers(id, memberData);
     } catch (err) {
       console.error('Failed to load members:', err);
     }
   }, []);
 
   const fetchMessages = useCallback(async (rId: string, cId: string) => {
-    setIsLoadingMessages(true);
+    // Only show loading state if we don't have cached messages
+    setMessages(prev => {
+      if (prev.length === 0) setIsLoadingMessages(true);
+      return prev;
+    });
+
     try {
       const data = await getMessages(rId, cId);
       const messageData = data as Message[];
-      console.log(`[Debug] Fetched ${messageData.length} messages. Messages with avatars:`, messageData.filter((m) => m.avatar_url).length);
+      
       setMessages(messageData);
+      // Update cache
+      if (cId) saveMessages(cId, messageData);
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
@@ -56,16 +66,32 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
 
   useEffect(() => {
     if (roomId && isMember) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchMembers(roomId);
+      // Try to load members from cache first
+      loadMembers(roomId).then(cached => {
+        if (cached && cached.length > 0) {
+          setMembers(cached as Member[]);
+        }
+        fetchMembers(roomId);
+      });
+
       if (channelId) {
-        setMessages([]);
-        fetchMessages(roomId, channelId);
+        // Try to load from cache first
+        loadMessages(channelId).then(cached => {
+          if (cached && cached.length > 0) {
+            setMessages(cached as Message[]);
+          } else {
+            setMessages([]);
+          }
+          fetchMessages(roomId, channelId);
+        });
         socketJoinRoom({ room_id: roomId, channel_id: channelId });
       } else {
         socketJoinRoom({ room_id: roomId });
       }
-      setTypingUsers([]);
+      
+      queueMicrotask(() => {
+        setTypingUsers([]);
+      });
       
       return () => {
         if (channelId) {
@@ -75,9 +101,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         }
       };
     } else {
-      setMembers([]);
-      setMessages([]);
-      setTypingUsers([]);
+      queueMicrotask(() => {
+        setMembers([]);
+        setMessages([]);
+        setTypingUsers([]);
+      });
     }
   }, [roomId, channelId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
 
@@ -101,10 +129,12 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
             ...newMessage,
             id: newMessage.id,
             created_at: newMessage.created_at
-          }];
+          }].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-          // Ensure sorted by creation time
-          return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          // Update cache with the new message
+          if (channelId) saveMessages(channelId, updated);
+          
+          return updated;
         });
       }
     });
@@ -114,7 +144,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   useEffect(() => {
     const unsubscribe = onMessageDeleted((data) => {
       if (data.channel_id === channelId) {
-        setMessages(prev => prev.filter(m => m.id !== data.message_id));
+        setMessages(prev => {
+          const updated = prev.filter(m => m.id !== data.message_id);
+          if (channelId) saveMessages(channelId, updated);
+          return updated;
+        });
       }
     });
     return unsubscribe;
@@ -202,7 +236,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         } : null,
         temp_id: tempId
       };
-      setMessages(prev => [...prev, newMessage]);
+      setMessages(prev => {
+        const updated = [...prev, newMessage];
+        if (channelId) saveMessages(channelId, updated);
+        return updated;
+      });
       socketStopTyping({ room_id: roomId, channel_id: channelId });
     }
   }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping, messages]);
@@ -211,7 +249,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     if (roomId && channelId && isMember) {
       socketUnsendMessage({ message_id: messageId, channel_id: channelId });
       // Optimistic update
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setMessages(prev => {
+        const updated = prev.filter(m => m.id !== messageId);
+        if (channelId) saveMessages(channelId, updated);
+        return updated;
+      });
     }
   }, [roomId, channelId, isMember, socketUnsendMessage]);
 

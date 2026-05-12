@@ -36,26 +36,37 @@ export default function Modal({
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleEscape);
       
-      // Simple focus trap: focus the modal container or the first interactive element
-      if (modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length > 0) {
-          (focusableElements[0] as HTMLElement).focus();
-        } else {
-          modalRef.current.focus();
+      // Focus the modal or its first element only when it first opens
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length > 0) {
+            (focusableElements[0] as HTMLElement).focus();
+          } else {
+            modalRef.current.focus();
+          }
         }
-      }
-    }
+      }, 50); // Small delay to ensure content is rendered
 
-    return () => {
-      document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleEscape);
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus();
-      }
-    };
+      return () => {
+        clearTimeout(timer);
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleEscape);
+        if (previousFocusRef.current) {
+          previousFocusRef.current.focus();
+        }
+      };
+    }
+  }, [isOpen]); // Only run when isOpen changes
+
+  // Separate effect for the escape key listener to keep it updated without re-running focus logic
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleEscape);
+      return () => window.removeEventListener('keydown', handleEscape);
+    }
   }, [isOpen, handleEscape]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -68,13 +79,13 @@ export default function Modal({
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in cursor-pointer"
       onClick={handleBackdropClick}
     >
       <div 
         ref={modalRef}
         tabIndex={-1}
-        className={`w-full ${maxWidth} bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh] focus:outline-none`}
+        className={`w-full ${maxWidth} bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh] focus:outline-none cursor-pointer`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -95,7 +106,7 @@ export default function Modal({
           <button 
             onClick={onClose}
             disabled={isLoading}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500/50 disabled:opacity-50 hover:scale-105 active:scale-95"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500/50 disabled:opacity-50 hover:scale-105 active:scale-95 cursor-pointer"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
