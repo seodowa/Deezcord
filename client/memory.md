@@ -80,3 +80,16 @@ The client frontend is under active development, focusing heavily on a responsiv
 - [x] Add Direct Messages (DMs).
 - [x] Redesign the home page (needs more polish).
 - [x] Modularize API services and separate domain logic.
+- [x] Implement Fingerprinted Hybrid Authentication (Refresh Tokens + Device IDs).
+
+## 🔒 Auth Overhaul: Fingerprinted Hybrid Sessions [DONE]
+- **Device Fingerprinting**: Persistent UUID v4 in `localStorage`. Sent via `X-Device-Id` header.
+- **Hybrid Storage**: 
+    - `sessionStorage` (12h limit): Standard sessions with hard cutoff.
+    - `localStorage` (1mo limit): "Remember Me" persistent sessions.
+- **fetchWithAuth**: Robust global fetch wrapper that handles:
+    - Automatic header injection.
+    - Silent refresh on 401 intercepts.
+    - Refresh race condition protection (request queuing).
+- **Socket.io**: Handshake security enforcing device fingerprinting.
+- **DMs**: Full integration with the new auth system.

@@ -81,7 +81,9 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Integrate Login/Register pages with the backend.
 - [x] Setup protected routes and global 404 handling.
 - [x] Create email verification page.
-- [ ] Create MFA modal.
+- [x] Create MFA challenge and setup modals.
+- [x] Implement Transactional MFA (Code-per-action) for sensitive operations.
+- [ ] Ensure build readiness (Client & Server).
 - [x] Implement full message persistence on the frontend.
 - [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
 - [x] Implement user profiles, avatars, and presence tracking.
@@ -90,7 +92,7 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Redesign Sidebar to "Unified Glass" aesthetic with squircle icons.
 - [x] Integrate and refine brand logo (Logo.png) across all application pages.
 - [x] Add real-time room/channel creation updates to the sidebar (Socket.io).
-- [x] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
+- [ ] Redesign Chat area (MessageList, MessageInput) to match the new Unified Glass aesthetic.
 - [x] Create a reusable modal component that can be used for anything.
 - [x] Add Direct Messages (DMs).
 - [x] Redesign the home page (needs more polish).

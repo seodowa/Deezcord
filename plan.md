@@ -58,3 +58,19 @@ The user must successfully link an authenticator app (via QR code) during initia
 
 ## 10. Open Questions
 - None. Email fallback elegantly solves the lack of native TOTP backup codes in Supabase.
+
+---
+
+# Authentication Overhaul Plan: Fingerprinted Hybrid Sessions [COMPLETED]
+
+## Objective
+Implement a secure, dual-mode authentication system ("Session" vs "Remember Me") featuring device fingerprinting and refresh token rotation.
+
+## Implementation Results
+- **Security Binding**: Tokens are bound to a persistent `deviceId` (UUID) stored in `localStorage` and verified server-side against `app_metadata.devices`.
+- **Hybrid Lifecycle**: 
+    - **Session Only**: Uses `sessionStorage` with a **hard 12-hour limit** (enforced via `sb-session-start` timestamp).
+    - **Remember Me**: Uses `localStorage` for a 1-month session duration.
+- **Mid-Session Refresh**: Implemented `fetchWithAuth` wrapper that intercepts 401s, handles silent refreshes (with race condition protection), and retries requests.
+- **Device Management**: Added a 10-device FIFO cap and server-side device deregistration on logout.
+- **Handshake Security**: Socket.io now enforces device fingerprinting in the auth handshake.
