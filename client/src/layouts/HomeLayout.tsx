@@ -422,22 +422,20 @@ export default function HomeLayout() {
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
 
-        {/* Render desktop header ONLY if not on WelcomePage or DiscoveryPage */}
-        {!isWelcomeMode && !isDiscoveryMode && (
+        {(
           <>
-            {/* Desktop Header */}
-            <header className="h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/40 dark:bg-slate-800/40 md:bg-transparent backdrop-blur-md z-20 sticky top-0 md:h-20">
-              <div className="flex items-center gap-4">
+            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/40 dark:bg-slate-800/40 md:bg-transparent backdrop-blur-md z-20 sticky top-0 md:h-20`}>
+              <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="md:hidden w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    className="md:hidden shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-white/10 hover:scale-105 hover:shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 >
                   <svg className="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
 
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
+                {!isWelcomeMode ? (<div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm shadow-blue-500/20 overflow-hidden ${
                   currentRoom?.is_dm ? 'bg-slate-200 dark:bg-slate-700' : (currentRoom?.room_profile ? '' : 'bg-blue-500')
                 }`}>
                   {currentRoom?.is_dm ? (
@@ -449,14 +447,20 @@ export default function HomeLayout() {
                   ) : currentRoom?.room_profile ? (
                     <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
                   ) : (
-                    <span>#</span>
+                    <span>#</span>    
                   )}
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
-                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? currentRoom.name : 'Select a Room'))}
+                </div>) : <></>}
+
+                <div className="flex flex-col min-w-0">
+                  {/* display room name if on desktop */}
+                  <h1 className="hidden md:block text-lg font-bold text-slate-900 dark:text-slate-50 truncate">
+                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? currentRoom.name : (isWelcomeMode ? 'Deezcord' : 'Select a Room')))}
                   </h1>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                  {/* display channel name in header if on mobile */}
+                  <h1 className="md:hidden text-lg font-bold text-slate-900 dark:text-slate-50 truncate">
+                    {isDiscoveryMode ? 'Discover Rooms' : (currentRoom?.is_dm ? currentRoom.targetUser?.username : (currentRoom ? (currentChannel ? `#${currentChannel.name}` : currentRoom.name) : (isWelcomeMode ? 'Deezcord' : 'Select a Room')))}
+                  </h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 truncate">
                     {isDiscoveryMode ? 'Find new communities to join' : (currentRoom?.is_dm ? 'Direct Message' : (currentRoom ? (currentRoom.isMember ? (
                       <>
                         <span className='hidden md:inline'>Chatting in</span>
@@ -464,12 +468,12 @@ export default function HomeLayout() {
                           <span className="hidden md:inline font-semibold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">#{currentChannel.name}</span>
                         )}
                       </>
-                    ) : `Not a member of ${currentRoom.name}`) : 'Join the conversation'))}
+                    ) : `Not a member of ${currentRoom.name}`) : ('Join the conversation')))}
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 shrink-0">
                 {!isDiscoveryMode && currentRoom?.isMember && members.length > 0 && !currentRoom?.is_dm && (
                   <div className="group relative">
                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm cursor-help transition-all hover:bg-emerald-500/20">
