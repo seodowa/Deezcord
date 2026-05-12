@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { isUserOnline } from '../utils/presence';
+import { sendEmailChangeCurrentEmail, sendEmailChangeNewEmail } from '../services/emailService';
 
 const router = express.Router();
 
@@ -103,32 +104,19 @@ router.patch('/profile', verifyUser, upload.single('file'), async (req: Authenti
 // PATCH /password - Update user password (PROTECTED)
 router.patch('/password', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const { password } = req.body;
-  const token = req.headers.authorization?.split(' ')[1];
+  const userId = req.user?.id;
 
   if (!password || password.length < 6) {
     res.status(400).json({ error: "Password must be at least 6 characters" });
     return;
   }
 
-  if (!token) {
+  if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  // We need to use the token to update the user's password in auth.users
-  const userClient = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || '', {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  });
-
-  const { error } = await userClient.auth.updateUser({ password });
+  const { error } = await supabase.auth.admin.updateUserById(userId, { password });
 
   if (error) {
     res.status(400).json({ error: error.message });
@@ -136,6 +124,58 @@ router.patch('/password', verifyUser, async (req: AuthenticatedRequest, res: Res
   }
 
   res.json({ message: "Password updated successfully" });
+});
+
+// PATCH /email - Update user email (PROTECTED)
+router.patch('/email', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const { email: newEmail } = req.body;
+  const userId = req.user?.id;
+  const currentEmail = req.user?.email;
+
+  if (!newEmail || !newEmail.includes('@')) {
+    res.status(400).json({ error: "Valid email is required" });
+    return;
+  }
+
+  if (!userId || !currentEmail) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    // Generate link for the current email address
+    const { data: currentEmailData, error: currentEmailError } = await supabase.auth.admin.generateLink({
+      type: 'email_change_current',
+      email: currentEmail,
+      newEmail: newEmail,
+      user_id: userId,
+    } as any);
+
+    if (currentEmailError) throw currentEmailError;
+
+    // Generate link for the new email address
+    const { data: newEmailData, error: newEmailError } = await supabase.auth.admin.generateLink({
+      type: 'email_change_new',
+      email: currentEmail,
+      newEmail: newEmail,
+      user_id: userId,
+    } as any);
+
+    if (newEmailError) throw newEmailError;
+
+    // Send emails using our custom email service
+    if (currentEmailData.properties?.action_link) {
+      await sendEmailChangeCurrentEmail(currentEmail, currentEmailData.properties.action_link);
+    }
+    
+    if (newEmailData.properties?.action_link) {
+      await sendEmailChangeNewEmail(newEmail, newEmailData.properties.action_link);
+    }
+
+    res.json({ message: "Confirmation emails sent to both new and old email addresses. Please verify to complete the update." });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to initiate email change." });
+  }
 });
 
 // GET /search - Search for users by username
