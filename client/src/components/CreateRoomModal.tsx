@@ -49,7 +49,7 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
         type="button"
         onClick={onClose}
         disabled={isLoading}
-        className="px-6 py-3 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors duration-200 disabled:opacity-50"
+        className="px-6 py-3 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors duration-200 disabled:opacity-50 cursor-pointer"
       >
         Cancel
       </button>
@@ -58,7 +58,7 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
         disabled={!name.trim()}
         isLoading={isLoading}
         loadingText="Creating..."
-        className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_8px_16px_-8px_rgba(59,130,246,1)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:-translate-y-0 disabled:hover:shadow-none"
+        className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_8px_16px_-8px_rgba(59,130,246,1)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:-translate-y-0 disabled:hover:shadow-none cursor-pointer"
       >
         Create Room
       </AsyncButton>
@@ -116,7 +116,7 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
             <button 
               type="button"
               onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }}
-              className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-semibold"
+              className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-semibold cursor-pointer"
             >
               Remove Picture
             </button>

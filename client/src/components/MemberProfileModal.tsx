@@ -148,14 +148,14 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
             <AsyncButton
               onClick={handleMessage}
               isLoading={isMessageLoading}
-              className="w-full py-3 rounded-xl font-bold shadow-lg transition-all duration-300 bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30"
+              className="w-full py-3 rounded-xl font-bold shadow-lg transition-all duration-300 bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/30 cursor-pointer"
             >
               Message
             </AsyncButton>
             <AsyncButton
               onClick={handleToggleFriend}
               isLoading={isLoading}
-              className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all duration-300 ${btnConfig.className}`}
+              className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all duration-300 ${btnConfig.className} cursor-pointer`}
             >
               {btnConfig.text}
             </AsyncButton>

@@ -100,14 +100,14 @@ export default function SecuritySettings({
             <AsyncButton
               onClick={onDisableMFA}
               isLoading={isDisablingMFA}
-              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-xl transition-all"
+              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-xl transition-all cursor-pointer"
             >
               Disable MFA
             </AsyncButton>
           ) : (
             <button
               onClick={onSetupMFA}
-              className="px-4 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-slate-900/10"
+              className="px-4 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-slate-900/10 cursor-pointer"
             >
               Setup MFA
             </button>
@@ -138,7 +138,7 @@ export default function SecuritySettings({
         <AsyncButton
           onClick={handleUpdatePassword}
           isLoading={isUpdatingPassword}
-          className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300"
+          className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
         >
           Update Password
         </AsyncButton>

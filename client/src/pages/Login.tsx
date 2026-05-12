@@ -153,7 +153,7 @@ export default function LoginPage() {
               />
               <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-200">Remember me</span>
             </label>
-            <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+            <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
               Forgot password?
             </Link>
           </div>
@@ -170,7 +170,7 @@ export default function LoginPage() {
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Don't have an account? 
-          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
             Sign up for free
           </Link>
         </div>

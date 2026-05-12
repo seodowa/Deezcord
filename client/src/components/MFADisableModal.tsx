@@ -25,14 +25,14 @@ export default function MFADisableModal({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <AsyncButton
             onClick={onConfirm}
             isLoading={isLoading}
-            className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all"
+            className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all cursor-pointer"
           >
             Disable Anyway
           </AsyncButton>

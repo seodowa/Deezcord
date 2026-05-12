@@ -141,7 +141,7 @@ export default function MfaTransactionModal({
             onClick={handleConfirm}
             loadingText="Authorizing..."
             disabled={isSendingEmail}
-            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
+            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
           >
             {actionLabel}
           </AsyncButton>
@@ -150,7 +150,7 @@ export default function MfaTransactionModal({
             <button
               onClick={handleResendEmail}
               disabled={resendCooldown > 0 || isSendingEmail}
-              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
             </button>
@@ -158,7 +158,7 @@ export default function MfaTransactionModal({
 
           <button
             onClick={handleClose}
-            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors"
+            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
           >
             Cancel
           </button>

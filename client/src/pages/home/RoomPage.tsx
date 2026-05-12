@@ -57,7 +57,7 @@ export default function RoomPage() {
           <AsyncButton
             onClick={handleJoinRoom}
             isLoading={isJoining}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
           >
             Join Room
           </AsyncButton>

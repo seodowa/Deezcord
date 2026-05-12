@@ -181,7 +181,7 @@ export default function RegisterPage() {
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Already have an account? 
-          <Link to="/login" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+          <Link to="/login" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
             Sign In
           </Link>
         </div>

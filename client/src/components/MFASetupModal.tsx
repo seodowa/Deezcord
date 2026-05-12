@@ -123,7 +123,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
           <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <button
               onClick={handleEnrollTOTP}
-              className="flex items-center p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-white/5 rounded-2xl hover:border-blue-500 dark:hover:border-blue-500/50 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all group text-left"
+              className="flex items-center p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-white/5 rounded-2xl hover:border-blue-500 dark:hover:border-blue-500/50 hover:bg-blue-50/50 dark:hover:bg-blue-500/5 transition-all group text-left cursor-pointer"
             >
               <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mr-4 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                 <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
@@ -138,7 +138,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
 
             <button
               onClick={handleEnrollEmail}
-              className="flex items-center p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-white/5 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all group text-left"
+              className="flex items-center p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-100 dark:border-white/5 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all group text-left cursor-pointer"
             >
               <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mr-4 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                 <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6" xmlns="http://www.w3.org/2000/svg">
@@ -177,7 +177,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
 
               <button
                 onClick={() => setStep('verify')}
-                className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all hover:shadow-lg hover:shadow-blue-500/25"
+                className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all hover:shadow-lg hover:shadow-blue-500/25 cursor-pointer"
               >
                 I've scanned it
               </button>
@@ -214,14 +214,14 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
 
             <AsyncButton
               onClick={step === 'verify' ? handleVerifyTOTP : handleVerifyEmail}
-              className={`w-full p-4 ${step === 'verify' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25`}
+              className={`w-full p-4 ${step === 'verify' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 cursor-pointer`}
             >
               Verify & Enable
             </AsyncButton>
 
             <button
               onClick={() => setStep('choice')}
-              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors"
+              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
             >
               Change method
             </button>
@@ -242,7 +242,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
 
             <button
               onClick={resetAndClose}
-              className="w-full p-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-xl"
+              className="w-full p-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-xl cursor-pointer"
             >
               Done
             </button>

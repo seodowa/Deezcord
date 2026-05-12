@@ -160,7 +160,7 @@ export default function MFAChallengeModal({
           <AsyncButton
             onClick={handleVerify}
             loadingText="Verifying..."
-            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25"
+            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 cursor-pointer"
           >
             Verify
           </AsyncButton>
@@ -169,7 +169,7 @@ export default function MFAChallengeModal({
             <button
               onClick={handleResendEmail}
               disabled={resendCooldown > 0}
-              className="text-sm font-medium text-slate-500 hover:text-blue-500 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors py-2"
+              className="text-sm font-medium text-slate-500 hover:text-blue-500 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors py-2 cursor-pointer"
             >
               {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
             </button>
@@ -177,7 +177,7 @@ export default function MFAChallengeModal({
 
           <button
             onClick={handleClose}
-            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors"
+            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
           >
             Cancel
           </button>

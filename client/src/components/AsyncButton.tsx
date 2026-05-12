@@ -47,7 +47,7 @@ const AsyncButton = memo(forwardRef<HTMLButtonElement, AsyncButtonProps>(({
       ref={ref}
       onClick={handleClick}
       disabled={isPending || disabled}
-      className={`relative inline-flex items-center justify-center transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden ${className}`}
+      className={`relative inline-flex items-center justify-center transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden ${className} cursor-pointer`}
       {...props}
     >
       <span className={`flex items-center gap-2 ${isPending && loadingText ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}>

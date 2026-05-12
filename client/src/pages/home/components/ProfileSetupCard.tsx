@@ -26,7 +26,7 @@ export default function ProfileSetupCard({ onSetupProfile }: ProfileSetupCardPro
           </div>
           <button 
             onClick={onSetupProfile}
-            className="w-full py-3 bg-fuchsia-600 text-white dark:bg-fuchsia-500 rounded-xl font-bold text-sm hover:bg-fuchsia-700 dark:hover:bg-fuchsia-600 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-fuchsia-500/20 dark:shadow-fuchsia-950/40"
+            className="w-full py-3 bg-fuchsia-600 text-white dark:bg-fuchsia-500 rounded-xl font-bold text-sm hover:bg-fuchsia-700 dark:hover:bg-fuchsia-600 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-fuchsia-500/20 dark:shadow-fuchsia-950/40 cursor-pointer"
           >
             Set up profile
           </button>

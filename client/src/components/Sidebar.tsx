@@ -108,10 +108,10 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           className={`relative w-11 h-11 flex-shrink-0 flex items-center justify-center font-bold text-sm transition-all duration-300 overflow-hidden ${
-            isActive
-              ? 'rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 scale-100'
-              : 'rounded-2xl bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-500 dark:hover:text-indigo-400'
-          }`}
+                      isActive
+                        ? 'rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 scale-100'
+                        : 'rounded-2xl bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-500 dark:hover:text-indigo-400'
+                    } cursor-pointer`}
           aria-label={room.name}
         >
           {room.room_profile ? (
@@ -197,7 +197,7 @@ function SidebarComponent({
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 cursor-pointer"
           onClick={onClose}
           aria-label="Close Sidebar"
         />
@@ -254,10 +254,10 @@ function SidebarComponent({
                       onMouseEnter={() => setSocialHovered(true)}
                       onMouseLeave={() => setSocialHovered(false)}
                       className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                        isSocialOpen
-                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white'
-                      }`}
+                                              isSocialOpen
+                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white'
+                                            } cursor-pointer`}
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -279,7 +279,7 @@ function SidebarComponent({
                     isLoading={isCreatingRoom}
                     onMouseEnter={() => setCreateHovered(true)}
                     onMouseLeave={() => setCreateHovered(false)}
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200"
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all duration-200 cursor-pointer"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -302,7 +302,7 @@ function SidebarComponent({
                   }}
                   onMouseEnter={() => setDiscoverHovered(true)}
                   onMouseLeave={() => setDiscoverHovered(false)}
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white`}
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-indigo-500 hover:text-white cursor-pointer`}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -359,7 +359,7 @@ function SidebarComponent({
             </h2>
             
             <div className="flex items-center gap-1 md:hidden">
-              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+              <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -385,10 +385,10 @@ function SidebarComponent({
                           if (onSelectDM) onSelectDM(dm);
                         }}
                         className={`w-full group flex items-center !justify-start gap-3 px-3 py-2 rounded-xl transition-all duration-500 ${
-                          currentRoomId === dm.id
-                            ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                        }`}
+                                                  currentRoomId === dm.id
+                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                                                } cursor-pointer`}
                       >
                         <div className="relative">
                           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-bold overflow-hidden ring-1 ring-white/20">
@@ -416,7 +416,7 @@ function SidebarComponent({
                   <div className="flex items-center justify-between px-2 mb-2 group">
                     <button
                       onClick={() => setIsChannelsCategoryOpen(!isChannelsCategoryOpen)}
-                      className="flex items-center gap-1.5"
+                      className="flex items-center gap-1.5 cursor-pointer"
                     >
                       <svg
                         className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isChannelsCategoryOpen ? 'rotate-0' : '-rotate-90'}`}
@@ -432,7 +432,7 @@ function SidebarComponent({
                     {userRole === 'owner' && (
                       <button
                         onClick={() => setIsCreatingChannelMode(!isCreatingChannelMode)}
-                        className="p-1 text-slate-400 hover:text-indigo-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 text-slate-400 hover:text-indigo-500 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -457,7 +457,7 @@ function SidebarComponent({
                           <button 
                             type="button" 
                             onClick={() => setIsCreatingChannelMode(false)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                             title="Cancel"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -467,7 +467,7 @@ function SidebarComponent({
                           <button 
                             type="submit" 
                             disabled={isCreatingChannel || !newChannelName} 
-                            className="p-1.5 bg-indigo-500 text-white rounded-lg disabled:opacity-50 hover:bg-indigo-600 transition-colors"
+                            className="p-1.5 bg-indigo-500 text-white rounded-lg disabled:opacity-50 hover:bg-indigo-600 transition-colors cursor-pointer"
                             title="Create"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -488,12 +488,12 @@ function SidebarComponent({
                           onSelectChannel(channel);
                         }}
                         className={`w-full group flex items-center !justify-start gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
-                          channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
-                        } ${
-                          currentChannelId === channel.id
-                            ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                        }`}
+                                                  channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
+                                                } ${
+                                                  currentChannelId === channel.id
+                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                                                } cursor-pointer`}
                       >
                         <span className={`text-lg transition-colors ${currentChannelId === channel.id ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400'}`}>#</span>
                         <span className={`text-[15px] truncate ${currentChannelId === channel.id ? 'font-bold' : 'font-medium'}`}>
@@ -512,7 +512,7 @@ function SidebarComponent({
             <div className="flex items-center justify-between p-2 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm">
               <button
                 onClick={onOpenProfile}
-                className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity cursor-pointer"
               >
                 <div className="relative flex-shrink-0">
                   <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden">
@@ -538,7 +538,7 @@ function SidebarComponent({
                 {mounted && (
                   <button
                     onClick={onToggleTheme}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     {isDarkMode ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -554,7 +554,7 @@ function SidebarComponent({
                 )}
                 <AsyncButton
                   onClick={onLogout}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

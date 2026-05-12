@@ -115,7 +115,7 @@ export default function DiscoveryPage() {
                 <AsyncButton
                   onClick={() => handleJoinRoom(room)}
                   isLoading={joiningRoomId === room.id}
-                  className="w-full bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white py-2.5 rounded-xl font-bold transition-all duration-300"
+                  className="w-full bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white py-2.5 rounded-xl font-bold transition-all duration-300 cursor-pointer"
                 >
                   Join Community
                 </AsyncButton>

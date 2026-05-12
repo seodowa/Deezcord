@@ -267,7 +267,7 @@ function MessageListComponent({
                       {msg.file_url && (
                         <div className={`mt-2 ${msg.content ? 'pt-2 border-t border-white/20 dark:border-white/10' : ''}`}>
                           {msg.file_url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
-                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-700/50">
+                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-700/50 cursor-pointer">
                               <img 
                                 src={msg.file_url} 
                                 alt="Attachment" 
@@ -282,10 +282,10 @@ function MessageListComponent({
                               target="_blank" 
                               rel="noopener noreferrer"
                               className={`flex items-center gap-2 p-2 rounded-lg border transition-all duration-300 ${
-                                isOwn 
-                                  ? 'bg-white/20 border-white/30 hover:bg-white/30 text-white' 
-                                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-500'
-                              }`}
+                                                              isOwn 
+                                                                ? 'bg-white/20 border-white/30 hover:bg-white/30 text-white' 
+                                                                : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-500'
+                                                            } cursor-pointer`}
                             >
                               <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -309,7 +309,7 @@ function MessageListComponent({
                             e.stopPropagation();
                             onReplyMessage(msg);
                           }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Reply"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -324,7 +324,7 @@ function MessageListComponent({
                             e.stopPropagation();
                             setActiveMenuId(isMenuOpen ? null : msg.id);
                           }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-pointer"
                           title="Add reaction"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -339,7 +339,7 @@ function MessageListComponent({
                             e.stopPropagation();
                             setMessageToDelete(msg.id);
                           }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 hover:text-red-600 transition-colors"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 hover:text-red-600 transition-colors cursor-pointer"
                           title="Delete message"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -354,8 +354,8 @@ function MessageListComponent({
                       <div 
                         onClick={(e) => e.stopPropagation()}
                         className={`absolute bottom-full mb-2 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-full p-1 shadow-xl animate-fade-in-up w-max max-w-[85vw] md:max-w-none flex items-center ${
-                          isOwn ? '-right-7' : '-left-7'
-                        }`}
+                                                  isOwn ? '-right-7' : '-left-7'
+                                                } cursor-pointer`}
                       >
                         <div className="flex gap-1 items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                           {onToggleReaction && COMMON_EMOJIS.map(emoji => (
@@ -365,7 +365,7 @@ function MessageListComponent({
                                 onToggleReaction(msg.id, emoji);
                                 setActiveMenuId(null);
                               }}
-                              className="shrink-0 w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors text-base"
+                              className="shrink-0 w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors text-base cursor-pointer"
                             >
                               {emoji}
                             </button>
@@ -386,7 +386,7 @@ function MessageListComponent({
                                 onReplyMessage(msg);
                                 setActiveMenuId(null);
                               }}
-                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
+                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 cursor-pointer"
                               title="Reply"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -403,7 +403,7 @@ function MessageListComponent({
                                 setMessageToDelete(msg.id);
                                 setActiveMenuId(null);
                               }}
-                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-colors"
+                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer"
                               title="Delete message"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -458,13 +458,13 @@ function MessageListComponent({
           <>
             <button
               onClick={() => setMessageToDelete(null)}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <AsyncButton
               onClick={handleConfirmDelete}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all hover:scale-105 active:scale-95"
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               Delete
             </AsyncButton>

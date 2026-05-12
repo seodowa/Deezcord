@@ -89,10 +89,10 @@ export default function SocialSection({
           <button 
             onClick={() => onTabChange('friends')}
             className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-extrabold transition-colors duration-200 ${
-              activeTab === 'friends' 
-                ? 'text-white' 
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+                          activeTab === 'friends' 
+                            ? 'text-white' 
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        } cursor-pointer`}
           >
             <svg className={`w-3.5 h-3.5 transition-transform ${activeTab === 'friends' ? 'scale-110' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -106,10 +106,10 @@ export default function SocialSection({
           <button 
             onClick={() => onTabChange('search')}
             className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-extrabold transition-colors duration-200 ${
-              activeTab === 'search' 
-                ? 'text-white' 
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+                          activeTab === 'search' 
+                            ? 'text-white' 
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        } cursor-pointer`}
           >
             <svg className={`w-3.5 h-3.5 transition-transform ${activeTab === 'search' ? 'scale-110' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -149,7 +149,7 @@ export default function SocialSection({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => onAcceptRequest(request.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 shadow-md transition-transform hover:scale-105 active:scale-95"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -157,7 +157,7 @@ export default function SocialSection({
                         </button>
                         <button
                           onClick={() => onDeclineRequest(request.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-red-500 hover:text-white transition-all hover:scale-105 active:scale-95"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-red-500 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -192,7 +192,7 @@ export default function SocialSection({
                               e.stopPropagation();
                               onUserClick({ id: target.id, username: target.username, avatar_url: target.avatar_url });
                             }}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-slate-400 to-slate-600'}`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-slate-400 to-slate-600'} cursor-pointer`}
                           >
                             {target.avatar_url ? (
                               <img src={target.avatar_url} alt={target.username} className="w-full h-full object-cover" />
@@ -248,7 +248,7 @@ export default function SocialSection({
                           e.stopPropagation();
                           onMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
                         }}
-                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white"
+                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white cursor-pointer"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -292,7 +292,7 @@ export default function SocialSection({
                           e.stopPropagation();
                           onMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
                         }}
-                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white"
+                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white cursor-pointer"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -340,7 +340,7 @@ export default function SocialSection({
         <div className="flex items-center justify-between p-3 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-white/40 dark:border-white/5 shadow-sm group/profile">
           <AsyncButton 
             onClick={onOpenProfile}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1 justify-start"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1 justify-start cursor-pointer"
           >
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden ring-2 ring-white/10 transition-transform group-hover/profile:scale-105">
@@ -365,7 +365,7 @@ export default function SocialSection({
           <div className="flex items-center gap-1 ml-2">
             <button
               onClick={toggleTheme}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all hover:scale-105 active:scale-95"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDarkMode ? (
@@ -381,7 +381,7 @@ export default function SocialSection({
 
             <AsyncButton
               onClick={onLogout}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all hover:scale-105 active:scale-95"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               title="Logout"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">

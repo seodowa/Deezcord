@@ -32,7 +32,7 @@ export default function HeroFeatureCard({ isNewUser, onExplore, className = '' }
           <div className="flex justify-center md:justify-start">
             <button 
               onClick={onExplore}
-              className="px-6 py-3 bg-white text-indigo-600 dark:bg-indigo-500 dark:text-white rounded-xl font-bold text-sm shadow-xl shadow-white/10 hover:scale-105 active:scale-95 transition-all duration-300"
+              className="px-6 py-3 bg-white text-indigo-600 dark:bg-indigo-500 dark:text-white rounded-xl font-bold text-sm shadow-xl shadow-white/10 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
             >
               {isNewUser ? "Start Exploring" : "Explore Rooms"}
             </button>
