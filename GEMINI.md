@@ -83,7 +83,8 @@ Deezcord is a real-time chat system developed as a Performance Innovative Task f
 - [x] Create email verification page.
 - [x] Create MFA challenge and setup modals.
 - [x] Implement Transactional MFA (Code-per-action) for sensitive operations.
-- [ ] Ensure build readiness (Client & Server).
+- [x] Implement User Choice MFA (Authenticator App or Email Fallback).
+- [x] Ensure build readiness (Client & Server).
 - [x] Implement full message persistence on the frontend.
 - [x] Migrate to 2-tier architecture (Servers -> Channels -> Messages).
 - [x] Implement user profiles, avatars, and presence tracking.
