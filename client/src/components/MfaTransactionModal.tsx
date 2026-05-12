@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import { useAuth } from '../hooks/useAuth';
@@ -27,26 +27,45 @@ export default function MfaTransactionModal({
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const mfaPreference = user?.app_metadata?.mfa_preference || 'none';
+
+  const handleResendEmail = useCallback(async () => {
+    if (resendCooldown > 0) return;
+    setIsSendingEmail(true);
+    try {
+      await mfaRequestEmail('transactional');
+      addToast("A security code has been sent to your email.", "info");
+      setResendCooldown(60);
+    } catch (err: any) {
+      setError("Failed to send email code. Please try again.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [resendCooldown, addToast]);
+
+  const handleClose = useCallback(() => {
+    setCode('');
+    setError(null);
+    setResendCooldown(0);
+    onClose();
+  }, [onClose]);
+
+  // Handle countdown for resend button
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Automatically request email code if preference is email
   useEffect(() => {
     if (isOpen && mfaPreference === 'email') {
-      const requestEmail = async () => {
-        setIsSendingEmail(true);
-        try {
-          await mfaRequestEmail('transactional');
-          addToast("A security code has been sent to your email.", "info");
-        } catch (err: any) {
-          setError("Failed to send email code. Please try again.");
-        } finally {
-          setIsSendingEmail(false);
-        }
-      };
-      requestEmail();
+      handleResendEmail();
     }
-  }, [isOpen, mfaPreference, addToast]);
+  }, [isOpen, mfaPreference, handleResendEmail]);
 
   const handleConfirm = async () => {
     if (code.length !== 6) {
@@ -65,12 +84,6 @@ export default function MfaTransactionModal({
         setError(err.message || "Something went wrong.");
       }
     }
-  };
-
-  const handleClose = () => {
-    setCode('');
-    setError(null);
-    onClose();
   };
 
   const defaultDescription = mfaPreference === 'email' 
@@ -123,30 +136,33 @@ export default function MfaTransactionModal({
           )}
         </div>
 
-        <AsyncButton
-          onClick={handleConfirm}
-          loadingText="Authorizing..."
-          disabled={isSendingEmail}
-          className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
-        >
-          {actionLabel}
-        </AsyncButton>
+        <div className="flex flex-col gap-3">
+          <AsyncButton
+            onClick={handleConfirm}
+            loadingText="Authorizing..."
+            disabled={isSendingEmail}
+            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
+          >
+            {actionLabel}
+          </AsyncButton>
 
-        {mfaPreference === 'email' && (
+          {mfaPreference === 'email' && (
+            <button
+              onClick={handleResendEmail}
+              disabled={resendCooldown > 0 || isSendingEmail}
+              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
+            </button>
+          )}
+
           <button
-            onClick={() => mfaRequestEmail('transactional').then(() => addToast("Code resent!", "info")).catch(err => setError(err.message))}
+            onClick={handleClose}
             className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors"
           >
-            Didn't receive a code? Resend
+            Cancel
           </button>
-        )}
-
-        <button
-          onClick={handleClose}
-          className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors"
-        >
-          Cancel
-        </button>
+        </div>
       </div>
     </Modal>
   );

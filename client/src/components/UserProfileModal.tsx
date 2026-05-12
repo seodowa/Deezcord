@@ -9,6 +9,7 @@ import Modal from './Modal';
 import MFASetupModal from './MFASetupModal';
 import MFADisableModal from './MFADisableModal';
 import SecuritySettings from './SecuritySettings';
+import MfaTransactionModal from './MfaTransactionModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const [mfaMethod, setMfaMethod] = useState<'totp' | 'email' | 'none'>('none');
   const [isDisablingMFA, setIsDisablingMFA] = useState(false);
   const [isConfirmDisableMFAOpen, setIsConfirmDisableMFAOpen] = useState(false);
+  const [isUnenrollChallengeOpen, setIsUnenrollChallengeOpen] = useState(false);
   const [currentAAL, setCurrentAAL] = useState<'aal1' | 'aal2' | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +71,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     }
   }, [user]);
 
-  const handleDisableMFA = async () => {
+  const handleDisableMFA = async (verificationCode?: string) => {
     setIsDisablingMFA(true);
     try {
       const token = getToken();
@@ -77,14 +79,9 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       
       // For Email MFA, we don't have a factorId, so we pass null/undefined
       // For TOTP, we pass the specific factorId
-      await mfaUnenroll(token, mfaFactorId || undefined);
+      await mfaUnenroll(token, mfaFactorId || undefined, verificationCode);
       
-      setIsMFAEnabled(false);
-      setMfaMethod('none');
-      setMfaFactorId(null);
-      setCurrentAAL(getAAL());
-      
-      // Update local user state immediately
+      // Update local user state immediately on success
       if (user) {
         setUser({
           ...user,
@@ -92,8 +89,14 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
         });
       }
       
+      setIsMFAEnabled(false);
+      setMfaMethod('none');
+      setMfaFactorId(null);
+      setCurrentAAL(getAAL());
+      
       addToast("Multi-factor authentication disabled", "success");
       setIsConfirmDisableMFAOpen(false);
+      setIsUnenrollChallengeOpen(false);
     } catch (err: any) {
       addToast(err.message || "Failed to disable MFA", "error");
     } finally {
@@ -235,8 +238,20 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       <MFADisableModal
         isOpen={isConfirmDisableMFAOpen}
         onClose={() => setIsConfirmDisableMFAOpen(false)}
-        onConfirm={handleDisableMFA}
+        onConfirm={async () => {
+          setIsConfirmDisableMFAOpen(false);
+          setIsUnenrollChallengeOpen(true);
+        }}
         isLoading={isDisablingMFA}
+      />
+
+      <MfaTransactionModal
+        isOpen={isUnenrollChallengeOpen}
+        onClose={() => setIsUnenrollChallengeOpen(false)}
+        onConfirm={handleDisableMFA}
+        title="Verify Identity to Disable MFA"
+        description="Please provide a security code to confirm you want to disable two-factor authentication."
+        actionLabel="Confirm Disable"
       />
     </Modal>
   );

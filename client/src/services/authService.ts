@@ -137,30 +137,14 @@ export const mfaListFactors = async (token?: string) => {
   return data;
 };
 
-export const mfaVerify = async (tokenOrFactorId: string, factorIdOrCode: string, code?: string) => {
-  // Overloaded handle: 
-  // 1. (factorId, code) - uses stored token
-  // 2. (token, factorId, code) - uses provided token
-  let token: string | undefined;
-  let factorId: string;
-  let actualCode: string;
-
-  if (code) {
-    token = tokenOrFactorId;
-    factorId = factorIdOrCode;
-    actualCode = code;
-  } else {
-    factorId = tokenOrFactorId;
-    actualCode = factorIdOrCode;
-  }
-
+export const mfaVerify = async (token: string, factorId: string, code: string) => {
   const response = await fetch(`${API_URL}/api/auth/mfa/verify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...getAuthHeaders(token),
+      'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ factorId, code: actualCode }),
+    body: JSON.stringify({ factorId, code }),
   });
 
   const data = await response.json();
@@ -169,6 +153,21 @@ export const mfaVerify = async (tokenOrFactorId: string, factorIdOrCode: string,
     throw new Error(data.error || 'Failed to verify MFA');
   }
 
+  return data;
+};
+
+export const mfaVerifyEmail = async (token: string, code: string, purpose: 'setup' | 'transactional') => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/email/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ code, purpose })
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Verification failed');
   return data;
 };
 
@@ -210,26 +209,15 @@ export const mfaSetupVerifyEmail = async (code: string, token?: string) => {
   return data;
 };
 
-export const mfaUnenroll = async (tokenOrFactorId?: string, factorId?: string) => {
-  let token: string | undefined;
-  let actualFactorId: string | undefined;
-
-  if (factorId) {
-    token = tokenOrFactorId;
-    actualFactorId = factorId;
-  } else if (tokenOrFactorId && tokenOrFactorId.length > 20) { // Simple heuristic for JWT vs factorId
-    token = tokenOrFactorId;
-  } else {
-    actualFactorId = tokenOrFactorId;
-  }
-
+export const mfaUnenroll = async (token: string, factorId?: string, mfaCode?: string) => {
   const response = await fetch(`${API_URL}/api/auth/mfa/unenroll`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(token),
+      ...(mfaCode ? { 'x-mfa-code': mfaCode } : {}),
     },
-    body: JSON.stringify({ factorId: actualFactorId }),
+    body: JSON.stringify({ factorId }),
   });
 
   const data = await response.json();
