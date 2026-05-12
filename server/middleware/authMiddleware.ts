@@ -10,8 +10,15 @@ export interface AuthenticatedRequest extends Request {
 export const verifyUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   // Check if the request has an Authorization header
   const authHeader = req.headers.authorization;
+  const deviceId = req.headers['x-device-id'] as string;
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ error: "Unauthorized: Missing or invalid token" });
+    return;
+  }
+
+  if (!deviceId) {
+    res.status(401).json({ error: "Unauthorized: Missing device ID" });
     return;
   }
 
@@ -26,9 +33,16 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
     return;
   }
 
-  // Token is valid! Attach the user info to the request so the next function can use it
+  // Fingerprint Check: Verify the deviceId is registered for this user
+  const registeredDevices = user.app_metadata?.devices || [];
+  if (!registeredDevices.includes(deviceId)) {
+    res.status(401).json({ error: "Unauthorized: Device not recognized" });
+    return;
+  }
+
+  // Token is valid and device is recognized!
   req.user = user;
-  next(); // Proceed to the actual route (e.g., creating a room)
+  next(); // Proceed to the actual route
 };
 
 /**

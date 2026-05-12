@@ -5,7 +5,7 @@ import { sendPasswordResetEmail } from '../services/emailService';
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 
-export async function signIn(identifier: string, password: string) {
+export async function signIn(identifier: string, password: string, deviceId: string) {
     try {
         let email = identifier;
 
@@ -25,8 +25,6 @@ export async function signIn(identifier: string, password: string) {
         }
 
         // Create a fresh, temporary client for this specific login request.
-        // This avoids modifying the shared singleton's auth state and
-        // ensures we don't need to call signOut() which would revoke the session.
         const authClient = createClient(supabaseUrl, supabaseKey, {
             auth: {
                 persistSession: false,
@@ -41,12 +39,68 @@ export async function signIn(identifier: string, password: string) {
 
         if (error) throw error;
 
+        // Register deviceId in app_metadata
+        if (data.user) {
+            const currentDevices = data.user.app_metadata?.devices || [];
+            if (!currentDevices.includes(deviceId)) {
+                // Cap at 10 devices (FIFO)
+                const updatedDevices = [...currentDevices, deviceId].slice(-10);
+
+                const { error: updateError } = await supabase.auth.admin.updateUserById(
+                    data.user.id,
+                    {
+                        app_metadata: {
+                            ...data.user.app_metadata,
+                            devices: updatedDevices
+                        }
+                    }
+                );
+                if (updateError) console.error("Failed to register deviceId:", updateError.message);
+            }
+        }
+
         return { 
             token: data.session.access_token, 
+            refreshToken: data.session.refresh_token,
             user: data.user 
         };
     } catch (error: any) {
         console.error("Authentication failed:", error.message);
+        throw error;
+    }
+}
+
+/**
+ * Refreshes an existing session using a refresh token.
+ */
+export async function refreshSession(refreshToken: string, deviceId: string) {
+    try {
+        const authClient = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+            },
+        });
+
+        const { data, error } = await authClient.auth.refreshSession({
+            refresh_token: refreshToken
+        });
+
+        if (error) throw error;
+
+        // Verify deviceId
+        const devices = data.user?.app_metadata?.devices || [];
+        if (!devices.includes(deviceId)) {
+            throw new Error("Unauthorized: Device not recognized.");
+        }
+
+        return {
+            token: data.session?.access_token,
+            refreshToken: data.session?.refresh_token,
+            user: data.user
+        };
+    } catch (error: any) {
+        console.error("Session refresh failed:", error.message);
         throw error;
     }
 }

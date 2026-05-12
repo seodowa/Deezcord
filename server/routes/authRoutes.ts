@@ -3,7 +3,7 @@ import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
-import signIn, { signUp, forgotPassword, resetPassword } from '../utils/auth';
+import signIn, { signUp, forgotPassword, resetPassword, refreshSession } from '../utils/auth';
 
 const router = express.Router();
 
@@ -39,22 +39,76 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 // POST /auth/login - Log in an existing user
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, password, deviceId } = req.body;
 
-    if (!identifier || !password) {
-      res.status(400).json({ error: "Identifier (username or email) and password are required." });
+    if (!identifier || !password || !deviceId) {
+      res.status(400).json({ error: "Identifier, password, and device ID are required." });
       return;
     }
 
-    const { token, user } = await signIn(identifier, password);
+    const { token, refreshToken, user } = await signIn(identifier, password, deviceId);
     
     res.status(200).json({
       message: "Login successful",
       token,
+      refreshToken,
       user
     });
   } catch (error: any) {
     res.status(401).json({ error: error.message || "Failed to login" });
+  }
+});
+
+// POST /auth/logout - Log out and deregister the current device
+router.post('/logout', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { user } = req;
+    const deviceId = req.headers['x-device-id'] as string;
+
+    if (!user || !deviceId) {
+      res.status(400).json({ error: "User and device ID are required for logout." });
+      return;
+    }
+
+    // Remove the current device from app_metadata.devices
+    const currentDevices = user.app_metadata?.devices || [];
+    const updatedDevices = currentDevices.filter((d: string) => d !== deviceId);
+
+    const { error } = await supabase.auth.admin.updateUserById(user.id, {
+      app_metadata: {
+        ...user.app_metadata,
+        devices: updatedDevices
+      }
+    });
+
+    if (error) throw error;
+
+    res.status(200).json({ message: "Logout successful and device deregistered." });
+  } catch (error: any) {
+    console.error("[Logout] Error:", error.message);
+    res.status(400).json({ error: error.message || "Failed to logout" });
+  }
+});
+
+// POST /auth/refresh - Refresh an expired session
+router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken, deviceId } = req.body;
+
+    if (!refreshToken || !deviceId) {
+      res.status(400).json({ error: "Refresh token and device ID are required." });
+      return;
+    }
+
+    const { token, refreshToken: newRefreshToken, user } = await refreshSession(refreshToken, deviceId);
+    
+    res.status(200).json({
+      token,
+      refreshToken: newRefreshToken,
+      user
+    });
+  } catch (error: any) {
+    res.status(401).json({ error: error.message || "Failed to refresh session" });
   }
 });
 

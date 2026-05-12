@@ -49,7 +49,7 @@ test('Socket.IO Connection', async (t) => {
     }
 
     try {
-        const { token } = await signIn(email, password);
+        const { token } = await signIn(email, password, 'test-device-id');
         assert.ok(token, 'Should retrieve an auth token');
 
         const socket = Client(SERVER_URL, {
