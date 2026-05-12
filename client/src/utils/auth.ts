@@ -77,7 +77,7 @@ export const getAAL = (): 'aal1' | 'aal2' | null => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.aal || 'aal1';
-  } catch (e) {
+  } catch {
     return 'aal1';
   }
 };

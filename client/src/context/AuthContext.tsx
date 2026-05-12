@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userData = await getCurrentUser();
             setUser(userData);
             setIsAuthenticated(true);
-          } catch (refreshError: any) {
+          } catch (refreshError: unknown) {
             console.error('Silent refresh failed:', refreshError);
             removeTokens();
             setIsAuthenticated(false);

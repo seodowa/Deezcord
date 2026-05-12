@@ -19,12 +19,6 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && !enrollData && step === 'qr') {
-      handleEnroll();
-    }
-  }, [isOpen, enrollData, step]);
-
   const handleEnroll = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -33,13 +27,19 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
       if (!token) throw new Error("Not authenticated");
       const data = await mfaEnroll(token);
       setEnrollData(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error("MFA Enroll Error:", err);
-      setError(err.message || "Failed to start MFA setup. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to start MFA setup. Please try again.");
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (isOpen && !enrollData && step === 'qr') {
+      handleEnroll();
+    }
+  }, [isOpen, enrollData, step, handleEnroll]);
 
   const handleVerify = useCallback(async () => {
     if (code.length !== 6) {
@@ -63,8 +63,8 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
       addToast("Multi-factor authentication enabled successfully!", "success");
       
       if (onSuccess) onSuccess();
-    } catch (err: any) {
-      setError(err.message || "Invalid code. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code. Please try again.");
     }
   }, [code, enrollData, addToast, onSuccess]);
 

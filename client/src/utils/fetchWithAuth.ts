@@ -24,7 +24,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
   };
 
   // 2. Perform initial request
-  let response = await fetch(url, finalOptions);
+  const response = await fetch(url, finalOptions);
 
   // 3. Handle 401 Unauthorized (likely expired token)
   if (response.status === 401) {
@@ -75,7 +75,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
         ...getAuthHeaders(data.token)
       };
       return await fetch(url, { ...options, headers: finalHeaders });
-    } catch (error) {
+    } catch {
       // Refresh failed (expired refresh token or 12h limit reached)
       isRefreshing = false;
       refreshQueue = [];
