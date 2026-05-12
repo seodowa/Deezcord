@@ -65,15 +65,39 @@ function MessageListComponent({
 
   // Scroll to bottom logic
   const lastMessageId = messages[messages.length - 1]?.id;
+  const isInitialScroll = useRef(true);
+
+  // Reset initial scroll tracking when the channel changes
+  useEffect(() => {
+    isInitialScroll.current = true;
+  }, [currentChannel?.id]);
+
   useEffect(() => {
     if (scrollRef.current) {
-      // Only auto-scroll if already at bottom or if it's a new message
-      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 100;
+      // If it's the first time we're rendering messages for this channel, always scroll to bottom
+      if (isInitialScroll.current && messages.length > 0) {
+        // Use requestAnimationFrame/setTimeout to ensure the DOM (and any cached messages) is fully rendered
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 10);
+        isInitialScroll.current = false;
+        return;
+      }
+
+      // Otherwise, only auto-scroll if already at bottom or if it's a new message
+      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 150; // Increased threshold slightly for better UX
       if (isAtBottom) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        // Use a tiny timeout for subsequent messages as well to ensure content height is updated
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 10);
       }
     }
-  }, [lastMessageId, typingUsers]);
+  }, [lastMessageId, typingUsers, messages.length]);
 
   const currentUserId = currentUser?.id;
   const currentUsername = currentUser?.username || currentUser?.email?.split('@')[0] || '';

@@ -142,7 +142,7 @@ export const mfaVerify = async (token: string, factorId: string, code: string) =
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      ...getAuthHeaders(token),
     },
     body: JSON.stringify({ factorId, code }),
   });
@@ -161,7 +161,7 @@ export const mfaVerifyEmail = async (token: string, code: string, purpose: 'setu
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      ...getAuthHeaders(token),
     },
     body: JSON.stringify({ code, purpose })
   });
