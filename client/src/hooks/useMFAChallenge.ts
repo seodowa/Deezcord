@@ -13,18 +13,26 @@ export function useMFAChallenge() {
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [overrideToken, setOverrideToken] = useState<string | null>(null);
-  const [onSuccessCallback, setOnSuccessCallback] = useState<{ fn: (token: string) => void } | null>(null);
+  const [mfaMethod, setMfaMethod] = useState<'totp' | 'email'>('totp');
+  const [onSuccessCallback, setOnSuccessCallback] = useState<{ fn: (token: string, refreshToken: string) => void } | null>(null);
   const { addToast } = useToast();
 
-  const startChallenge = useCallback(async (onSuccess: (token: string) => void, tokenOverride?: string) => {
+  const startChallenge = useCallback(async (onSuccess: (token: string, refreshToken: string) => void, tokenOverride?: string, preferredMethod?: 'totp' | 'email') => {
     try {
       const token = tokenOverride || getToken();
       if (!token) throw new Error("Not authenticated");
 
-      // 1. Fetch factors to find a TOTP factor
+      if (preferredMethod === 'email') {
+        setMfaMethod('email');
+        setFactorId(null);
+        setOverrideToken(tokenOverride || null);
+        setOnSuccessCallback({ fn: onSuccess });
+        setIsChallengeOpen(true);
+        return;
+      }
+
+      // Default: Check for TOTP factors
       const factors = await mfaListFactors(token);
-      
-      // Filter for verified TOTP factors
       const totpFactor = factors.all.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
 
       if (!totpFactor) {
@@ -32,6 +40,7 @@ export function useMFAChallenge() {
         return;
       }
 
+      setMfaMethod('totp');
       setFactorId(totpFactor.id);
       setOverrideToken(tokenOverride || null);
       setOnSuccessCallback({ fn: onSuccess });
@@ -49,9 +58,9 @@ export function useMFAChallenge() {
     setOnSuccessCallback(null);
   }, []);
 
-  const handleVerified = useCallback((newToken: string) => {
+  const handleVerified = useCallback((newToken: string, newRefreshToken: string) => {
     if (onSuccessCallback) {
-      onSuccessCallback.fn(newToken);
+      onSuccessCallback.fn(newToken, newRefreshToken);
     }
     closeChallenge();
   }, [onSuccessCallback, closeChallenge]);
@@ -60,6 +69,7 @@ export function useMFAChallenge() {
     isChallengeOpen,
     factorId,
     overrideToken,
+    mfaMethod,
     startChallenge,
     closeChallenge,
     handleVerified

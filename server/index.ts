@@ -69,9 +69,14 @@ io.use(async (socket: AuthenticatedSocket, next) => {
   try {
     // The frontend must pass the token when initializing the socket connection
     const token = socket.handshake.auth?.token;
+    const deviceId = socket.handshake.auth?.deviceId;
 
     if (!token) {
       return next(new Error("Unauthorized: No token provided"));
+    }
+
+    if (!deviceId) {
+      return next(new Error("Unauthorized: No device ID provided"));
     }
 
     // Verify the token with Supabase
@@ -79,6 +84,12 @@ io.use(async (socket: AuthenticatedSocket, next) => {
 
     if (error || !user) {
       return next(new Error("Unauthorized: Invalid token"));
+    }
+
+    // Fingerprint Check
+    const registeredDevices = user.app_metadata?.devices || [];
+    if (!registeredDevices.includes(deviceId)) {
+      return next(new Error("Unauthorized: Device not recognized"));
     }
 
     // Attach the verified user object to the socket for future use

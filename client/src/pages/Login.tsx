@@ -17,13 +17,13 @@ export default function LoginPage() {
 
   const { isDarkMode, toggleTheme, mounted } = useTheme();
   const { login } = useAuth();
-  const { isChallengeOpen, factorId, overrideToken, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
+  const { isChallengeOpen, factorId, overrideToken, mfaMethod, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const completeLogin = async (token: string) => {
-    await login(token, rememberMe);
+  const completeLogin = async (token: string, refreshToken: string) => {
+    await login(token, refreshToken, rememberMe);
     addToast('Successfully signed in!', 'success');
     navigate('/');
   };
@@ -34,17 +34,23 @@ export default function LoginPage() {
     try {
       const data = await loginUser(identifier, password);
       
-      // Check if user has MFA enabled
+      // Check if user has MFA enabled (either TOTP factor or Email preference)
       const factors = await mfaListFactors(data.token);
       const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
+      const mfaPreference = data.user?.app_metadata?.mfa_preference;
       
       if (verifiedFactor) {
-        // Trigger MFA challenge with the token we just received
-        startChallenge((newToken) => {
-          completeLogin(newToken);
-        }, data.token);
+        // Trigger TOTP MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'totp');
+      } else if (mfaPreference === 'email') {
+        // Trigger Email MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'email');
       } else {
-        await completeLogin(data.token);
+        await completeLogin(data.token, data.refreshToken);
       }
     } catch (error: unknown) {
       const err = error as Error;
@@ -170,13 +176,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <MFAChallengeModal
+      <MFAChallengeModal 
         isOpen={isChallengeOpen}
         factorId={factorId || ''}
         token={overrideToken || undefined}
+        mfaMethod={mfaMethod}
         onClose={closeChallenge}
         onSuccess={handleVerified}
       />
+
     </div>
   );
 }

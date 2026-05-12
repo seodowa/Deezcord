@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { useTheme } from '../hooks/useTheme';
@@ -7,15 +7,14 @@ export default function VerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [countdown, setCountdown] = useState(3);
-  const [isSuccess, setIsSuccess] = useState(true); // Default to true as the landing page
   const { isDarkMode, toggleTheme, mounted } = useTheme();
 
-  useEffect(() => {
-    // Basic error detection: if there's an error in the hash/URL
-    if (location.hash.includes('error') || location.search.includes('error')) {
-      setIsSuccess(false);
-    }
+  // Derive success status from URL instead of using state to avoid cascading renders
+  const isSuccess = useMemo(() => {
+    return !(location.hash.includes('error') || location.search.includes('error'));
+  }, [location]);
 
+  useEffect(() => {
     let timer: number;
     if (countdown > 0) {
       timer = window.setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -23,14 +22,14 @@ export default function VerifyPage() {
       navigate('/login');
     }
     return () => clearTimeout(timer);
-  }, [countdown, navigate, location]);
+  }, [countdown, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       {/* Background Blobs */}
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse"></div>
-      <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-emerald-500/30 dark:bg-emerald-500/15 rounded-full blur-[80px] z-0 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-emerald-500/30 dark:bg-emerald-400/15 rounded-full blur-[80px] z-0 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
       {mounted && (
         <button 
@@ -80,7 +79,7 @@ export default function VerifyPage() {
               >
                 Continue to Login
               </button>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-slate-400 dark:text-slate-500 text-xs font-medium">
                 Redirecting you in {countdown}s...
               </p>
             </div>

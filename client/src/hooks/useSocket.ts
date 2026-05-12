@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import msgpackParser from "socket.io-msgpack-parser";
 import type { Socket } from 'socket.io-client';
-import { getToken } from '../utils/auth';
+import { getToken, getDeviceId } from '../utils/auth';
 import type { MessageReaction } from '../types/message';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL;
@@ -13,10 +13,11 @@ export const useSocket = () => {
 
   useEffect(() => {
     const token = getToken();
+    const deviceId = getDeviceId();
     if (!token) return;
 
     const socket = io(SOCKET_URL, {
-      auth: { token },
+      auth: { token, deviceId },
       parser: msgpackParser,
     });
 
