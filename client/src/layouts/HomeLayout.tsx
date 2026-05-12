@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Outlet, useMatch, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import Logo from '../components/Logo';
 import CreateRoomModal from '../components/CreateRoomModal';
 import UserProfileModal from '../components/UserProfileModal';
 import MemberProfileModal from '../components/MemberProfileModal';
