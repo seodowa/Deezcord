@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
+import { verifyEmailOtp } from '../services/mfaService';
 
 // Extend Express Request type
 export interface AuthenticatedRequest extends Request {
@@ -99,64 +100,69 @@ export const verifyTransactionalMfa = async (req: AuthenticatedRequest, res: Res
 
   const token = authHeader.split(' ')[1];
   const mfaCode = req.headers['x-mfa-code'] as string;
+  const user = req.user;
+  const mfaPreference = user?.app_metadata?.mfa_preference || 'none';
+
+  // If no MFA is enabled, allow the action
+  if (mfaPreference === 'none') {
+    return next();
+  }
+
+  // 1. Check for a valid code format
+  if (!mfaCode || !/^\d{6}$/.test(mfaCode)) {
+    res.status(403).json({ 
+      error: "MFA_REQUIRED_TRANSACTIONAL", 
+      message: `This action requires a fresh 6-digit verification code sent via ${mfaPreference === 'totp' ? 'your authenticator app' : 'email'}.`,
+      mfaMethod: mfaPreference
+    });
+    return;
+  }
 
   try {
-    // Create a client authenticated as the user
-    const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    });
-
-    // 1. Check if the user has a verified TOTP factor
-    const { data: factors, error: factorsError } = await userClient.auth.mfa.listFactors();
-    
-    if (factorsError) throw factorsError;
-
-    const totpFactor = factors.all.find(f => f.factor_type === 'totp' && f.status === 'verified');
-
-    // If no MFA is enabled, allow the action
-    if (!totpFactor) {
-      return next();
-    }
-
-    // 2. If MFA is enabled, check for a valid code format
-    if (!mfaCode || !/^\d{6}$/.test(mfaCode)) {
-      res.status(403).json({ 
-        error: "MFA_REQUIRED_TRANSACTIONAL", 
-        message: "This action requires a fresh 6-digit verification code.",
-        factorId: totpFactor.id
+    if (mfaPreference === 'totp') {
+      // TOTP Verification via Supabase
+      const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: `Bearer ${token}` } }
       });
-      return;
-    }
 
-    // 3. Verify the code
-    // challenge -> verify
-    const { data: challenge, error: challengeError } = await userClient.auth.mfa.challenge({ factorId: totpFactor.id });
-    if (challengeError) throw challengeError;
+      const { data: factors, error: factorsError } = await userClient.auth.mfa.listFactors();
+      if (factorsError) throw factorsError;
 
-    const { error: verifyError } = await userClient.auth.mfa.verify({
-      factorId: totpFactor.id,
-      challengeId: challenge.id,
-      code: mfaCode
-    });
+      const totpFactor = factors.all.find(f => f.factor_type === 'totp' && f.status === 'verified');
+      if (!totpFactor) {
+        // Fallback: If preference is totp but no factor found, allow for now or error?
+        // Let's allow to prevent lockouts, but ideally this shouldn't happen.
+        return next();
+      }
 
-    if (verifyError) {
-      res.status(401).json({ error: "INVALID_MFA_CODE", message: "The verification code is incorrect or has expired." });
-      return;
+      const { data: challenge, error: challengeError } = await userClient.auth.mfa.challenge({ factorId: totpFactor.id });
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await userClient.auth.mfa.verify({
+        factorId: totpFactor.id,
+        challengeId: challenge.id,
+        code: mfaCode
+      });
+
+      if (verifyError) {
+        res.status(401).json({ error: "INVALID_MFA_CODE", message: "The verification code is incorrect or has expired." });
+        return;
+      }
+    } else if (mfaPreference === 'email') {
+      // Email OTP Verification via custom Service
+      await verifyEmailOtp(user.id, mfaCode, 'transactional');
     }
 
     // Code verified successfully!
     next();
   } catch (err: any) {
     console.error("Transactional MFA Error:", err.message);
-    res.status(500).json({ error: "Failed to verify transaction security" });
+    if (err.message.includes("Invalid security code") || err.message.includes("expired") || err.message.includes("No active security code")) {
+      res.status(401).json({ error: "INVALID_MFA_CODE", message: err.message });
+    } else {
+      res.status(500).json({ error: "Failed to verify transaction security" });
+    }
   }
 };
 

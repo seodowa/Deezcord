@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
 import signIn, { signUp, forgotPassword, resetPassword, refreshSession } from '../utils/auth';
+import { generateEmailOtp, verifyEmailOtp } from '../services/mfaService';
 
 const router = express.Router();
 
@@ -263,6 +264,14 @@ router.post('/mfa/verify', verifyUser, async (req: AuthenticatedRequest, res: Re
 
     if (verifyError) throw verifyError;
 
+    // 3. Success! Update the user's preference in app_metadata
+    await supabase.auth.admin.updateUserById(req.user.id, {
+      app_metadata: {
+        ...req.user.app_metadata,
+        mfa_preference: 'totp'
+      }
+    });
+
     res.status(200).json({
       message: "MFA verified successfully",
       ...verifyData
@@ -270,6 +279,52 @@ router.post('/mfa/verify', verifyUser, async (req: AuthenticatedRequest, res: Re
   } catch (error: any) {
     console.error("[MFA Verify] Error:", error.message);
     res.status(400).json({ error: error.message || "Failed to verify MFA code" });
+  }
+});
+
+// POST /auth/mfa/email/request - Request a code for Email MFA
+router.post('/mfa/email/request', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { purpose } = req.body;
+    const { user } = req;
+
+    if (!user || !user.email) {
+      res.status(400).json({ error: "User email not found." });
+      return;
+    }
+
+    const result = await generateEmailOtp(user.id, user.email, purpose || 'transactional');
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to send security code." });
+  }
+});
+
+// POST /auth/mfa/email/setup-verify - Verify Email MFA setup and update preference
+router.post('/mfa/email/setup-verify', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { code } = req.body;
+    const { user } = req;
+
+    if (!code) {
+      res.status(400).json({ error: "Verification code is required." });
+      return;
+    }
+
+    // 1. Verify the code
+    await verifyEmailOtp(user.id, code, 'setup');
+
+    // 2. Update preference to email
+    await supabase.auth.admin.updateUserById(user.id, {
+      app_metadata: {
+        ...user.app_metadata,
+        mfa_preference: 'email'
+      }
+    });
+
+    res.status(200).json({ message: "Email MFA enabled successfully." });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to verify Email MFA." });
   }
 });
 
@@ -281,6 +336,15 @@ router.delete('/mfa/unenroll', verifyUser, async (req: AuthenticatedRequest, res
     const token = authHeader.split(' ')[1];
 
     if (!factorId) {
+      // If no factorId, they might be unenrolling from Email MFA
+      const { user } = req;
+      if (user.app_metadata?.mfa_preference === 'email') {
+        await supabase.auth.admin.updateUserById(user.id, {
+          app_metadata: { ...user.app_metadata, mfa_preference: 'none' }
+        });
+        res.status(200).json({ message: "Email MFA removed successfully" });
+        return;
+      }
       res.status(400).json({ error: "Factor ID is required." });
       return;
     }
@@ -293,6 +357,11 @@ router.delete('/mfa/unenroll', verifyUser, async (req: AuthenticatedRequest, res
     const { data, error } = await userClient.auth.mfa.unenroll({ factorId });
 
     if (error) throw error;
+
+    // Update preference to none
+    await supabase.auth.admin.updateUserById(req.user.id, {
+      app_metadata: { ...req.user.app_metadata, mfa_preference: 'none' }
+    });
 
     res.status(200).json({ message: "MFA factor removed successfully", ...data });
   } catch (error: any) {
