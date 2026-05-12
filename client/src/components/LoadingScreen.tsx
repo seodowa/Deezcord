@@ -1,7 +1,3 @@
-
-
-import Logo from './Logo';
-
 interface LoadingScreenProps {
   message?: string;
 }
