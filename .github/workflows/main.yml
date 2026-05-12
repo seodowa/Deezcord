@@ -12,6 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable venv and pull latest code
+        run: |
+          cd /home/deezcord/repos/CS323_FinalsPIT_Deezcord && source .venv/bin/activate && git pull origin main
+
       - name: Install & Build
         run: |
           cd /home/deezcord/repos/CS323_FinalsPIT_Deezcord/client && npm install && npm run build
