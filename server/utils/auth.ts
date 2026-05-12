@@ -111,6 +111,30 @@ export async function signUp(email: string, password: string, username: string) 
     try {
         console.log(`[Auth] Attempting to register user: ${email} (${username})`);
         
+        // Check if username or email already exists in profiles
+        const { data: existingProfiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('username, email')
+            .or(`username.eq.${username},email.eq.${email}`);
+
+        if (profilesError) {
+            console.error('[Auth] Error checking existing user:', profilesError.message);
+            throw new Error("Error validating user availability.");
+        }
+
+        if (existingProfiles && existingProfiles.length > 0) {
+            const hasUsername = existingProfiles.some(p => p.username.toLowerCase() === username.toLowerCase());
+            const hasEmail = existingProfiles.some(p => p.email.toLowerCase() === email.toLowerCase());
+            
+            if (hasUsername && hasEmail) {
+                throw new Error("Username and email already exist.");
+            } else if (hasUsername) {
+                throw new Error("Username already exists.");
+            } else {
+                throw new Error("Email already exists.");
+            }
+        }
+
         // Use the standard signUp method to trigger the auto-verification email flow.
         // admin.createUser bypasses the email flow by design.
         const { data, error } = await supabase.auth.signUp({
