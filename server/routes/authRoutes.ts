@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
-import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { verifyUser, verifyTransactionalMfa, AuthenticatedRequest } from '../middleware/authMiddleware';
 import signIn, { signUp, forgotPassword, resetPassword, refreshSession } from '../utils/auth';
 import { generateEmailOtp, verifyEmailOtp } from '../services/mfaService';
 
@@ -328,8 +328,25 @@ router.post('/mfa/email/setup-verify', verifyUser, async (req: AuthenticatedRequ
   }
 });
 
+// POST /auth/mfa/email/verify - Generic Email OTP verification (for login)
+router.post('/mfa/email/verify', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { code, purpose } = req.body;
+    const { user } = req;
+
+    if (!code || !purpose) {
+      return res.status(400).json({ error: "Code and purpose are required." });
+    }
+
+    await verifyEmailOtp(user.id, code, purpose);
+    res.status(200).json({ message: "Verification successful." });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Verification failed." });
+  }
+});
+
 // DELETE /auth/mfa/unenroll - Remove an MFA factor
-router.delete('/mfa/unenroll', verifyUser, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.delete('/mfa/unenroll', verifyUser, verifyTransactionalMfa, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { factorId } = req.body;
     const authHeader = req.headers.authorization!;
