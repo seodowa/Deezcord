@@ -135,6 +135,8 @@ export default function ChatPage() {
             setIsProfileModalOpen(true);
           }
         }}
+        currentRoom={currentRoom}
+        currentChannel={currentChannel}
       />
       <MessageInput 
         onSendMessage={(content, fileUrl, fileName, parentId) => {

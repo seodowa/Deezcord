@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, memo } from 'react';
 import type { Message } from '../types/message';
-import type { Member } from '../types/room';
+import type { Member, Room, Channel } from '../types/room';
 import ReactionList from './ReactionList';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
@@ -16,6 +16,8 @@ interface MessageListProps {
   onDeleteMessage?: (messageId: string) => void;
   onReplyMessage?: (message: Message) => void;
   onUserClick?: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+  currentRoom?: Room | null;
+  currentChannel?: Channel | null;
 }
 
 const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '💯'];
@@ -29,11 +31,30 @@ function MessageListComponent({
   onToggleReaction,
   onDeleteMessage,
   onReplyMessage,
-  onUserClick
+  onUserClick,
+  currentRoom,
+  currentChannel
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [activePickerId, setActivePickerId] = useState<string | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePointerDown = (msgId: string) => {
+    longPressTimer.current = setTimeout(() => {
+      setActiveMenuId(msgId);
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handlePointerUpOrLeave = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const handleConfirmDelete = async () => {
     if (messageToDelete && onDeleteMessage) {
@@ -59,7 +80,7 @@ function MessageListComponent({
 
   // Close picker when clicking elsewhere
   useEffect(() => {
-    const handleClickOutside = () => setActivePickerId(null);
+    const handleClickOutside = () => setActiveMenuId(null);
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
@@ -91,10 +112,51 @@ function MessageListComponent({
       ref={scrollRef}
       className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700"
     >
+      {/* Conversation Start Indicator */}
+      {currentRoom && !isLoadingMessages && (
+        <div className="flex flex-col items-center justify-center py-10 px-4 mt-4 mb-8 border-b border-slate-200/50 dark:border-white/10 text-center animate-fade-in">
+          {currentRoom.is_dm && currentRoom.targetUser ? (
+            <>
+              <div className="w-24 h-24 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-4xl font-bold text-slate-500 dark:text-slate-400 mb-4 shadow-xl overflow-hidden ring-4 ring-white dark:ring-slate-900">
+                {currentRoom.targetUser.avatar_url ? (
+                  <img src={currentRoom.targetUser.avatar_url} alt={currentRoom.targetUser.username} className="w-full h-full object-cover" />
+                ) : (
+                  currentRoom.targetUser.username.substring(0, 1).toUpperCase()
+                )}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 mb-2">
+                {currentRoom.targetUser.username}
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">
+                This is the beginning of your direct message history with <span className="font-semibold text-slate-700 dark:text-slate-300">@{currentRoom.targetUser.username}</span>.
+              </p>
+            </>
+          ) : currentChannel ? (
+            <>
+              <div className="w-20 h-20 rounded-3xl bg-blue-500 flex items-center justify-center text-4xl font-bold text-white mb-4 shadow-xl shadow-blue-500/20 ring-4 ring-white dark:ring-slate-900 overflow-hidden">
+                {currentRoom.room_profile ? (
+                  <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
+                ) : (
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                  </svg>
+                )}
+              </div>
+              <h2 className="text-3xl font-black text-slate-900 dark:text-slate-50 mb-2 tracking-tight">
+                Welcome to #{currentChannel.name}!
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">
+                This is the start of the <span className="font-semibold text-slate-700 dark:text-slate-300">#{currentChannel.name}</span> channel in {currentRoom.name}.
+              </p>
+            </>
+          ) : null}
+        </div>
+      )}
+
       {isLoadingMessages ? (
         <MessageSkeleton />
       ) : messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
+        <div className="flex flex-col items-center justify-center py-10 text-center opacity-50">
           <div className="text-4xl mb-4">💬</div>
           <p>No messages yet. Start the conversation!</p>
         </div>
@@ -108,7 +170,7 @@ function MessageListComponent({
             
             const avatarUrl = getAvatarForUser(msg.user_id, msg.username, msg.avatar_url);
             const displayName = getUsernameForUser(msg.user_id, msg.username);
-            const isPickerOpen = activePickerId === msg.id;
+            const isMenuOpen = activeMenuId === msg.id;
             let avatarMargin = `mt-auto ${isOwn ? '' : 'mb-0.75'}`
 
             if (msg.reactions?.length && msg.parent_id) {
@@ -180,11 +242,25 @@ function MessageListComponent({
                   
                   <div className="relative group/content">
                     <div 
-                      className={`px-4 py-2 rounded-2xl shadow-sm text-sm break-words ${
+                      className={`px-4 py-2 rounded-2xl shadow-sm text-sm break-words select-none lg:select-auto ${
                         isOwn 
                           ? 'bg-blue-500 text-white rounded-tr-none' 
                           : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200/50 dark:border-white/10 rounded-tl-none'
                       }`}
+                      style={{ WebkitTouchCallout: 'none' }}
+                      onPointerDown={(e) => {
+                        if (e.pointerType !== 'mouse') {
+                          handlePointerDown(msg.id);
+                        }
+                      }}
+                      onPointerUp={handlePointerUpOrLeave}
+                      onPointerLeave={handlePointerUpOrLeave}
+                      onPointerCancel={handlePointerUpOrLeave}
+                      onContextMenu={(e) => {
+                        if (window.matchMedia("(pointer: coarse)").matches || 'ontouchstart' in window) {
+                          e.preventDefault();
+                        }
+                      }}
                     >
                       {msg.content}
                       
@@ -224,7 +300,7 @@ function MessageListComponent({
                     </div>
 
                     {/* Hover Actions Container */}
-                    <div className={`absolute top-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
+                    <div className={`hidden md:flex absolute top-1 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
                       isOwn ? (onDeleteMessage ? '-left-[7rem]' : '-left-20') : '-right-20'
                     }`}>
                       {onReplyMessage && (
@@ -246,7 +322,7 @@ function MessageListComponent({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActivePickerId(isPickerOpen ? null : msg.id);
+                            setActiveMenuId(isMenuOpen ? null : msg.id);
                           }}
                           className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
                           title="Add reaction"
@@ -273,27 +349,68 @@ function MessageListComponent({
                       )}
                     </div>
 
-                    {/* Reaction Picker Popover */}
-                    {onToggleReaction && isPickerOpen && (
+                    {/* Reaction/Mobile Context Menu Popover */}
+                    {isMenuOpen && (
                       <div 
                         onClick={(e) => e.stopPropagation()}
-                        className={`absolute -top-12 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-full p-1 shadow-xl animate-fade-in-up flex items-center gap-1 ${
-                          isOwn ? 'right-0' : 'left-0'
+                        className={`absolute bottom-full mb-2 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-full p-1 shadow-xl animate-fade-in-up w-max max-w-[85vw] md:max-w-none flex items-center ${
+                          isOwn ? '-right-7' : '-left-7'
                         }`}
                       >
-                        <div className="flex gap-1">
-                          {COMMON_EMOJIS.map(emoji => (
+                        <div className="flex gap-1 items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          {onToggleReaction && COMMON_EMOJIS.map(emoji => (
                             <button
                               key={emoji}
                               onClick={() => {
                                 onToggleReaction(msg.id, emoji);
-                                setActivePickerId(null);
+                                setActiveMenuId(null);
                               }}
-                              className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors text-base"
+                              className="shrink-0 w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors text-base"
                             >
                               {emoji}
                             </button>
                           ))}
+                        </div>
+
+                        {/* Mobile-only actions separator */}
+                        {(onReplyMessage || (isOwn && onDeleteMessage)) && (
+                          <div className="md:hidden shrink-0 w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                        )}
+
+                        <div className="md:hidden flex gap-1 items-center shrink-0">
+                          {/* Mobile-only Reply action */}
+                          {onReplyMessage && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onReplyMessage(msg);
+                                setActiveMenuId(null);
+                              }}
+                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
+                              title="Reply"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5" />
+                              </svg>
+                            </button>
+                          )}
+
+                          {/* Mobile-only Delete action */}
+                          {isOwn && onDeleteMessage && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMessageToDelete(msg.id);
+                                setActiveMenuId(null);
+                              }}
+                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-colors"
+                              title="Delete message"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
