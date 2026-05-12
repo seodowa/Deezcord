@@ -11,14 +11,15 @@ interface HomeContextType {
 }
 
 export default function RoomPage() {
-  const { currentRoom, isJoining, isLoadingChannels, joinExistingRoom } = useOutletContext<HomeContextType>();
+  const { currentRoom, isJoining, isLoadingChannels, joinExistingRoom, channels } = useOutletContext<HomeContextType & { channels: any[] }>();
 
   if (!currentRoom) {
     return <Navigate to="/" replace />;
   }
 
-  // If we're currently loading channels, show the skeleton instead of "No channel"
-  if (isLoadingChannels) {
+  // If we're currently loading channels OR if we have channels but haven't navigated to one yet
+  // (HomeLayout will handle the redirect, we just want to avoid the "No channel selected" flash)
+  if (isLoadingChannels || (currentRoom.isMember && channels && channels.length > 0)) {
     return <MessageSkeleton />;
   }
 

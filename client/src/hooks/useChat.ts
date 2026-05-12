@@ -10,8 +10,25 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  // Start loading if we have IDs, otherwise we'll wait for the effect
+  const [isLoadingMessages, setIsLoadingMessages] = useState(!!(roomId && channelId && isMember));
   const { user } = useAuth();
+
+  // Handle immediate state reset when roomId or channelId changes to prevent flickering
+  const [prevIds, setPrevIds] = useState({ roomId, channelId });
+  if (prevIds.roomId !== roomId || prevIds.channelId !== channelId) {
+    setPrevIds({ roomId, channelId });
+    if (roomId && channelId && isMember) {
+      setIsLoadingMessages(true);
+      setMessages([]);
+      setMembers([]);
+    } else {
+      setIsLoadingMessages(false);
+      setMessages([]);
+      setMembers([]);
+    }
+  }
+
   const { 
     joinRoom: socketJoinRoom, 
     leaveRoom: socketLeaveRoom,
@@ -43,12 +60,10 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     }
   }, []);
 
-  const fetchMessages = useCallback(async (rId: string, cId: string) => {
-    // Only show loading state if we don't have cached messages
-    setMessages(prev => {
-      if (prev.length === 0) setIsLoadingMessages(true);
-      return prev;
-    });
+  const fetchMessages = useCallback(async (rId: string, cId: string, showLoading = false) => {
+    if (showLoading) {
+      setIsLoadingMessages(true);
+    }
 
     try {
       const data = await getMessages(rId, cId);
@@ -65,9 +80,12 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (roomId && isMember) {
       // Try to load members from cache first
       loadMembers(roomId).then(cached => {
+        if (!isMounted) return;
         if (cached && cached.length > 0) {
           setMembers(cached as Member[]);
         }
@@ -75,25 +93,35 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
       });
 
       if (channelId) {
+        // Reset state for new channel
+        setIsLoadingMessages(true);
+        setMessages([]);
+
         // Try to load from cache first
         loadMessages(channelId).then(cached => {
+          if (!isMounted) return;
           if (cached && cached.length > 0) {
             setMessages(cached as Message[]);
+            setIsLoadingMessages(false);
+            fetchMessages(roomId, channelId, false); // Silent sync
           } else {
-            setMessages([]);
+            fetchMessages(roomId, channelId, true); // Full loading
           }
-          fetchMessages(roomId, channelId);
         });
         socketJoinRoom({ room_id: roomId, channel_id: channelId });
       } else {
+        setIsLoadingMessages(false);
+        setMessages([]);
         socketJoinRoom({ room_id: roomId });
       }
       
       queueMicrotask(() => {
+        if (!isMounted) return;
         setTypingUsers([]);
       });
       
       return () => {
+        isMounted = false;
         if (channelId) {
           socketLeaveRoom({ room_id: roomId, channel_id: channelId });
         } else {
@@ -102,10 +130,13 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
       };
     } else {
       queueMicrotask(() => {
+        if (!isMounted) return;
         setMembers([]);
         setMessages([]);
         setTypingUsers([]);
+        setIsLoadingMessages(false);
       });
+      return () => { isMounted = false; };
     }
   }, [roomId, channelId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
 
