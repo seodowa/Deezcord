@@ -5,7 +5,7 @@ import * as parser from 'socket.io-msgpack-parser';
 import signIn from '../utils/auth';
 
 import dotenv from 'dotenv';
-dotenv.config({path: `${__dirname}/.env.stresstest`});
+dotenv.config({path: `${__dirname}/.env`});
 
 const SERVER_URL = process.env.VITE_API_URL;
 
@@ -44,7 +44,7 @@ test('Socket.IO Connection', async (t) => {
     const password = process.env.PASSWORD;
 
     if (!email || !password) {
-        console.warn('Skipping Socket.io test because process.env.EMAIL or process.env.PASSWORD is missing');
+        console.warn('Skipping Socket.io test because process.env.email or process.env.password is missing');
         return;
     }
 
