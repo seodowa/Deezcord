@@ -1,57 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AsyncButton from '../components/AsyncButton';
+import Logo from '../components/Logo';
+import { useToast } from '../hooks/useToast';
+import { loginUser, mfaListFactors } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { useMFAChallenge } from '../hooks/useMFAChallenge';
+import MFAChallengeModal from '../components/MFAChallengeModal';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    // On mount, read from local storage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+  const { isDarkMode, toggleTheme, mounted } = useTheme();
+  const { login } = useAuth();
+  const { isChallengeOpen, factorId, overrideToken, mfaMethod, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
-  const toggleTheme = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      localStorage.setItem('theme', 'light');
-      setIsDarkMode(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-      localStorage.setItem('theme', 'dark');
-      setIsDarkMode(true);
-    }
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+
+  const completeLogin = async (token: string, refreshToken: string) => {
+    await login(token, refreshToken, rememberMe);
+    addToast('Successfully signed in!', 'success');
+    navigate('/');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate loading for the visual MVP
-    setTimeout(() => {
+    try {
+      const data = await loginUser(identifier, password);
+      
+      // Check if user has MFA enabled (either TOTP factor or Email preference)
+      const factors = await mfaListFactors(data.token);
+      const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
+      const mfaPreference = data.user?.app_metadata?.mfa_preference;
+      
+      if (verifiedFactor) {
+        // Trigger TOTP MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'totp');
+      } else if (mfaPreference === 'email') {
+        // Trigger Email MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'email');
+      } else {
+        await completeLogin(data.token, data.refreshToken);
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
+      addToast(err.message || 'Login failed', 'error');
+    } finally {
       setIsLoading(false);
-      console.log('Login attempt', { identifier, password, rememberMe });
-    }, 1500);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       {/* Deezcord Server Status Feature - Top Left */}
       <div className="absolute top-6 left-6 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 text-slate-900 dark:text-slate-50 px-4 py-2 rounded-full flex items-center gap-2.5 z-50 shadow-sm transition-colors duration-500">
@@ -89,8 +99,11 @@ export default function LoginPage() {
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse"></div>
       <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-      <div className="relative z-10 w-full max-w-[420px] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
+      <div className="relative z-10 w-full mx-5 max-w-[25rem] min-w-[20rem] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <Logo className="w-16 h-16" />
+          </div>
           <h1 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Welcome Back</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your details to access your account</p>
         </div>
@@ -131,36 +144,47 @@ export default function LoginPage() {
           </div>
 
           <div className="flex justify-between items-center mb-8">
-            <label className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 cursor-pointer group">
               <input
                 type="checkbox"
-                className="accent-blue-500 w-[18px] h-[18px] cursor-pointer"
+                className="cursor-pointer transition-transform duration-200 group-hover:scale-110"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              Remember me
+              <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-200">Remember me</span>
             </label>
-            <a href="#" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+            <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
               Forgot password?
-            </a>
+            </Link>
           </div>
 
-          <button 
+          <AsyncButton 
             type="submit" 
             className="w-full p-4 bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-200 relative overflow-hidden hover:-translate-y-[2px] hover:shadow-[0_10px_20px_-10px_rgba(59,130,246,1)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-            disabled={isLoading}
+            isLoading={isLoading}
+            loadingText="Signing in..."
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
+            Sign In
+          </AsyncButton>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Don't have an account? 
-          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
             Sign up for free
           </Link>
         </div>
       </div>
+
+      <MFAChallengeModal 
+        isOpen={isChallengeOpen}
+        factorId={factorId || ''}
+        token={overrideToken || undefined}
+        mfaMethod={mfaMethod}
+        onClose={closeChallenge}
+        onSuccess={handleVerified}
+      />
+
     </div>
   );
 }
