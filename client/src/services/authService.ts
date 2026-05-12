@@ -172,13 +172,53 @@ export const mfaVerify = async (tokenOrFactorId: string, factorIdOrCode: string,
   return data;
 };
 
-export const mfaUnenroll = async (tokenOrFactorId: string, factorId?: string) => {
+export const mfaRequestEmail = async (purpose: string = 'transactional', token?: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/email/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(token),
+    },
+    body: JSON.stringify({ purpose }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to request email code');
+  }
+
+  return data;
+};
+
+export const mfaSetupVerifyEmail = async (code: string, token?: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/email/setup-verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(token),
+    },
+    body: JSON.stringify({ code }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to verify email MFA setup');
+  }
+
+  return data;
+};
+
+export const mfaUnenroll = async (tokenOrFactorId?: string, factorId?: string) => {
   let token: string | undefined;
-  let actualFactorId: string;
+  let actualFactorId: string | undefined;
 
   if (factorId) {
     token = tokenOrFactorId;
     actualFactorId = factorId;
+  } else if (tokenOrFactorId && tokenOrFactorId.length > 20) { // Simple heuristic for JWT vs factorId
+    token = tokenOrFactorId;
   } else {
     actualFactorId = tokenOrFactorId;
   }
