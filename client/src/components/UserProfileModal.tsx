@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { updateProfile } from '../services/userService';
+import { updateProfile, getCurrentUser } from '../services/userService';
 import { mfaListFactors, mfaUnenroll } from '../services/authService';
 import { getToken, getAAL } from '../utils/auth';
 import AsyncButton from './AsyncButton';
@@ -43,8 +43,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
     setIsCheckingMFA(true);
     try {
+      const freshUser = await getCurrentUser();
+      setUser(freshUser);
+
       // 1. Check local user metadata (covers both, especially Email)
-      const preference = user?.app_metadata?.mfa_preference || 'none';
+      const preference = freshUser?.app_metadata?.mfa_preference || 'none';
       
       if (preference === 'email') {
         setIsMFAEnabled(true);
@@ -69,7 +72,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     } finally {
       setIsCheckingMFA(false);
     }
-  }, [user]);
+  }, [setUser]);
 
   const handleDisableMFA = async (verificationCode?: string) => {
     setIsDisablingMFA(true);

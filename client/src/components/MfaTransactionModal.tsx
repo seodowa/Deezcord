@@ -79,9 +79,9 @@ export default function MfaTransactionModal({
       setCode('');
     } catch (err: any) {
       if (err.message.includes("INVALID_MFA_CODE") || err.message.includes("incorrect") || err.message.includes("Invalid security code")) {
-        setError(err.message || "Invalid code. Please try again.");
+        setError("Invalid code. Please try again.");
       } else {
-        setError(err.message || "Something went wrong.");
+        setError("Something went wrong.");
       }
     }
   };
