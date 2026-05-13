@@ -76,21 +76,13 @@ export default function SecuritySettings({
   }, [emailStage, isPasswordUnlocked, addToast]);
 
   const handleBeginEmailChange = () => {
-    if (isMFAEnabled) {
-      setPendingAction('unlock_email');
-      setShowMfaModal(true);
-    } else {
-      setEmailStage('input');
-    }
+    setPendingAction('unlock_email');
+    setShowMfaModal(true);
   };
 
   const handleBeginPasswordChange = () => {
-    if (isMFAEnabled) {
-      setPendingAction('unlock_password');
-      setShowMfaModal(true);
-    } else {
-      setIsPasswordUnlocked(true);
-    }
+    setPendingAction('unlock_password');
+    setShowMfaModal(true);
   };
 
   const handleDeleteAccount = () => {
@@ -101,15 +93,8 @@ export default function SecuritySettings({
       return;
     }
 
-    if (isMFAEnabled) {
-      setPendingAction('delete_account');
-      setShowMfaModal(true);
-    } else {
-      const confirmed = window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.");
-      if (confirmed) {
-        executeAccountDeletion();
-      }
-    }
+    setPendingAction('delete_account');
+    setShowMfaModal(true);
   };
 
   const handleMfaVerify = async (code: string) => {

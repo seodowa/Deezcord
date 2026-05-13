@@ -103,23 +103,21 @@ export const verifyTransactionalMfa = async (req: AuthenticatedRequest, res: Res
   const user = req.user;
   const mfaPreference = user?.app_metadata?.mfa_preference || 'none';
 
-  // If no MFA is enabled, allow the action
-  if (mfaPreference === 'none') {
-    return next();
-  }
+  // Fallback: If no MFA is enabled, default to email verification for sensitive actions
+  const effectiveMfa = mfaPreference === 'none' ? 'email' : mfaPreference;
 
   // 1. Check for a valid code format
   if (!mfaCode || !/^\d{6}$/.test(mfaCode)) {
     res.status(403).json({ 
       error: "MFA_REQUIRED_TRANSACTIONAL", 
-      message: `This action requires a fresh 6-digit verification code sent via ${mfaPreference === 'totp' ? 'your authenticator app' : 'email'}.`,
-      mfaMethod: mfaPreference
+      message: `This action requires a fresh 6-digit verification code sent via ${effectiveMfa === 'totp' ? 'your authenticator app' : 'email'}.`,
+      mfaMethod: effectiveMfa
     });
     return;
   }
 
   try {
-    if (mfaPreference === 'totp') {
+    if (effectiveMfa === 'totp') {
       // TOTP Verification via Supabase
       const userClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -149,7 +147,7 @@ export const verifyTransactionalMfa = async (req: AuthenticatedRequest, res: Res
         res.status(401).json({ error: "INVALID_MFA_CODE", message: "The verification code is incorrect or has expired." });
         return;
       }
-    } else if (mfaPreference === 'email') {
+    } else if (effectiveMfa === 'email') {
       // Email OTP Verification via custom Service
       await verifyEmailOtp(user.id, mfaCode, 'transactional');
     }

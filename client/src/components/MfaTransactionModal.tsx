@@ -30,6 +30,8 @@ export default function MfaTransactionModal({
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const mfaPreference = user?.app_metadata?.mfa_preference || 'none';
+  // Fallback: Treat 'none' as 'email' for transactional challenges
+  const effectiveMfa = mfaPreference === 'none' ? 'email' : mfaPreference;
 
   const handleResendEmail = useCallback(async () => {
     if (resendCooldown > 0) return;
@@ -60,12 +62,12 @@ export default function MfaTransactionModal({
     }
   }, [resendCooldown]);
 
-  // Automatically request email code if preference is email
+  // Automatically request email code if effective method is email
   useEffect(() => {
-    if (isOpen && mfaPreference === 'email') {
+    if (isOpen && effectiveMfa === 'email') {
       handleResendEmail();
     }
-  }, [isOpen, mfaPreference, handleResendEmail]);
+  }, [isOpen, effectiveMfa, handleResendEmail]);
 
   const handleConfirm = async () => {
     if (code.length !== 6) {
@@ -86,7 +88,7 @@ export default function MfaTransactionModal({
     }
   };
 
-  const defaultDescription = mfaPreference === 'email' 
+  const defaultDescription = effectiveMfa === 'email' 
     ? "Please enter the 6-digit code we sent to your email." 
     : "Please enter your 6-digit MFA code from your authenticator app.";
 
@@ -101,7 +103,7 @@ export default function MfaTransactionModal({
       <div className="space-y-6">
         <div className="text-center">
           <div className="w-20 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            {mfaPreference === 'email' ? (
+            {effectiveMfa === 'email' ? (
               <svg viewBox="0 0 24 24" fill="none" className="w-10 h-10 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 8L10.8906 13.2604C11.5624 13.7083 12.4376 13.7083 13.1094 13.2604L21 8M5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V17C3 18.1046 3.89543 19 5 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -146,7 +148,7 @@ export default function MfaTransactionModal({
             {actionLabel}
           </AsyncButton>
 
-          {mfaPreference === 'email' && (
+          {effectiveMfa === 'email' && (
             <button
               onClick={handleResendEmail}
               disabled={resendCooldown > 0 || isSendingEmail}
