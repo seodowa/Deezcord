@@ -78,14 +78,14 @@ export default function SocialSection({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sidebar Header */}
-      <div className="shrink-0 p-4 pb-2">
+      <div className="shrink-0 p-4 h-16 md:h-20 flex items-center justify-center border-b border-slate-200/50 dark:border-white/10">
         <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex justify-center items-center gap-2">
           Social
         </h2>
       </div>
 
       {/* Sidebar Top Section - Toggles */}
-      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/5 p-3 pt-0">
+      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/10 p-3">
         {/* Tab Header - Switch Style (Narrower Width) */}
         <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-65 mx-auto">
           {/* Sliding Background Indicator */}
@@ -363,8 +363,8 @@ export default function SocialSection({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-slate-200/50 dark:border-white/5 px-3 py-4">
-        <div className="flex items-center justify-between p-3 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-white/40 dark:border-white/5 shadow-sm group/profile">
+      <div className="shrink-0 py-3 px-4 bg-slate-50/30 dark:bg-black/10">
+        <div className="flex items-center justify-between px-3 py-2 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm group/profile">
           <AsyncButton 
             onClick={onOpenProfile}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1 justify-start cursor-pointer"
