@@ -99,12 +99,11 @@ export default function SecuritySettings({
 
   const handleMfaVerify = async (code: string) => {
     try {
-      if (pendingAction === 'unlock_email' || pendingAction === 'unlock_password') {
+      if (pendingAction === 'unlock_email') {
         // Verification 1: Identity (Current Channel)
         await verifyMfaCode(code);
         
-        if (pendingAction === 'unlock_email') setEmailStage('input');
-        if (pendingAction === 'unlock_password') setIsPasswordUnlocked(true);
+        setEmailStage('input');
         
         addToast("Identity verified.", "success");
       } else if (pendingAction === 'execute_password') {
@@ -306,7 +305,10 @@ export default function SecuritySettings({
               </button>
             </div>
           ) : emailStage === 'input' ? (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <form 
+              className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300"
+              onSubmit={(e) => { e.preventDefault(); handleSendCode(); }}
+            >
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-widest">NEW EMAIL ADDRESS</label>
                 <input
@@ -320,6 +322,7 @@ export default function SecuritySettings({
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setEmailStage('locked');
                     setNewEmail('');
@@ -329,6 +332,7 @@ export default function SecuritySettings({
                   Cancel
                 </button>
                 <AsyncButton
+                  type="submit"
                   onClick={handleSendCode}
                   isLoading={isRequestingOtp}
                   className="flex-[2] bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
@@ -336,9 +340,12 @@ export default function SecuritySettings({
                   Send Code
                 </AsyncButton>
               </div>
-            </div>
+            </form>
           ) : (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <form 
+              className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300"
+              onSubmit={(e) => { e.preventDefault(); handleVerifyAndUpdate(); }}
+            >
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-widest flex items-center gap-2">
                   <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
@@ -356,12 +363,14 @@ export default function SecuritySettings({
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setEmailStage('input')}
                   className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                 >
                   Back
                 </button>
                 <AsyncButton
+                  type="submit"
                   onClick={handleVerifyAndUpdate}
                   isLoading={isUpdatingEmail}
                   className="flex-[2] bg-red-500 hover:bg-red-600 text-white rounded-xl py-3 font-bold transition-all duration-300 shadow-lg shadow-red-500/25 cursor-pointer"
@@ -370,9 +379,9 @@ export default function SecuritySettings({
                 </AsyncButton>
               </div>
               <p className="text-[10px] text-center text-slate-500 dark:text-slate-400 mt-2 italic">
-                Didn't receive a code? <button onClick={handleSendCode} className="text-red-500 hover:underline font-bold cursor-pointer">Resend</button>
+                Didn't receive a code? <button type="button" onClick={handleSendCode} className="text-red-500 hover:underline font-bold cursor-pointer">Resend</button>
               </p>
-            </div>
+            </form>
           )}
         </div>
 
@@ -394,7 +403,10 @@ export default function SecuritySettings({
               </button>
             </div>
           ) : (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <form 
+              className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300"
+              onSubmit={(e) => { e.preventDefault(); handleUpdatePassword(); }}
+            >
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-widest">NEW PASSWORD</label>
                 <input
@@ -418,6 +430,7 @@ export default function SecuritySettings({
               </div>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsPasswordUnlocked(false);
                     setNewPassword('');
@@ -428,6 +441,7 @@ export default function SecuritySettings({
                   Cancel
                 </button>
                 <AsyncButton
+                  type="submit"
                   onClick={handleUpdatePassword}
                   isLoading={isUpdatingPassword}
                   className="flex-[2] bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
@@ -435,7 +449,7 @@ export default function SecuritySettings({
                   Update Password
                 </AsyncButton>
               </div>
-            </div>
+            </form>
           )}
         </div>
 

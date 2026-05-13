@@ -139,49 +139,57 @@ export default function MFAChallengeModal({
           </p>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            maxLength={6}
-            placeholder="000000"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            autoFocus
-            className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono bg-white/50 dark:bg-slate-900/50 border-2 border-slate-200 dark:border-white/10 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
-          />
-          {error && (
-            <p className="mt-2 text-red-500 text-xs font-bold text-center animate-shake">
-              {error}
-            </p>
-          )}
-        </div>
+        <form 
+          onSubmit={(e) => { e.preventDefault(); handleVerify(); }}
+          className="space-y-6"
+        >
+          <div className="relative">
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="000000"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              autoFocus
+              className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono bg-white/50 dark:bg-slate-900/50 border-2 border-slate-200 dark:border-white/10 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+            />
+            {error && (
+              <p className="mt-2 text-red-500 text-xs font-bold text-center animate-shake">
+                {error}
+              </p>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-3">
-          <AsyncButton
-            onClick={handleVerify}
-            loadingText="Verifying..."
-            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 cursor-pointer"
-          >
-            Verify
-          </AsyncButton>
-
-          {isEmail && (
-            <button
-              onClick={handleResendEmail}
-              disabled={resendCooldown > 0}
-              className="text-sm font-medium text-slate-500 hover:text-blue-500 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors py-2 cursor-pointer"
+          <div className="flex flex-col gap-3">
+            <AsyncButton
+              type="submit"
+              onClick={handleVerify}
+              loadingText="Verifying..."
+              className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 cursor-pointer"
             >
-              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
-            </button>
-          )}
+              Verify
+            </AsyncButton>
 
-          <button
-            onClick={handleClose}
-            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
+            {isEmail && (
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                disabled={resendCooldown > 0}
+                className="text-sm font-medium text-slate-500 hover:text-blue-500 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors py-2 cursor-pointer"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleClose}
+              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </Modal>
   );

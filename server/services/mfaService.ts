@@ -18,11 +18,17 @@ const MAX_ATTEMPTS = 3;
  * Then sends the plain code via email.
  */
 export async function generateEmailOtp(userId: string, email: string, purpose: string, targetEmail?: string) {
-  // 1. Global cleanup of stale codes
-  await supabase
-    .from('mfa_email_otps')
-    .delete()
-    .lt('expires_at', new Date().toISOString());
+  // 1. Global cleanup of stale codes (fire-and-forget to prevent blocking)
+  (async () => {
+    try {
+      await supabase
+        .from('mfa_email_otps')
+        .delete()
+        .lt('expires_at', new Date().toISOString());
+    } catch (err) {
+      console.error("[MfaService] Cleanup Error:", err);
+    }
+  })();
 
   // 2. Check for cooldown (prevent spamming)
   const { data: existingOtp, error: fetchError } = await supabase
@@ -38,7 +44,9 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
     const diff = (now - lastSent) / 1000;
 
     if (diff < COOLDOWN_SECONDS) {
-      throw new Error(`Please wait ${Math.ceil(COOLDOWN_SECONDS - diff)} seconds before requesting a new code.`);
+      // Instead of throwing an error, return success so the user can re-enter the verification screen
+      // and use the code that was already sent to them.
+      return { message: `A code was already sent recently. Please check your email.` };
     }
   }
 
@@ -71,14 +79,11 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
     throw new Error("Failed to generate security code. Please try again.");
   }
 
-  // 5. Send Email with rollback on failure
-  try {
-    await sendMfaEmail(email, code, purpose);
-  } catch (emailError) {
+  // 5. Send Email with rollback on failure (Fire-and-forget to prevent blocking)
+  sendMfaEmail(email, code, purpose).catch(async (emailError) => {
     console.error("[MfaService] Email failure, rolling back OTP record:", emailError);
     await supabase.from('mfa_email_otps').delete().eq('user_id', userId).eq('purpose', purpose);
-    throw new Error("Failed to deliver security email. Please try again later.");
-  }
+  });
 
   return { message: "Security code sent to your email." };
 }

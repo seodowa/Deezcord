@@ -218,7 +218,10 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                     accept="image/*"
                   />
                   
-                  <div className="flex-1 w-full space-y-4">
+                  <form 
+                    className="flex-1 w-full space-y-4"
+                    onSubmit={(e) => { e.preventDefault(); if (isOwner) handleUpdateRoom(); }}
+                  >
                     <div>
                       <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Room Name</label>
                       <input
@@ -232,6 +235,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                     </div>
                     {isOwner && (
                       <AsyncButton
+                        type="submit"
                         onClick={handleUpdateRoom}
                         isLoading={isUpdating}
                         className="w-full md:w-auto px-8 bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-2.5 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
@@ -239,7 +243,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                         Save Changes
                       </AsyncButton>
                     )}
-                  </div>
+                  </form>
                 </div>
               </div>
             </div>
