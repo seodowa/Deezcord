@@ -363,7 +363,7 @@ export default function SocialSection({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-slate-200/50 dark:border-white/10 py-3 px-4 bg-slate-50/30 dark:bg-black/10">
+      <div className="shrink-0 py-3 px-4 bg-slate-50/30 dark:bg-black/10">
         <div className="flex items-center justify-between px-3 py-2 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm group/profile">
           <AsyncButton 
             onClick={onOpenProfile}
