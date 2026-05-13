@@ -86,9 +86,12 @@ function MessageListComponent({
         return;
       }
 
-      // Otherwise, only auto-scroll if already at bottom or if it's a new message
-      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 150; // Increased threshold slightly for better UX
-      if (isAtBottom) {
+      // Otherwise, only auto-scroll if already at bottom or if it's a new message from the current user
+      const lastMessage = messages[messages.length - 1];
+      const isOwnLastMessage = lastMessage?.user_id === currentUser?.id;
+      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 400; 
+      
+      if (isAtBottom || isOwnLastMessage) {
         // Use a tiny timeout for subsequent messages as well to ensure content height is updated
         setTimeout(() => {
           if (scrollRef.current) {
@@ -97,7 +100,7 @@ function MessageListComponent({
         }, 10);
       }
     }
-  }, [lastMessageId, typingUsers, messages.length]);
+  }, [lastMessageId, typingUsers, messages.length, currentUser?.id]);
 
   const currentUserId = currentUser?.id;
   const currentUsername = currentUser?.username || currentUser?.email?.split('@')[0] || '';
@@ -300,7 +303,7 @@ function MessageListComponent({
                                 aspectRatio: msg.file_width && msg.file_height ? `${msg.file_width} / ${msg.file_height}` : 'auto',
                                 maxHeight: '256px',
                                 maxWidth: msg.file_width && msg.file_height ? `min(100%, ${Math.min(msg.file_width, 400)}px)` : '100%',
-                                width: msg.file_width && msg.file_height ? 'auto' : '100%'
+                                width: '100%'
                               }}
                             >
                               <img 
