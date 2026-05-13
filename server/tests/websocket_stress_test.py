@@ -16,6 +16,7 @@ Run:
     locust -f <filename>.py \\
         --headless \\
         -e TOKEN=<token> \\
+        -e DEVICE_ID=<device_id> \\
         -e ROOM_ID=<uuid> \\
         -e CHANNEL_ID=<uuid> \\
         -e BASE_URL=http://localhost:3001
@@ -76,12 +77,13 @@ class ChatUser(User):
         self._running  = True
 
         token      = os.getenv("TOKEN")
+        device_id  = os.getenv("DEVICE_ID")
         room_id    = os.getenv("ROOM_ID")
         channel_id = os.getenv("CHANNEL_ID")
         base_url   = os.getenv("BASE_URL", "http://localhost:3001")
 
-        if not all([token, room_id, channel_id]):
-            raise StopUser("Missing TOKEN, ROOM_ID, or CHANNEL_ID env vars")
+        if not all([token, device_id, room_id, channel_id]):
+            raise StopUser("Missing TOKEN, DEVICE_ID, ROOM_ID, or CHANNEL_ID env vars")
 
         self._room_id    = room_id
         self._channel_id = channel_id
@@ -96,7 +98,7 @@ class ChatUser(User):
             self._sio.connect(
                 base_url,
                 transports=["websocket"],
-                auth={"token": token},      # mirrors: socket.send(`40{"token":"..."}`)
+                auth={"token": token, "deviceId": device_id},      # mirrors: socket.send(`40{"token":"...", "deviceId":"..."}`)
                 namespaces=["/"],
                 wait_timeout=10,
             )
