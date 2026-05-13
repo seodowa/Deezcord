@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import multer from 'multer';
-import { rateLimit } from 'express-rate-limit';
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import supabase from '../config/supabaseClient';
 import { verifyUser, AuthenticatedRequest, verifyTransactionalMfa } from '../middleware/authMiddleware';
 import { isUserOnline } from '../utils/presence';
@@ -15,7 +15,13 @@ const accountUpdateLimiter = rateLimit({
   message: { error: "Too many update attempts. Please try again after 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: any) => req.user?.id || req.ip,
+  keyGenerator: (req: any) => {
+    if (req.query.apiKey) return req.query.apiKey
+    
+ 		// fallback to IP for unauthenticated users
+		// return req.ip // vulnerable
+		return ipKeyGenerator(req.ip) // better
+  },
 });
 
 // Configure multer for memory storage

@@ -4,13 +4,13 @@ interface ProfileSetupCardProps {
 
 export default function ProfileSetupCard({ onSetupProfile }: ProfileSetupCardProps) {
   return (
-    <div className="p-6 md:p-8 rounded-[2.5rem] bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 text-slate-900 dark:text-white relative overflow-hidden group shadow-2xl shadow-slate-200 dark:shadow-slate-900/20 border border-slate-200 dark:border-white/5 flex flex-col justify-center transition-all duration-300 hover:-translate-y-1">
+    <div className="p-6 md:p-8 rounded-[2.5rem] bg-white dark:bg-linear-to-br dark:from-slate-900 dark:to-slate-800 text-slate-900 dark:text-white relative overflow-hidden group shadow-2xl shadow-slate-200 dark:shadow-slate-900/20 border border-slate-200 dark:border-white/5 flex flex-col justify-center transition-all duration-300 hover:-translate-y-1">
       {/* Decorative Gradient Blob */}
       <div className="absolute -top-10 -right-10 w-48 h-48 bg-fuchsia-500/5 dark:bg-fuchsia-500/10 rounded-full blur-3xl group-hover:bg-fuchsia-500/10 dark:group-hover:bg-fuchsia-500/20 transition-colors"></div>
       
       <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
         {/* Stylized Avatar Placeholder */}
-        <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-gradient-to-tr from-fuchsia-500/20 to-violet-500/20 dark:from-fuchsia-400/10 dark:to-violet-400/10 backdrop-blur-xl border border-fuchsia-500/20 dark:border-fuchsia-400/20 flex items-center justify-center relative shadow-lg group-hover:scale-105 transition-transform duration-500 shrink-0">
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-linear-to-tr from-fuchsia-500/20 to-violet-500/20 dark:from-fuchsia-400/10 dark:to-violet-400/10 backdrop-blur-xl border border-fuchsia-500/20 dark:border-fuchsia-400/20 flex items-center justify-center relative shadow-lg group-hover:scale-105 transition-transform duration-500 shrink-0">
           <svg className="w-8 h-8 text-fuchsia-600 dark:text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>

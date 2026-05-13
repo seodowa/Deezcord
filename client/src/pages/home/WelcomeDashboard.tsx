@@ -8,7 +8,6 @@ import InviteTeamCard from './components/InviteTeamCard';
 import ProfileSetupCard from './components/ProfileSetupCard';
 import RecentRooms from './components/RecentRooms';
 import SocialSection from './components/SocialSection';
-import UserProfileModal from '../../components/UserProfileModal';
 
 // Types
 import type { Room } from '../../types/room';
@@ -65,8 +64,8 @@ const WelcomeDashboard = () => {
   const isNewUser = !isLoadingRooms && rooms.length === 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 2xl:pr-[380px] scrollbar-none animate-fade-in relative">
-      <div className="absolute top-0 right-0 w-full h-[300px] bg-gradient-to-b from-blue-500/10 to-transparent pointer-events-none -z-10"></div>
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 2xl:pr-95 scrollbar-none animate-fade-in relative">
+      <div className="absolute top-0 right-0 w-full h-75 bg-linear-to-b from-blue-500/10 to-transparent pointer-events-none -z-10"></div>
       
       <div className="w-full relative">
         <div className="flex flex-col relative">
@@ -110,7 +109,7 @@ const WelcomeDashboard = () => {
                 </section>
 
                 {/* Mobile/Tablet Social Section (Visible < 2xl) */}
-                <section className="2xl:hidden bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden h-[600px] flex flex-col mb-8">
+                <section className="2xl:hidden bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden h-150 flex flex-col mb-8">
                   <SocialSection 
                     user={user}
                     onLogout={onLogout}
@@ -141,7 +140,7 @@ const WelcomeDashboard = () => {
       </div>
 
       {/* Right Sidebar - Unified Command Center (Social + Search) */}
-      <aside className="hidden 2xl:flex fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-[350px] h-[90vh] flex-col z-40 bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 border-r-0 rounded-l-[2.5rem] shadow-2xl shadow-slate-900/5 overflow-hidden">
+      <aside className="hidden 2xl:flex fixed right-0 top-1/2 -translate-y-1/2 w-[320px] xl:w-87.5 h-[90vh] flex-col z-40 bg-white/60 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-200/50 dark:border-white/10 border-r-0 rounded-l-[2.5rem] shadow-2xl shadow-slate-900/5 overflow-hidden">
         <SocialSection 
           user={user}
           onLogout={onLogout}
