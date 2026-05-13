@@ -106,7 +106,7 @@ export async function verifyEmailOtp(userId: string, code: string, purpose: stri
     throw new Error("Invalid or expired security code. Please request a new one.");
   }
 
-  // 3. Verify target email binding (Phase 2)
+  // 3. Verify target email binding
   if (expectedTargetEmail && otpData.target_email !== expectedTargetEmail) {
     throw new Error("Invalid or expired security code. Please request a new one.");
   }
@@ -211,7 +211,7 @@ async function deleteOtp(id: string) {
 
 /**
  * Template for MFA Email
- * Updated for Phase 2 to handle 'email_change' purpose
+ * Handles different purposes including 'email_change'
  */
 async function sendMfaEmail(toEmail: string, code: string, purpose: string) {
   const subject = purpose === 'setup' 

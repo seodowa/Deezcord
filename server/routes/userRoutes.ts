@@ -136,10 +136,10 @@ router.patch('/password', verifyUser, verifyTransactionalMfa, accountUpdateLimit
 });
 
 /**
- * POST /email/request-otp - Phase 3 (Refined)
+ * POST /email/request-otp
  * 
- * Requests a verification code for a new email.
- * Enforces Identity Check: MFA-enabled users MUST have a valid identity session (unlocked).
+ * Step 1: Request a verification code for a new email (Ownership Challenge).
+ * Enforces Identity Check: MFA-enabled users must have a valid identity session (unlocked).
  */
 router.post('/email/request-otp', verifyUser, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
   let { newEmail } = req.body;
@@ -189,9 +189,10 @@ router.post('/email/request-otp', verifyUser, accountUpdateLimiter, async (req: 
 });
 
 /**
- * PATCH /email - Phase 3 (Refined)
+ * PATCH /email
  * 
- * Finalize email change by verifying the Ownership OTP sent to the new address.
+ * Step 2: Finalize email change by verifying the Ownership OTP sent to the new address.
+ * Proves ownership of the new email address before executing the change.
  */
 router.patch('/email', verifyUser, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
   let { newEmail, code } = req.body;

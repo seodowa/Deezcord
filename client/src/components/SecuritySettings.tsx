@@ -22,7 +22,7 @@ type EmailStage = 'locked' | 'input' | 'verify';
  * SecuritySettings
  * 
  * Manages user security settings including MFA, email, and password updates.
- * Implements a streamlined 2-step verified email change process (Refined).
+ * Implements a secure 2-step verified email change process (Identity -> Ownership).
  */
 export default function SecuritySettings({
   currentAAL,
@@ -36,7 +36,7 @@ export default function SecuritySettings({
   const { addToast } = useToast();
   const { user, setUser } = useAuth();
   
-  // Email Change State machine (Phase 5)
+  // Email Change State machine
   const [emailStage, setEmailStage] = useState<EmailStage>('locked');
   const [newEmail, setNewEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -53,7 +53,7 @@ export default function SecuritySettings({
   const [showMfaModal, setShowMfaModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'unlock_email' | 'unlock_password' | 'execute_password' | null>(null);
 
-  // Vault Auto-Lock (Phase 5)
+  // Vault Auto-Lock (Security cleanup)
   useEffect(() => {
     if (emailStage === 'locked' && !isPasswordUnlocked) return;
     

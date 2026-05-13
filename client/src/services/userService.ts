@@ -54,8 +54,7 @@ export const updatePassword = async (password: string, mfaCode?: string) => {
 };
 
 /**
- * Phase 4 (Refined): execute email change with OWNERSHIP OTP.
- * Redundant MFA code parameter removed.
+ * Finalize email change with Ownership OTP.
  */
 export const updateEmail = async (newEmail: string, code: string) => {
   const response = await fetchWithAuth(`${API_URL}/api/users/email`, {
@@ -76,8 +75,7 @@ export const updateEmail = async (newEmail: string, code: string) => {
 };
 
 /**
- * Phase 4 (Refined): request OWNERSHIP OTP for new email.
- * Redundant MFA code parameter removed (AAL level is used on server).
+ * Request Ownership OTP for new email.
  */
 export const requestEmailChangeOtp = async (newEmail: string) => {
   const response = await fetchWithAuth(`${API_URL}/api/users/email/request-otp`, {
