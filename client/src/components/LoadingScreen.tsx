@@ -8,7 +8,7 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ message = "Loading Deezcord..." }: LoadingScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
       {/* Aesthetic Blobs */}
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-[80px] z-0 animate-pulse"></div>
       <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-purple-500/20 dark:bg-purple-500/10 rounded-full blur-[80px] z-0 animate-pulse" style={{ animationDelay: '2s' }}></div>

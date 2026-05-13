@@ -371,7 +371,7 @@ export default function HomeLayout() {
   }
 
   return (
-    <div className="h-screen flex bg-linear-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
+    <div className="h-[100dvh] flex bg-linear-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       <div className="absolute top-[10%] left-[20%] w-100 h-100 bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-[10%] right-[20%] w-87.5 h-87.5 bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>

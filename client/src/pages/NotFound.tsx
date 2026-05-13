@@ -19,7 +19,7 @@ export default function NotFoundPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
       
       {/* Background Blobs for Visual Aesthetics */}
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-red-500/20 dark:bg-red-500/10 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
