@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../hooks/useToast';
-import { updatePassword } from '../services/userService';
+import { updatePassword, updateEmail } from '../services/userService';
+import { useAuth } from '../hooks/useAuth';
 import AsyncButton from './AsyncButton';
 
 interface SecuritySettingsProps {
@@ -28,9 +29,37 @@ export default function SecuritySettings({
   onDisableMFA
 }: SecuritySettingsProps) {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  
+  const [newEmail, setNewEmail] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setNewConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      addToast('Please enter a valid email address', 'error');
+      return;
+    }
+
+    if (newEmail === user?.email) {
+      addToast('New email cannot be the same as the current email', 'error');
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    try {
+      const result = await updateEmail(newEmail);
+      addToast(result.message || 'Confirmation emails sent to both addresses. Please verify to complete the update.', 'success');
+      setNewEmail('');
+    } catch (err: unknown) {
+      addToast(err instanceof Error ? err.message : 'Failed to update email', 'error');
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
 
   const handleUpdatePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
@@ -114,34 +143,61 @@ export default function SecuritySettings({
           )}
         </div>
 
+        <hr className="border-slate-200 dark:border-white/10" />
+
+        {/* Email Update Fields */}
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">NEW EMAIL ADDRESS</label>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
+              placeholder={user?.email || "new@example.com"}
+            />
+          </div>
+          <AsyncButton
+            onClick={handleUpdateEmail}
+            isLoading={isUpdatingEmail}
+            className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
+          >
+            Update Email
+          </AsyncButton>
+        </div>
+
+        <hr className="border-slate-200 dark:border-white/10" />
+
         {/* Password Update Fields */}
-        <div className="space-y-1.5 pt-2">
-          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">NEW PASSWORD</label>
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
-            placeholder="••••••••"
-          />
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">NEW PASSWORD</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">CONFIRM PASSWORD</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setNewConfirmPassword(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
+              placeholder="••••••••"
+            />
+          </div>
+          <AsyncButton
+            onClick={handleUpdatePassword}
+            isLoading={isUpdatingPassword}
+            className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
+          >
+            Update Password
+          </AsyncButton>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">CONFIRM PASSWORD</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setNewConfirmPassword(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 transition-all duration-200"
-            placeholder="••••••••"
-          />
-        </div>
-        <AsyncButton
-          onClick={handleUpdatePassword}
-          isLoading={isUpdatingPassword}
-          className="w-full bg-slate-800 dark:bg-white dark:text-slate-950 text-white hover:bg-slate-900 dark:hover:bg-slate-100 rounded-xl py-3 font-bold transition-all duration-300 cursor-pointer"
-        >
-          Update Password
-        </AsyncButton>
       </div>
     </section>
   );

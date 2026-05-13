@@ -52,6 +52,24 @@ export const updatePassword = async (password: string) => {
   return data;
 };
 
+export const updateEmail = async (email: string) => {
+  const response = await fetchWithAuth(`${API_URL}/api/users/email`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update email');
+  }
+
+  return data;
+};
+
 export const searchUsers = async (query: string): Promise<User[]> => {
   const response = await fetchWithAuth(`${API_URL}/api/friends/search?q=${encodeURIComponent(query)}`);
 
