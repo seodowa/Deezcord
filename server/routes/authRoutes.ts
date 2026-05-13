@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import supabase from '../config/supabaseClient';
 import { verifyUser, verifyTransactionalMfa, AuthenticatedRequest } from '../middleware/authMiddleware';
 import signIn, { signUp, forgotPassword, resetPassword, refreshSession } from '../utils/auth';
-import { generateEmailOtp, verifyEmailOtp } from '../services/mfaService';
+import { generateEmailOtp, verifyEmailOtp, createIdentitySession } from '../services/mfaService';
 
 const router = express.Router();
 
@@ -152,6 +152,22 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
   } catch (error: any) {
     res.status(400).json({ error: error.message || "Failed to reset password" });
   }
+});
+
+/**
+ * POST /auth/mfa/challenge-verify
+ * 
+ * A no-op route used to 'unlock' the UI or verify identity via MFA.
+ * It relies on verifyTransactionalMfa middleware to do the heavy lifting.
+ */
+router.post('/mfa/challenge-verify', verifyUser, verifyTransactionalMfa, async (req: AuthenticatedRequest, res: Response) => {
+  // Create a short-lived identity session in the database
+  await createIdentitySession(req.user.id);
+
+  res.status(200).json({ 
+    message: "Identity verified successfully",
+    aal: req.user?.app_metadata?.mfa_preference === 'none' ? 'aal1' : 'aal2'
+  });
 });
 
 /**

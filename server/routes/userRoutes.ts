@@ -1,12 +1,22 @@
 import express, { Response } from 'express';
 import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
+import { rateLimit } from 'express-rate-limit';
 import supabase from '../config/supabaseClient';
-import { verifyUser, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { verifyUser, AuthenticatedRequest, verifyTransactionalMfa } from '../middleware/authMiddleware';
 import { isUserOnline } from '../utils/presence';
-import { sendEmailChangeCurrentEmail, sendEmailChangeNewEmail } from '../services/emailService';
+import { generateEmailOtp, verifyEmailOtp, verifyIdentitySession, consumeIdentitySession } from '../services/mfaService';
 
 const router = express.Router();
+
+// Rate limiter for sensitive account updates
+const accountUpdateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP/User to 5 requests per window
+  message: { error: "Too many update attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: any) => req.user?.id || req.ip,
+});
 
 // Configure multer for memory storage
 const upload = multer({
@@ -48,61 +58,60 @@ router.get('/me', verifyUser, async (req: AuthenticatedRequest, res: Response) =
 router.patch('/profile', verifyUser, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
   const { username } = req.body;
   const userId = req.user?.id;
-  const file = req.file;
 
-  const updateData: any = {};
-  if (username) {
-    if (username.length < 3 || username.length > 30) {
-      res.status(400).json({ error: "Username must be 3-30 characters" });
-      return;
-    }
-    updateData.username = username;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
-  if (file) {
-    const fileExt = file.originalname.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = fileName;
+  try {
+    let avatarUrl = undefined;
 
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true
-      });
+    // Handle file upload if present
+    if (req.file) {
+      const file = req.file;
+      const fileExt = file.originalname.split('.').pop();
+      const fileName = `${userId}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
 
-    if (!uploadError) {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
-      updateData.avatar_url = publicUrl;
-    } else {
-      console.error('Avatar upload error:', uploadError);
+
+      avatarUrl = publicUrl;
     }
+
+    // Update profile in database
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (avatarUrl) updateData.avatar_url = avatarUrl;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Failed to update profile" });
   }
-
-  if (Object.keys(updateData).length === 0) {
-    res.status(400).json({ error: "No update data provided" });
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updateData)
-    .eq('id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
-  }
-
-  res.json(data);
 });
 
 // PATCH /password - Update user password (PROTECTED)
-router.patch('/password', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/password', verifyUser, verifyTransactionalMfa, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
   const { password } = req.body;
   const userId = req.user?.id;
 
@@ -126,55 +135,127 @@ router.patch('/password', verifyUser, async (req: AuthenticatedRequest, res: Res
   res.json({ message: "Password updated successfully" });
 });
 
-// PATCH /email - Update user email (PROTECTED)
-router.patch('/email', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
-  const { email: newEmail } = req.body;
+/**
+ * POST /email/request-otp - Phase 3 (Refined)
+ * 
+ * Requests a verification code for a new email.
+ * Enforces Identity Check: MFA-enabled users MUST have a valid identity session (unlocked).
+ */
+router.post('/email/request-otp', verifyUser, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  let { newEmail } = req.body;
   const userId = req.user?.id;
   const currentEmail = req.user?.email;
 
-  if (!newEmail || !newEmail.includes('@')) {
+  // 1. Enforce Identity Check for MFA users
+  if (req.user?.app_metadata?.mfa_preference !== 'none') {
+    try {
+      await verifyIdentitySession(userId);
+    } catch (err: any) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+  }
+
+  // Normalize
+  newEmail = newEmail?.trim().toLowerCase();
+
+  // 3. Validate format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!newEmail || !emailRegex.test(newEmail)) {
     res.status(400).json({ error: "Valid email is required" });
     return;
   }
 
-  if (!userId || !currentEmail) {
+  // 4. Same-email guard
+  if (newEmail === currentEmail?.toLowerCase()) {
+    res.status(400).json({ error: "New email must differ from current email" });
+    return;
+  }
+
+  try {
+    // 5. Duplicate-email check (Accurate via Admin API)
+    const { data: existingUsers, error: lookupError } = await supabase.auth.admin.listUsers();
+    if (!lookupError && existingUsers?.users?.some(u => u.email?.toLowerCase() === newEmail && u.id !== userId)) {
+      res.status(409).json({ error: "This email address is already in use." });
+      return;
+    }
+
+    // 6. Generate OTP and send to NEW email address (Ownership Challenge)
+    const result = await generateEmailOtp(userId!, newEmail, 'email_change', newEmail);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /email - Phase 3 (Refined)
+ * 
+ * Finalize email change by verifying the Ownership OTP sent to the new address.
+ */
+router.patch('/email', verifyUser, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  let { newEmail, code } = req.body;
+  const userId = req.user?.id;
+  const currentEmail = req.user?.email;
+
+  // 1. Enforce Identity Check for MFA users
+  if (req.user?.app_metadata?.mfa_preference !== 'none') {
+    try {
+      await verifyIdentitySession(userId);
+    } catch (err: any) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+  }
+
+  // 2. Normalize
+  newEmail = newEmail?.trim().toLowerCase();
+
+  // 3. Validate
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!newEmail || !emailRegex.test(newEmail)) {
+    res.status(400).json({ error: "Valid email is required" });
+    return;
+  }
+  if (!code || !/^\d{6}$/.test(code)) {
+    res.status(400).json({ error: "A valid 6-digit verification code is required." });
+    return;
+  }
+  if (newEmail === currentEmail?.toLowerCase()) {
+    res.status(400).json({ error: "New email must differ from current email" });
+    return;
+  }
+  if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
   try {
-    // Generate link for the current email address
-    const { data: currentEmailData, error: currentEmailError } = await supabase.auth.admin.generateLink({
-      type: 'email_change_current',
-      email: currentEmail,
-      newEmail: newEmail,
-      user_id: userId,
-    } as any);
+    // 4. Verify OTP — proves ownership of this specific newEmail
+    await verifyEmailOtp(userId, code, 'email_change', newEmail);
 
-    if (currentEmailError) throw currentEmailError;
+    // 5. Execute the email change via Admin API
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      email: newEmail,
+      email_confirm: true,
+    });
 
-    // Generate link for the new email address
-    const { data: newEmailData, error: newEmailError } = await supabase.auth.admin.generateLink({
-      type: 'email_change_new',
-      email: currentEmail,
-      newEmail: newEmail,
-      user_id: userId,
-    } as any);
+    if (error) throw error;
 
-    if (newEmailError) throw newEmailError;
+    // 6. Update the profile email as well for consistency
+    await supabase
+      .from('profiles')
+      .update({ email: newEmail })
+      .eq('id', userId);
 
-    // Send emails using our custom email service
-    if (currentEmailData.properties?.action_link) {
-      await sendEmailChangeCurrentEmail(currentEmail, currentEmailData.properties.action_link);
-    }
-    
-    if (newEmailData.properties?.action_link) {
-      await sendEmailChangeNewEmail(newEmail, newEmailData.properties.action_link);
+    // 7. Success! Consume the identity session
+    if (req.user?.app_metadata?.mfa_preference !== 'none') {
+      await consumeIdentitySession(userId);
     }
 
-    res.json({ message: "Confirmation emails sent to both new and old email addresses. Please verify to complete the update." });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || "Failed to initiate email change." });
+    res.json({ message: "Email updated successfully." });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || "Failed to update email." });
   }
 });
 
@@ -188,25 +269,26 @@ router.get('/search', verifyUser, async (req: AuthenticatedRequest, res: Respons
     return;
   }
 
-  const { data: users, error } = await supabase
-    .from('profiles')
-    .select('id, username, avatar_url')
-    .ilike('username', `%${q.trim()}%`)
-    .neq('id', myId)
-    .limit(10);
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .neq('id', myId)
+      .ilike('username', `%${q}%`)
+      .limit(10);
 
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+    if (error) throw error;
+
+    // Check online status for each found user
+    const usersWithPresence = data.map(u => ({
+      ...u,
+      isOnline: isUserOnline(u.id)
+    }));
+
+    res.json(usersWithPresence);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || "Search failed" });
   }
-
-  // Check online status for each user
-  const usersWithPresence = users?.map(u => ({
-    ...u,
-    isOnline: isUserOnline(u.id)
-  }));
-
-  res.json(usersWithPresence || []);
 });
 
 export default router;
