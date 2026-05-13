@@ -168,7 +168,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 cursor-pointer group overflow-hidden shrink-0"
+              className="relative w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 cursor-pointer group overflow-hidden shrink-0"
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Avatar Preview" className="w-full h-full object-cover" />

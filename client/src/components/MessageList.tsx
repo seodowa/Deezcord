@@ -89,7 +89,7 @@ function MessageListComponent({
       // Otherwise, only auto-scroll if already at bottom or if it's a new message from the current user
       const lastMessage = messages[messages.length - 1];
       const isOwnLastMessage = lastMessage?.user_id === currentUser?.id;
-      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 400; 
+      const isAtBottom = scrollRef.current.scrollHeight - scrollRef.current.scrollTop <= scrollRef.current.clientHeight + 150; 
       
       if (isAtBottom || isOwnLastMessage) {
         // Use a tiny timeout for subsequent messages as well to ensure content height is updated
@@ -251,7 +251,7 @@ function MessageListComponent({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5" />
                         </svg>
                       </div>
-                      <div className={`text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 truncate max-w-[200px] ${isOwn ? 'text-right' : 'text-left'}`}>
+                      <div className={`text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 truncate max-w-50 ${isOwn ? 'text-right' : 'text-left'}`}>
                         <span className="font-bold text-blue-500 mr-1">{msg.parent_message?.username || 'Unknown'}:</span>
                         <span className="text-slate-500 dark:text-slate-400 italic">"{msg.parent_message?.content || 'Original message'}"</span>
                       </div>
@@ -269,7 +269,7 @@ function MessageListComponent({
                   
                   <div className="relative group/content">
                     <div 
-                      className={`px-4 py-2 rounded-2xl shadow-sm text-sm break-words select-none lg:select-auto ${
+                      className={`px-4 py-2 rounded-2xl shadow-sm text-sm wrap-break-word select-none lg:select-auto ${
                         isOwn 
                           ? 'bg-blue-500 text-white rounded-tr-none' 
                           : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200/50 dark:border-white/10 rounded-tl-none'
@@ -312,7 +312,7 @@ function MessageListComponent({
                                 loading="lazy"
                                 width={msg.file_width || undefined}
                                 height={msg.file_height || undefined}
-                                className={`max-w-full h-full object-contain hover:scale-[1.02] transition-transform duration-300 opacity-0 animate-fade-in ${!msg.file_width ? 'min-h-[120px] w-full' : ''}`}
+                                className={`max-w-full h-full object-contain hover:scale-[1.02] transition-transform duration-300 opacity-0 animate-fade-in ${!msg.file_width ? 'min-h-30 w-full' : ''}`}
                                 onLoad={(e) => (e.currentTarget.style.opacity = '1')}
                               />
                             </a>
@@ -327,10 +327,10 @@ function MessageListComponent({
                                                                 : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-500'
                                                             } cursor-pointer`}
                             >
-                              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              <span className="text-xs font-medium truncate max-w-[150px] md:max-w-[250px]">
+                              <span className="text-xs font-medium truncate max-w-37.5 md:max-w-62.5">
                                 {msg.file_name || 'Download Attachment'}
                               </span>
                             </a>
@@ -341,7 +341,7 @@ function MessageListComponent({
 
                     {/* Hover Actions Container */}
                     <div className={`hidden md:flex absolute top-1 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 ${
-                      isOwn ? (onDeleteMessage ? '-left-[7rem]' : '-left-20') : '-right-20'
+                      isOwn ? (onDeleteMessage ? '-left-28' : '-left-20') : '-right-20'
                     }`}>
                       {onReplyMessage && (
                         <button

@@ -73,7 +73,7 @@ function Tooltip({ text, targetRef, show }: { text: string; targetRef: React.Ref
 
   return createPortal(
     <div
-      className="fixed z-[9999] px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap animate-tooltip-in"
+      className="fixed z-9999 px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold shadow-xl pointer-events-none whitespace-nowrap animate-tooltip-in"
       style={{ top: pos.top, left: pos.left, transform: 'translateY(-50%)' }}
     >
       {text}
@@ -107,7 +107,7 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
           onClick={handleClick}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          className={`relative w-11 h-11 flex-shrink-0 flex items-center justify-center font-bold text-sm transition-all duration-300 overflow-hidden ${
+          className={`relative w-11 h-11 shrink-0 flex items-center justify-center font-bold text-sm transition-all duration-300 overflow-hidden ${
                       isActive
                         ? 'rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 scale-100'
                         : 'rounded-2xl bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-indigo-500 dark:hover:text-indigo-400'
@@ -206,10 +206,10 @@ function SidebarComponent({
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex md:relative transition-all duration-300 ease-expo ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 ${isCollapsed ? 'w-[68px]' : 'w-[312px]'} h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/5 flex-shrink-0 overflow-hidden`}
+        } md:translate-x-0 ${isCollapsed ? 'w-17' : 'w-78'} h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/5 shrink-0 overflow-hidden`}
       >
         {/* ── UNIFIED RAIL (Utility Area) ── */}
-        <div className="w-[68px] flex flex-col items-center py-4 flex-shrink-0 bg-slate-900/5 dark:bg-white/5 h-full border-r border-slate-200/30 dark:border-white/5">
+        <div className="w-17 flex flex-col items-center py-4 shrink-0 bg-slate-900/5 dark:bg-white/5 h-full border-r border-slate-200/30 dark:border-white/5">
           {/* Brand Mark */}
           <button
             type="button"
@@ -384,7 +384,7 @@ function SidebarComponent({
                           await new Promise(resolve => setTimeout(resolve, 300));
                           if (onSelectDM) onSelectDM(dm);
                         }}
-                        className={`w-full group flex items-center !justify-start gap-3 px-3 py-2 rounded-xl transition-all duration-500 ${
+                        className={`w-full group flex items-center justify-start! gap-3 px-3 py-2 rounded-xl transition-all duration-500 ${
                                                   currentRoomId === dm.id
                                                     ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
                                                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
@@ -487,7 +487,7 @@ function SidebarComponent({
                           await new Promise(resolve => setTimeout(resolve, 300));
                           onSelectChannel(channel);
                         }}
-                        className={`w-full group flex items-center !justify-start gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
+                        className={`w-full group flex items-center justify-start! gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
                                                   channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
                                                 } ${
                                                   currentChannelId === channel.id
@@ -514,7 +514,7 @@ function SidebarComponent({
                 onClick={onOpenProfile}
                 className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity cursor-pointer"
               >
-                <div className="relative flex-shrink-0">
+                <div className="relative shrink-0">
                   <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden">
                     {user?.avatar_url ? (
                       <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />

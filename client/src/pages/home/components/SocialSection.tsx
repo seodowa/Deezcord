@@ -87,7 +87,7 @@ export default function SocialSection({
       {/* Sidebar Top Section - Toggles */}
       <div className="shrink-0 border-b border-slate-200/50 dark:border-white/5 p-3 pt-0">
         {/* Tab Header - Switch Style (Narrower Width) */}
-        <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-[260px] mx-auto">
+        <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-65 mx-auto">
           {/* Sliding Background Indicator */}
           <div 
             className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-[calc(1rem-2px)] transition-all duration-300 ease-out shadow-sm ${
@@ -144,7 +144,7 @@ export default function SocialSection({
                   {pendingList.map(request => (
                     <div key={request.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 shadow-sm">
                       <div 
-                        className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden cursor-pointer shrink-0"
+                        className="w-10 h-10 rounded-xl bg-linear-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden cursor-pointer shrink-0"
                         onClick={() => onUserClick({ id: request.id, username: request.username, avatar_url: request.avatar_url })}
                       >
                         {request.avatar_url ? (
@@ -197,13 +197,13 @@ export default function SocialSection({
                         onClick={() => onDMClick(dm)}
                         className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                       >
-                        <div className="relative flex-shrink-0">
+                        <div className="relative shrink-0">
                           <div 
                             onClick={(e) => {
                               e.stopPropagation();
                               onUserClick({ id: target.id, username: target.username, avatar_url: target.avatar_url });
                             }}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-slate-400 to-slate-600'} cursor-pointer`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-linear-to-br from-emerald-400 to-emerald-600' : 'bg-linear-to-br from-slate-400 to-slate-600'} cursor-pointer`}
                           >
                             {target.avatar_url ? (
                               <img src={target.avatar_url} alt={target.username} className="w-full h-full object-cover" />
@@ -240,8 +240,8 @@ export default function SocialSection({
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
                       className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                     >
-                      <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-gradient-to-br from-emerald-400 to-emerald-600">
+                      <div className="relative shrink-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-linear-to-br from-emerald-400 to-emerald-600">
                           {friend.avatar_url ? (
                             <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
                           ) : (
@@ -292,8 +292,8 @@ export default function SocialSection({
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
                       className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                     >
-                      <div className="relative flex-shrink-0 grayscale group-hover:grayscale-0 transition-all">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-gradient-to-br from-slate-400 to-slate-600">
+                      <div className="relative shrink-0 grayscale group-hover:grayscale-0 transition-all">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-linear-to-br from-slate-400 to-slate-600">
                           {friend.avatar_url ? (
                             <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
                           ) : (

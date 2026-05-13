@@ -79,7 +79,7 @@ export default function Modal({
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in cursor-pointer"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in cursor-pointer"
       onClick={handleBackdropClick}
     >
       <div 

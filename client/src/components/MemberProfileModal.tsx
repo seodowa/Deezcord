@@ -132,7 +132,7 @@ export default function MemberProfileModal({ isOpen, onClose, user, onMessageCli
       maxWidth="max-w-sm"
     >
       <div className="flex flex-col items-center space-y-6">
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
+        <div className="w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
           {user.avatar_url ? (
             <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
           ) : (
