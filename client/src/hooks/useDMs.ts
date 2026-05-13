@@ -60,7 +60,7 @@ export function useDMs() {
       });
       if (!response.ok) throw new Error('Failed to create DM');
       const data = await response.json();
-      
+
       // Optimistically update list if it's a new DM
       if (!dms.find(d => d.id === data.id)) {
           // We need to fetch again to get the full joined data with the target user profile
@@ -74,11 +74,32 @@ export function useDMs() {
     }
   };
 
+  const deleteDM = async (roomId: string): Promise<boolean> => {
+    if (!token) return false;
+    try {
+      const response = await fetchWithAuth(`${API_URL}/api/dms/${roomId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete DM');
+
+      // Update local state
+      const updatedDMs = dms.filter(d => d.id !== roomId);
+      setDms(updatedDMs);
+      saveDMs(updatedDMs);
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
   return {
     dms,
     isLoading,
     error,
     createDM,
+    deleteDM,
     refreshDMs: fetchDMs
   };
-}
+  }

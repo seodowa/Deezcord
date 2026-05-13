@@ -58,7 +58,7 @@ export default function HomeLayout() {
     joinExistingRoom 
   } = useRooms();
 
-  const { dms, createDM, isLoading: isLoadingDMs } = useDMs();
+  const { dms, createDM, deleteDM, isLoading: isLoadingDMs } = useDMs();
   const social = useSocial();
 
   const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
@@ -246,7 +246,22 @@ export default function HomeLayout() {
     navigate('/login');
   }, [logout, addToast, navigate]);
 
-  const handleMessageClick = async (u: { id: string; username: string; avatar_url?: string | null }) => {
+  const handleDeleteDM = useCallback(async (roomId: string) => {
+    const success = await deleteDM(roomId);
+    if (success) {
+      addToast('Conversation left.', 'info');
+      // If we're currently viewing this DM, navigate home
+      if (currentRoom?.id === roomId) {
+        navigate('/');
+      }
+      return true;
+    } else {
+      addToast('Failed to leave conversation.', 'error');
+      return false;
+    }
+  }, [deleteDM, addToast, currentRoom?.id, navigate]);
+
+  const handleMessageClick = useCallback(async (u: { id: string; username: string; avatar_url?: string | null }) => {
     try {
       const result = await createDM(u.id);
       if (result) {
@@ -260,14 +275,14 @@ export default function HomeLayout() {
     } catch {
       addToast('An error occurred.', 'error');
     }
-  };
+  }, [createDM, navigate, addToast]);
 
-  const handleDMClick = (dm: Room) => {
+  const handleDMClick = useCallback((dm: Room) => {
     setIsSocialOpen(false);
     navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
       state: { roomId: dm.id, channelId: dm.defaultChannelId } 
     });
-  };
+  }, [navigate]);
 
   const outletContext = useMemo(() => ({
     currentRoom,
@@ -301,7 +316,8 @@ export default function HomeLayout() {
     dms,
     isLoadingDMs,
     handleMessageClick,
-    handleDMClick
+    handleDMClick,
+    handleDeleteDM
   }), [
     currentRoom, 
     currentChannel, 
@@ -333,7 +349,8 @@ export default function HomeLayout() {
     dms,
     isLoadingDMs,
     handleMessageClick,
-    handleDMClick
+    handleDMClick,
+    handleDeleteDM
   ]);
 
   // Show a full-page loading screen until both user and initial rooms are loaded

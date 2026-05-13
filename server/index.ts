@@ -222,6 +222,15 @@ io.on('connection', (socket: AuthenticatedSocket) => {
 
       if (error) throw error;
 
+      // Automatically unhide DM conversation for all members when a message is sent
+      const { data: roomInfo } = await supabase.from('rooms').select('is_dm').eq('id', data.room_id).single();
+      if (roomInfo?.is_dm) {
+        await supabase
+          .from('room_members')
+          .update({ is_hidden: false })
+          .eq('room_id', data.room_id);
+      }
+
       // Broadcast the message to EVERYONE in the channel including the sender
       const broadcastData: ReceiveMessagePayload = {
           id: insertedData.id,

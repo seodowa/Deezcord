@@ -9,11 +9,12 @@ const router = express.Router();
 router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.id;
 
-  // 1. Fetch room memberships for this user where the room is a DM
+  // 1. Fetch room memberships for this user where the room is a DM AND not hidden
   const { data: memberships, error } = await supabase
     .from('room_members')
     .select(`
       role,
+      is_hidden,
       rooms!inner (
         id,
         name,
@@ -24,6 +25,7 @@ router.get('/', verifyUser, async (req: AuthenticatedRequest, res: Response) => 
     `)
     .eq('user_id', userId)
     .eq('rooms.is_dm', true)
+    .neq('is_hidden', true) // Filter out hidden conversations
     .order('created_at', { referencedTable: 'rooms', ascending: false });
 
   if (error) {
@@ -172,6 +174,13 @@ router.post('/:targetUserId', verifyUser, async (req: AuthenticatedRequest, res:
       // DM already exists, return the room info
       const existingRoomId = sharedRooms[0].room_id;
       
+      // Resurface the room for the current user if it was hidden
+      await supabase
+        .from('room_members')
+        .update({ is_hidden: false })
+        .eq('room_id', existingRoomId)
+        .eq('user_id', userId);
+
       // Fetch room details
       const { data: existingRoom, error: fetchError } = await supabase
         .from('rooms')
@@ -265,6 +274,25 @@ router.post('/:targetUserId', verifyUser, async (req: AuthenticatedRequest, res:
   }
 
   res.status(201).json({ ...roomData, defaultChannelId: channelData.id });
+});
+
+// DELETE /api/dms/:roomId - Soft-hide a DM for the current user
+router.delete('/:roomId', verifyUser, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  const { roomId } = req.params;
+
+  const { error } = await supabase
+    .from('room_members')
+    .update({ is_hidden: true })
+    .eq('room_id', roomId)
+    .eq('user_id', userId);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  res.status(200).json({ message: "Conversation hidden successfully" });
 });
 
 export default router;
