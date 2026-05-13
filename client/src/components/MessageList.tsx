@@ -290,13 +290,26 @@ function MessageListComponent({
                       
                       {msg.file_url && (
                         <div className={`mt-2 ${msg.content ? 'pt-2 border-t border-white/20 dark:border-white/10' : ''}`}>
-                          {msg.file_url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
-                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-700/50 cursor-pointer">
+                          {msg.file_url.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i) ? (
+                            <a 
+                              href={msg.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="block overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-700/50 cursor-pointer"
+                              style={{ 
+                                aspectRatio: msg.file_width && msg.file_height ? `${msg.file_width} / ${msg.file_height}` : 'auto',
+                                maxHeight: '256px',
+                                maxWidth: msg.file_width && msg.file_height ? `min(100%, ${Math.min(msg.file_width, 400)}px)` : '100%',
+                                width: msg.file_width && msg.file_height ? 'auto' : '100%'
+                              }}
+                            >
                               <img 
                                 src={msg.file_url} 
                                 alt="Attachment" 
                                 loading="lazy"
-                                className="max-w-full max-h-64 min-h-[120px] object-contain hover:scale-[1.02] transition-transform duration-300 opacity-0 animate-fade-in"
+                                width={msg.file_width || undefined}
+                                height={msg.file_height || undefined}
+                                className={`max-w-full h-full object-contain hover:scale-[1.02] transition-transform duration-300 opacity-0 animate-fade-in ${!msg.file_width ? 'min-h-[120px] w-full' : ''}`}
                                 onLoad={(e) => (e.currentTarget.style.opacity = '1')}
                               />
                             </a>
