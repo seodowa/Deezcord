@@ -399,13 +399,6 @@ export default function HomeLayout() {
         }}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
-        onSelectDM={(dm) => {
-          setIsMobileMenuOpen(false);
-          setIsSocialOpen(false);
-          navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
-            state: { roomId: dm.id, channelId: dm.defaultChannelId } 
-          });
-        }}
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
