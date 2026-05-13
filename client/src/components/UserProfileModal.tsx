@@ -167,8 +167,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="relative w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 cursor-pointer group overflow-hidden shrink-0"
+              onClick={() => !isUpdatingProfile && fileInputRef.current?.click()}
+              className={`relative w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 group overflow-hidden shrink-0 ${isUpdatingProfile ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
@@ -204,7 +204,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               <AsyncButton
                 onClick={handleUpdateProfile}
                 isLoading={isUpdatingProfile}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
               >
                 Save Profile
               </AsyncButton>

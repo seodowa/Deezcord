@@ -79,13 +79,13 @@ export default function Modal({
 
   return (
     <div 
-      className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in cursor-pointer"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
       onClick={handleBackdropClick}
     >
       <div 
         ref={modalRef}
         tabIndex={-1}
-        className={`w-full ${maxWidth} bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh] focus:outline-none cursor-pointer`}
+        className={`w-full ${maxWidth} bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh] focus:outline-none`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
