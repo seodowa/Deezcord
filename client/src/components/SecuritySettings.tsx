@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast';
-import { updatePassword, updateEmail, requestEmailChangeOtp } from '../services/userService';
+import { updatePassword, updateEmail, requestEmailChangeOtp, deleteAccount } from '../services/userService';
 import { verifyMfaCode } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import { useRooms } from '../hooks/useRooms';
 import AsyncButton from './AsyncButton';
 import MfaTransactionModal from './MfaTransactionModal';
 
@@ -34,7 +35,8 @@ export default function SecuritySettings({
   onDisableMFA
 }: SecuritySettingsProps) {
   const { addToast } = useToast();
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
+  const { rooms } = useRooms();
   
   // Email Change State machine
   const [emailStage, setEmailStage] = useState<EmailStage>('locked');
@@ -49,9 +51,12 @@ export default function SecuritySettings({
   const [confirmPassword, setNewConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Account Deletion State
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
   // MFA Modal State
   const [showMfaModal, setShowMfaModal] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'unlock_email' | 'unlock_password' | 'execute_password' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'unlock_email' | 'unlock_password' | 'execute_password' | 'delete_account' | null>(null);
 
   // Vault Auto-Lock (Security cleanup)
   useEffect(() => {
@@ -88,6 +93,25 @@ export default function SecuritySettings({
     }
   };
 
+  const handleDeleteAccount = () => {
+    // 1. Ownership check (Frontend guard)
+    const ownsRooms = rooms.some(r => r.role === 'owner');
+    if (ownsRooms) {
+      addToast("You cannot delete your account while you own active rooms. Please delete them first.", "error");
+      return;
+    }
+
+    if (isMFAEnabled) {
+      setPendingAction('delete_account');
+      setShowMfaModal(true);
+    } else {
+      const confirmed = window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.");
+      if (confirmed) {
+        executeAccountDeletion();
+      }
+    }
+  };
+
   const handleMfaVerify = async (code: string) => {
     try {
       if (pendingAction === 'unlock_email' || pendingAction === 'unlock_password') {
@@ -101,12 +125,27 @@ export default function SecuritySettings({
       } else if (pendingAction === 'execute_password') {
         // Password still uses Double-MFA (Identity check for both steps)
         await executePasswordUpdate(code);
+      } else if (pendingAction === 'delete_account') {
+        await executeAccountDeletion(code);
       }
       
       setShowMfaModal(false);
       setPendingAction(null);
     } catch (err: any) {
       throw err; // Let modal display error
+    }
+  };
+
+  const executeAccountDeletion = async (mfaCode?: string) => {
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount(mfaCode);
+      addToast("Your account has been successfully deleted.", "success");
+      logout();
+    } catch (err: any) {
+      addToast(err.message || "Failed to delete account", "error");
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -413,6 +452,29 @@ export default function SecuritySettings({
               </div>
             </div>
           )}
+        </div>
+
+        <hr className="border-slate-200 dark:border-white/10" />
+
+        {/* Danger Zone */}
+        <div className="pt-4">
+          <h3 className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            Danger Zone
+          </h3>
+          <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-red-600 dark:text-red-400">Delete Account</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Permanently remove your account and all associated data.</p>
+            </div>
+            <AsyncButton
+              onClick={handleDeleteAccount}
+              isLoading={isDeletingAccount}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-500/20 cursor-pointer whitespace-nowrap"
+            >
+              Delete Account
+            </AsyncButton>
+          </div>
         </div>
       </div>
 

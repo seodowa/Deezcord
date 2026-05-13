@@ -105,3 +105,21 @@ export const searchUsers = async (query: string): Promise<User[]> => {
 
   return response.json();
 };
+
+export const deleteAccount = async (mfaCode?: string) => {
+  const response = await fetchWithAuth(`${API_URL}/api/users/me`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(mfaCode && { 'x-mfa-code': mfaCode }),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to delete account');
+  }
+
+  return data;
+};

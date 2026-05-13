@@ -298,4 +298,68 @@ router.get('/search', verifyUser, async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+// DELETE /me - Delete user account (PROTECTED)
+router.delete('/me', verifyUser, verifyTransactionalMfa, accountUpdateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    // 1. Strict ownership check (Backend fallback)
+    const { data: ownedRooms, error: ownershipError } = await supabase
+      .from('room_members')
+      .select('room_id')
+      .eq('user_id', userId)
+      .eq('role', 'owner');
+
+    if (ownershipError) throw ownershipError;
+
+    if (ownedRooms && ownedRooms.length > 0) {
+      res.status(400).json({ 
+        error: "You cannot delete your account while you own active rooms. Please delete or transfer ownership of your rooms first." 
+      });
+      return;
+    }
+
+    // 2. Data Cleanup Sequence
+    
+    // A. Delete friendships
+    const { error: friendsError } = await supabase
+      .from('friendships')
+      .delete()
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+    
+    if (friendsError) throw friendsError;
+
+    // B. Delete room memberships (Not an owner, safe to leave)
+    const { error: membersError } = await supabase
+      .from('room_members')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (membersError) throw membersError;
+
+    // C. Delete profile record
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+    
+    if (profileError) throw profileError;
+
+    // D. Final deletion: Auth record (Admin API)
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+    
+    if (authError) throw authError;
+
+    res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error: any) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ error: error.message || "Failed to delete account" });
+  }
+});
+
 export default router;
