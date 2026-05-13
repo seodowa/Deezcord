@@ -51,3 +51,8 @@ export interface ReactionUpdatePayload {
   message_id: string;
   reactions: MessageReaction[];
 }
+
+export interface ChannelDeletedPayload {
+  roomId: string;
+  channelId: string;
+}

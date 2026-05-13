@@ -186,6 +186,17 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     };
   }, []);
 
+  const onChannelDeleted = useCallback((callback: (data: { roomId: string, channelId: string }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('channel_deleted', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('channel_deleted', callback);
+      }
+    };
+  }, []);
+
   const onFriendRequestReceived = useCallback((callback: (data: { requesterId: string }) => void) => {
     if (socketRef.current) {
       socketRef.current.on('friend_request_received', callback);
@@ -249,6 +260,7 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     onRoomCreated, 
     onRoomDeleted, 
     onChannelCreated,
+    onChannelDeleted,
     onFriendRequestReceived,
     onFriendRequestAccepted,
     onFriendRemoved,

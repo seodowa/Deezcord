@@ -27,6 +27,7 @@ export interface SidebarProps {
   onSelectDM?: (dm: Room) => void;
   onCreateRoom: () => void;
   onCreateChannel: (name: string) => void;
+  onDeleteChannel?: (channelId: string) => void;
   onDiscoverRoom: () => void;
   onOpenProfile: () => void;
   isLoadingRooms: boolean;
@@ -126,6 +127,8 @@ function RoomIcon({ room, isActive, onClick }: { room: Room; isActive: boolean; 
   );
 }
 
+import Modal from './Modal';
+
 function SidebarComponent({
   rooms,
   dms = [],
@@ -146,6 +149,7 @@ function SidebarComponent({
   onSelectDM,
   onCreateRoom,
   onCreateChannel,
+  onDeleteChannel,
   onDiscoverRoom,
   onOpenProfile,
   isLoadingRooms,
@@ -166,6 +170,8 @@ function SidebarComponent({
   const [isCreatingChannelMode, setIsCreatingChannelMode] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [isChannelsCategoryOpen, setIsChannelsCategoryOpen] = useState(true);
+  const [isDeletingChannel, setIsDeletingChannel] = useState(false);
+  const [channelToDelete, setChannelToDelete] = useState<Channel | null>(null);
   const { user } = useAuth();
 
   const createBtnRef = useRef<HTMLButtonElement>(null);
@@ -192,6 +198,17 @@ function SidebarComponent({
     setNewChannelName('');
   };
 
+  const handleConfirmDeleteChannel = async () => {
+    if (!channelToDelete || !onDeleteChannel) return;
+    setIsDeletingChannel(true);
+    try {
+      await onDeleteChannel(channelToDelete.id);
+      setChannelToDelete(null);
+    } finally {
+      setIsDeletingChannel(false);
+    }
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -202,6 +219,43 @@ function SidebarComponent({
           aria-label="Close Sidebar"
         />
       )}
+
+      {/* Channel Deletion Confirmation Modal */}
+      <Modal
+        isOpen={!!channelToDelete}
+        onClose={() => setChannelToDelete(null)}
+        title="Delete Channel"
+        description={`Are you sure you want to delete "#${channelToDelete?.name}"? This action cannot be undone and all messages will be permanently removed.`}
+        isLoading={isDeletingChannel}
+        footer={
+          <>
+            <button
+              onClick={() => setChannelToDelete(null)}
+              className="px-6 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <AsyncButton
+              onClick={handleConfirmDeleteChannel}
+              isLoading={isDeletingChannel}
+              className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-bold shadow-lg shadow-red-500/25 hover:bg-red-600 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              Delete Channel
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center justify-center py-4">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-4">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <p className="text-center text-slate-600 dark:text-slate-300 font-medium">
+            You are about to delete <span className="font-bold text-slate-900 dark:text-white">#{channelToDelete?.name}</span>.
+          </p>
+        </div>
+      </Modal>
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex md:relative transition-all duration-300 ease-expo ${
@@ -481,25 +535,41 @@ function SidebarComponent({
 
                   <div className={`space-y-0.5 transition-all duration-300 ${isChannelsCategoryOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
                     {channels.map(channel => (
-                      <AsyncButton
-                        key={channel.id}
-                        onClick={async () => {
-                          await new Promise(resolve => setTimeout(resolve, 300));
-                          onSelectChannel(channel);
-                        }}
-                        className={`w-full group flex items-center justify-start! gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
-                                                  channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
-                                                } ${
-                                                  currentChannelId === channel.id
-                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                                                } cursor-pointer`}
-                      >
-                        <span className={`text-lg transition-colors ${currentChannelId === channel.id ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400'}`}>#</span>
-                        <span className={`text-[15px] truncate ${currentChannelId === channel.id ? 'font-bold' : 'font-medium'}`}>
-                          {channel.name}
-                        </span>
-                      </AsyncButton>
+                      <div key={channel.id} className="relative group/channel">
+                        <AsyncButton
+                          onClick={async () => {
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                            onSelectChannel(channel);
+                          }}
+                          className={`w-full flex items-center justify-start! gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 ${
+                                                    channel.isNew ? 'animate-slide-down bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm' : ''
+                                                  } ${
+                                                    currentChannelId === channel.id
+                                                      ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                                                  } cursor-pointer`}
+                        >
+                          <span className={`text-lg transition-colors ${currentChannelId === channel.id ? 'text-indigo-500' : 'text-slate-300 group-hover:text-slate-400'}`}>#</span>
+                          <span className={`text-[15px] truncate ${currentChannelId === channel.id ? 'font-bold' : 'font-medium'}`}>
+                            {channel.name}
+                          </span>
+                        </AsyncButton>
+
+                        {userRole === 'owner' && channels.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChannelToDelete(channel);
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover/channel:opacity-100 transition-all duration-200 cursor-pointer"
+                            title="Delete Channel"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

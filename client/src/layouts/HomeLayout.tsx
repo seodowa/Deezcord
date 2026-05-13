@@ -12,8 +12,8 @@ import { useRooms } from '../hooks/useRooms';
 import { useDMs } from '../hooks/useDMs';
 import { useSocial } from '../hooks/useSocial';
 import { useChat } from '../hooks/useChat';
-import { getChannels, createChannel } from '../services/roomService';
-import { loadChannels, saveChannels } from '../utils/persistence';
+import { getChannels, createChannel, deleteChannel } from '../services/roomService';
+import { loadChannels, saveChannels, clearChannelCache } from '../utils/persistence';
 import type { Room, Channel } from '../types/room';
 import { generateSlug } from '../utils/slug';
 
@@ -92,8 +92,37 @@ export default function HomeLayout() {
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   } = useChat(roomId, channelId, currentRoom?.isMember);
+
+  useEffect(() => {
+    const unsubscribe = onChannelDeleted((data: { roomId: string, channelId: string }) => {
+      if (currentRoom?.id === data.roomId) {
+        // Clear message cache for the deleted channel
+        clearChannelCache(data.channelId);
+
+        setChannels(prev => {
+          const updated = prev.filter(c => c.id !== data.channelId);
+          
+          // Update room's channels cache
+          saveChannels(data.roomId, updated);
+
+          // If the deleted channel was the current one, redirect
+          if (channelId === data.channelId && updated.length > 0) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(updated[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: updated[0].id }
+            });
+            addToast('The channel you were in has been deleted.', 'info');
+          }
+          
+          return updated;
+        });
+      }
+    });
+    return unsubscribe;
+  }, [onChannelDeleted, currentRoom?.id, currentRoom?.name, channelId, navigate, addToast]);
 
   useEffect(() => {
     const unsubscribe = onRoomCreated((data: unknown) => {
@@ -247,6 +276,40 @@ export default function HomeLayout() {
       addToast(error.message || 'Failed to create channel', 'error');
     } finally {
       setIsCreatingChannel(false);
+    }
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!currentRoom) return;
+    try {
+      await deleteChannel(currentRoom.id, channelId);
+      
+      // Clear message cache for the deleted channel
+      clearChannelCache(channelId);
+
+      setChannels(prev => {
+        const updated = prev.filter(c => c.id !== channelId);
+        
+        // Update room's channels cache
+        saveChannels(currentRoom.id, updated);
+        
+        return updated;
+      });
+
+      addToast('Channel deleted successfully.', 'success');
+      
+      // If we deleted the channel we were currently in, redirect (redundant with socket but good for UX)
+      if (channelId === stateChannelId) {
+        const remaining = channels.filter(c => c.id !== channelId);
+        if (remaining.length > 0) {
+          navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(remaining[0].name)}`, { 
+            state: { roomId: currentRoom.id, channelId: remaining[0].id } 
+          });
+        }
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      addToast(error.message || 'Failed to delete channel', 'error');
     }
   };
 
@@ -408,6 +471,7 @@ export default function HomeLayout() {
         }}
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
+        onDeleteChannel={handleDeleteChannel}
         onDiscoverRoom={handleDiscoverRoom}
         onOpenProfile={() => social.setIsUserProfileOpen(true)}
         isLoadingRooms={isLoadingRooms}

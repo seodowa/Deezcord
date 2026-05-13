@@ -46,7 +46,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     onPresenceUpdate,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   } = useSocket();
 
   const fetchMembers = useCallback(async (id: string) => {
@@ -338,6 +339,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   };
 };
