@@ -16,11 +16,9 @@ const accountUpdateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: any) => {
-    if (req.query.apiKey) return req.query.apiKey
-    
- 		// fallback to IP for unauthenticated users
-		// return req.ip // vulnerable
-		return ipKeyGenerator(req.ip) // better
+    if (req.query.apiKey) return req.query.apiKey;
+    if (req.user && req.user.id) return req.user.id;
+    return ipKeyGenerator(req.ip);
   },
 });
 
@@ -308,7 +306,16 @@ router.delete('/me', verifyUser, verifyTransactionalMfa, accountUpdateLimiter, a
   }
 
   try {
-    // 1. Strict ownership check (Backend fallback)
+    // 1. Fetch profile info first for cleanup (Avatar URL)
+    const { data: profile, error: profileFetchError } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (profileFetchError) throw profileFetchError;
+
+    // 2. Strict ownership check (Backend fallback)
     const { data: ownedRooms, error: ownershipError } = await supabase
       .from('room_members')
       .select('room_id')
@@ -324,33 +331,29 @@ router.delete('/me', verifyUser, verifyTransactionalMfa, accountUpdateLimiter, a
       return;
     }
 
-    // 2. Data Cleanup Sequence
-    
-    // A. Delete friendships
-    const { error: friendsError } = await supabase
-      .from('friendships')
-      .delete()
-      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-    
-    if (friendsError) throw friendsError;
+    // 3. Storage Asset Cleanup (Privacy Compliance)
+    if (profile?.avatar_url) {
+      try {
+        const urlParts = profile.avatar_url.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        if (filename) {
+          await supabase.storage
+            .from('avatars')
+            .remove([`avatars/${filename}`]);
+        }
+      } catch (storageErr) {
+        console.error('Storage cleanup failed (non-fatal):', storageErr);
+      }
+    }
 
-    // B. Delete room memberships (Not an owner, safe to leave)
-    const { error: membersError } = await supabase
-      .from('room_members')
-      .delete()
-      .eq('user_id', userId);
-    
-    if (membersError) throw membersError;
+    // 4. Atomic Database Teardown (Transactionality)
+    const { error: rpcError } = await supabase.rpc('delete_user_data', {
+      target_user_id: userId
+    });
 
-    // C. Delete profile record
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-    
-    if (profileError) throw profileError;
+    if (rpcError) throw rpcError;
 
-    // D. Final deletion: Auth record (Admin API)
+    // 5. Final deletion: Auth record (Admin API)
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
     
     if (authError) throw authError;
