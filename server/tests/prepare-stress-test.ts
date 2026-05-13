@@ -27,7 +27,7 @@ async function main() {
     console.log(`Room ID: ${room.id}`);
     console.log(`Channel ID: ${channel.id}`);
     console.log("\n--- Run this command to start locust test ---");
-    console.log(`TOKEN=${token}\nROOM_ID=${room.id}\nCHANNEL_ID=${channel.id}\nBASE_URL=http://localhost:3001`);
+    console.log(`TOKEN=${token}\nDEVICE_ID=test-device-id\nROOM_ID=${room.id}\nCHANNEL_ID=${channel.id}\nBASE_URL=http://localhost:3001`);
     
   } catch (error: any) {
     console.error("Failed to prepare test context:", error.message);
