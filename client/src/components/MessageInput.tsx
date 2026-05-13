@@ -4,7 +4,7 @@ import { useToast } from '../hooks/useToast';
 import AsyncButton from './AsyncButton';
 
 interface MessageInputProps {
-  onSendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => void;
+  onSendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null, fileWidth?: number, fileHeight?: number) => void;
   onStartTyping?: () => void;
   onStopTyping?: () => void;
   isDisabled?: boolean;
@@ -54,6 +54,25 @@ function MessageInputComponent({
     }
   }, [replyTo]);
 
+  const getFileDimensions = (file: File): Promise<{ width: number; height: number } | null> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve(null);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => {
+        resolve(null);
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((content.trim() || selectedFile) && !isDisabled && !isUploading) {
@@ -61,12 +80,21 @@ function MessageInputComponent({
       try {
         let fileUrl = undefined;
         let fileName = undefined;
+        let fileWidth = undefined;
+        let fileHeight = undefined;
         if (selectedFile && roomId && channelId) {
           fileName = selectedFile.name;
+          
+          const dimensions = await getFileDimensions(selectedFile);
+          if (dimensions) {
+            fileWidth = dimensions.width;
+            fileHeight = dimensions.height;
+          }
+          
           fileUrl = await uploadFile(roomId, channelId, selectedFile);
         }
         
-        onSendMessage(content.trim(), fileUrl, fileName, replyTo?.id);
+        onSendMessage(content.trim(), fileUrl, fileName, replyTo?.id, fileWidth, fileHeight);
         setContent('');
         setSelectedFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';

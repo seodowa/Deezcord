@@ -213,6 +213,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           content: data.content,
           file_url: data.file_url, // Store optional file URL
           file_name: data.file_name, // Store optional file name
+          file_width: data.file_width, // Store optional image width
+          file_height: data.file_height, // Store optional image height
           parent_id: data.parent_id // Store parent_id for replies
         }])
         .select()
@@ -232,6 +234,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           avatar_url: profile?.avatar_url,
           file_url: data.file_url,
           file_name: data.file_name,
+          file_width: data.file_width,
+          file_height: data.file_height,
           parent_id: data.parent_id,
           parent_message: parentMessage,
           temp_id: data.temp_id

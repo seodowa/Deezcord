@@ -50,7 +50,7 @@ export const useSocket = () => {
     }
   }, []);
 
-  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; parent_id?: string | null; temp_id?: string }) => {
+  const sendMessage = useCallback((data: { room_id: string; channel_id: string; content: string; file_url?: string; file_name?: string; file_width?: number | null; file_height?: number | null; parent_id?: string | null; temp_id?: string }) => {
     if (socketRef.current) {
       socketRef.current.emit('send_message', data);
     }
