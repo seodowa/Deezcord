@@ -12,9 +12,10 @@ interface MemberProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  onMessageClick?: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void> | void;
 }
 
-export default function MemberProfileModal({ isOpen, onClose, user }: MemberProfileModalProps) {
+export default function MemberProfileModal({ isOpen, onClose, user, onMessageClick }: MemberProfileModalProps) {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const { createDM } = useDMs();
@@ -74,6 +75,12 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
   const handleMessage = async () => {
     setIsMessageLoading(true);
     try {
+      if (onMessageClick) {
+        await onMessageClick({ id: user.id, username: user.username, avatar_url: user.avatar_url });
+        onClose();
+        return;
+      }
+
       const result = await createDM(user.id);
       if (result) {
         onClose();

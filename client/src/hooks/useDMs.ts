@@ -64,7 +64,7 @@ export function useDMs() {
       // Optimistically update list if it's a new DM
       if (!dms.find(d => d.id === data.id)) {
           // We need to fetch again to get the full joined data with the target user profile
-          fetchDMs(); 
+          await fetchDMs(); 
       }
 
       return { room: data, channelId: data.defaultChannelId };

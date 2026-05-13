@@ -20,11 +20,11 @@ import { generateSlug } from '../utils/slug';
 export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,6 +63,16 @@ export default function HomeLayout() {
 
   const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
                       dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
+
+  const currentRoomId = currentRoom?.id || null;
+
+  // Sync loading state when room changes to avoid race conditions and premature redirects
+  if (currentRoomId !== activeRoomId) {
+    setActiveRoomId(currentRoomId);
+    setIsLoadingChannels(!!currentRoomId);
+    setChannels([]);
+  }
+
   const roomId = currentRoom?.id;
   const currentChannel = channels.find(c => stateChannelId ? c.id === stateChannelId : generateSlug(c.name) === channelSlug);
   const channelId = currentChannel?.id;
@@ -249,17 +259,15 @@ export default function HomeLayout() {
   const handleDeleteDM = useCallback(async (roomId: string) => {
     const success = await deleteDM(roomId);
     if (success) {
-      addToast('Conversation left.', 'info');
       // If we're currently viewing this DM, navigate home
       if (currentRoom?.id === roomId) {
         navigate('/');
       }
       return true;
     } else {
-      addToast('Failed to leave conversation.', 'error');
       return false;
     }
-  }, [deleteDM, addToast, currentRoom?.id, navigate]);
+  }, [deleteDM, currentRoom?.id, navigate]);
 
   const handleMessageClick = useCallback(async (u: { id: string; username: string; avatar_url?: string | null }) => {
     try {
@@ -401,7 +409,7 @@ export default function HomeLayout() {
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
         onDiscoverRoom={handleDiscoverRoom}
-        onOpenProfile={() => setIsUserProfileOpen(true)}
+        onOpenProfile={() => social.setIsUserProfileOpen(true)}
         isLoadingRooms={isLoadingRooms}
         isCreatingRoom={isCreatingRoom}
         isCreatingChannel={isCreatingChannel}
@@ -423,8 +431,8 @@ export default function HomeLayout() {
       />
 
       <UserProfileModal
-        isOpen={isUserProfileOpen}
-        onClose={() => setIsUserProfileOpen(false)}
+        isOpen={social.isUserProfileOpen}
+        onClose={() => social.setIsUserProfileOpen(false)}
       />
 
       <MemberProfileModal
@@ -434,6 +442,7 @@ export default function HomeLayout() {
           social.handleRefreshFriends();
         }}
         user={social.selectedFriendProfile}
+        onMessageClick={handleMessageClick}
       />
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">

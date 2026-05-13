@@ -43,7 +43,7 @@ interface HomeContextType {
   };
   dms: Room[];
   isLoadingDMs: boolean;
-  handleMessageClick: (u: { id: string; username: string }) => Promise<void>;
+  handleMessageClick: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void>;
   handleDMClick: (dm: Room) => void;
 }
 
@@ -165,11 +165,6 @@ const WelcomeDashboard = () => {
           onDMClick={handleDMClick}
         />
       </aside>
-
-      <UserProfileModal
-        isOpen={social.isUserProfileOpen}
-        onClose={() => social.setIsUserProfileOpen(false)}
-      />
     </div>
   );
 };

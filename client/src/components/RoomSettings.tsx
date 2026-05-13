@@ -17,9 +17,10 @@ interface RoomSettingsProps {
   onMemberChange: () => void;
   onLeave: () => void;
   onDeleteDM?: (roomId: string) => Promise<boolean>;
+  onMessageClick?: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void> | void;
 }
 
-export default function RoomSettings({ room, members, onRoomUpdate, onMemberChange, onLeave, onDeleteDM }: RoomSettingsProps) {
+export default function RoomSettings({ room, members, onRoomUpdate, onMemberChange, onLeave, onDeleteDM, onMessageClick }: RoomSettingsProps) {
   const { user } = useAuth();
   const [roomName, setRoomName] = useState(room.name);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -119,7 +120,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
       if (isDM && onDeleteDM) {
         const success = await onDeleteDM(room.id);
         if (success) {
-          addToast('Conversation left', 'info');
+          addToast('Left conversation successfully', 'info');
           setConfirmAction(null);
           onLeave();
         }
@@ -518,6 +519,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         user={selectedProfile}
+        onMessageClick={onMessageClick}
       />
 
       {/* MFA Transaction Modal for Room Deletion */}
