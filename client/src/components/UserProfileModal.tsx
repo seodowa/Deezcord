@@ -193,7 +193,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               accept="image/*"
             />
             
-            <div className="flex-1 w-full space-y-4">
+            <form 
+              className="flex-1 w-full space-y-4"
+              onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}
+            >
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">USERNAME</label>
                 <input
@@ -205,13 +208,14 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                 />
               </div>
               <AsyncButton
+                type="submit"
                 onClick={handleUpdateProfile}
                 isLoading={isUpdatingProfile}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
               >
                 Save Profile
               </AsyncButton>
-            </div>
+            </form>
           </div>
         </section>
 

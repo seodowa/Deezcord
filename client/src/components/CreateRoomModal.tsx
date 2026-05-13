@@ -54,7 +54,8 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
         Cancel
       </button>
       <AsyncButton
-        onClick={(e) => { e.preventDefault(); handleSubmit(e as unknown as React.FormEvent); }}
+        type="submit"
+        form="create-room-form"
         disabled={!name.trim()}
         isLoading={isLoading}
         loadingText="Creating..."
@@ -75,7 +76,7 @@ export default function CreateRoomModal({ isOpen, onClose, onCreate }: CreateRoo
       maxWidth="max-w-md"
       isLoading={isLoading}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form id="create-room-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
         {/* Image Upload Area */}
         <div className="flex flex-col items-center justify-center gap-4">
           <div 
