@@ -239,7 +239,7 @@ function SidebarComponent({
           </div>
 
           {/* Action Area */}
-          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/30 dark:border-white/5 w-full mt-auto ${isHomeDashboard ? 'border-t-0' : ''}`}>
+          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/50 dark:border-white/10 w-full mt-auto ${isHomeDashboard ? 'border-t-0' : ''}`}>
             {!isHomeDashboard && (
               <>
                 {/* Social Toggle Button */}
@@ -381,7 +381,7 @@ function SidebarComponent({
           ) : (
             <>
               {/* Header */}
-              <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/30 dark:border-white/5">
+              <div className="h-16 md:h-20 flex items-center justify-between px-5 border-b border-slate-200/50 dark:border-white/10">
                 <h2 className="text-[17px] font-bold text-slate-900 dark:text-white truncate tracking-tight">
                   {currentRoom?.name || 'Deezcord'}
                 </h2>
@@ -493,14 +493,14 @@ function SidebarComponent({
               </div>
 
               {/* User Footer Panel */}
-              <div className="p-4 border-t border-slate-200/30 dark:border-white/5 bg-slate-50/30 dark:bg-black/10">
-                <div className="flex items-center justify-between p-2 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm">
+              <div className="py-3 px-4 border-t border-slate-200/50 dark:border-white/10 bg-slate-50/30 dark:bg-black/10">
+                <div className="flex items-center justify-between px-3 py-2 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm group/profile">
                   <button
                     onClick={onOpenProfile}
-                    className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity cursor-pointer"
+                    className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity cursor-pointer text-left"
                   >
                     <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden ring-2 ring-white/10 transition-transform group-hover/profile:scale-105">
                         {user?.avatar_url ? (
                           <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
@@ -519,11 +519,12 @@ function SidebarComponent({
                     </div>
                   </button>
 
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-1 ml-2">
                     {mounted && (
                       <button
                         onClick={onToggleTheme}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                        title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                       >
                         {isDarkMode ? (
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -539,7 +540,8 @@ function SidebarComponent({
                     )}
                     <AsyncButton
                       onClick={onLogout}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      title="Logout"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
