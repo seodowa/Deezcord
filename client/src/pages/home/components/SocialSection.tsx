@@ -29,6 +29,7 @@ interface SocialSectionProps {
   dmList: Room[];
   isLoadingDMs: boolean;
   onDMClick: (dm: Room) => void;
+  onClose?: () => void;
 }
 
 export default function SocialSection({
@@ -51,7 +52,8 @@ export default function SocialSection({
   searchQuery,
   dmList,
   isLoadingDMs,
-  onDMClick
+  onDMClick,
+  onClose
 }: SocialSectionProps) {
   const { isDarkMode, toggleTheme } = useTheme();
   const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
@@ -78,10 +80,19 @@ export default function SocialSection({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sidebar Header */}
-      <div className="shrink-0 p-4 h-16 md:h-20 flex items-center justify-center border-b border-slate-200/50 dark:border-white/10">
-        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex justify-center items-center gap-2">
+      <div className="shrink-0 p-4 h-16 md:h-20 flex items-center justify-between border-b border-slate-200/50 dark:border-white/10">
+        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex items-center gap-2">
           Social
         </h2>
+        {onClose && (
+          <div className="flex items-center gap-1 md:hidden">
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Top Section - Toggles */}

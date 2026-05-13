@@ -401,6 +401,7 @@ function SidebarComponent({
                   dmList={dms}
                   isLoadingDMs={isLoadingDMs}
                   onDMClick={(dm) => onDMClick?.(dm)}
+                  onClose={onToggleSocial}
                 />
               )}
             </div>
@@ -430,6 +431,7 @@ function SidebarComponent({
                 dmList={dms}
                 isLoadingDMs={isLoadingDMs}
                 onDMClick={(dm) => onDMClick?.(dm)}
+                onClose={onClose}
               />
             )
           ) : (

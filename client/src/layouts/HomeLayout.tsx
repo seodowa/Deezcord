@@ -21,6 +21,7 @@ export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
@@ -231,9 +232,23 @@ export default function HomeLayout() {
   }, [onChannelCreated, currentRoom?.id]);
 
   const handleSelectRoom = (room: Room) => {
-    setIsMobileMenuOpen(false);
-    setIsSocialOpen(false);
-    navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
+    if (currentRoomId === room.id) {
+      setIsSidebarExpanded(prev => !prev);
+    } else {
+      setIsSidebarExpanded(true);
+      setIsSocialOpen(false);
+      navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
+    }
+  };
+
+  const handleHomeClick = () => {
+    if (isWelcomeMode) {
+      setIsSidebarExpanded(prev => !prev);
+    } else {
+      setIsSidebarExpanded(true);
+      setIsSocialOpen(false);
+      navigate('/');
+    }
   };
 
   const handleSelectChannel = (channel: Channel) => {
@@ -448,18 +463,14 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isDiscoveryMode || isWelcomeMode}
+        isCollapsed={isDiscoveryMode || !isSidebarExpanded}
         isDiscoveryMode={isDiscoveryMode}
         isWelcomeMode={isHomeView}
         isHomeDashboard={isWelcomeMode}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
-        onHomeClick={() => {
-          setIsMobileMenuOpen(false);
-          setIsSocialOpen(false);
-          navigate('/');
-        }}
+        onHomeClick={handleHomeClick}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
         onCreateRoom={() => setIsCreateModalOpen(true)}
@@ -473,7 +484,14 @@ export default function HomeLayout() {
         userRole={currentRoom?.role || null}
         // Social Drawer Props
         isSocialOpen={isSocialOpen}
-        onToggleSocial={() => setIsSocialOpen(!isSocialOpen)}
+        onToggleSocial={() => {
+          if (!isSidebarExpanded) {
+            setIsSidebarExpanded(true);
+            setIsSocialOpen(true);
+          } else {
+            setIsSocialOpen(!isSocialOpen);
+          }
+        }}
         social={social}
         isLoadingDMs={isLoadingDMs}
         onMessageClick={handleMessageClick}
