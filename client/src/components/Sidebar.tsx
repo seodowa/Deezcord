@@ -293,11 +293,10 @@ function SidebarComponent({
           </div>
 
           {/* Action Area */}
-          <div className={`flex flex-col items-center gap-3 pt-4 border-t border-slate-200/50 dark:border-white/10 w-full mt-auto ${isHomeDashboard ? 'border-t-0' : ''}`}>
-            {!isHomeDashboard && (
+          <div className="flex flex-col items-center gap-3 pt-4 border-t border-slate-200/50 dark:border-white/10 w-full mt-auto">
               <>
                 {/* Social Toggle Button */}
-                {!isDiscoveryMode && (
+                {!isWelcomeMode && (
                   <div className="relative">
                     <button
                       type="button"
@@ -318,7 +317,6 @@ function SidebarComponent({
                     <Tooltip text="Friends & Social" targetRef={socialBtnRef} show={socialHovered} />
                   </div>
                 )}
-
                 <div className="relative">
                   <AsyncButton
                     type="button"
@@ -340,9 +338,7 @@ function SidebarComponent({
                   <Tooltip text="Create Room" targetRef={createBtnRef} show={createHovered} />
                 </div>
               </>
-            )}
 
-            {!isHomeDashboard && !isDiscoveryMode && (
               <div className="relative">
                 <button
                   type="button"
@@ -362,13 +358,12 @@ function SidebarComponent({
                 </button>
                 <Tooltip text="Discover" targetRef={discoverBtnRef} show={discoverHovered} />
               </div>
-            )}
           </div>
         </div>
         
         {/* ── SECONDARY PANEL AREA (Channels, DMs, or Social Overlay) ── */}
         <div className={`flex-1 relative flex flex-col min-w-0 transition-all duration-300 ${
-          isCollapsed && !isSocialOpen 
+          (isCollapsed && !isSocialOpen) 
             ? 'opacity-0 invisible hidden' 
             : 'opacity-100 visible'
         }`}>
@@ -408,7 +403,7 @@ function SidebarComponent({
           )}
 
           {isWelcomeMode ? (
-            /* Social Sidebar for Home/DM Views */
+            /* Social Sidebar for Home/DM/Discovery Views */
             social && (
               <SocialSection 
                 user={user}

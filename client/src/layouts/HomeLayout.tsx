@@ -21,7 +21,7 @@ export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(window.innerWidth < 1536);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
@@ -233,7 +233,9 @@ export default function HomeLayout() {
 
   const handleSelectRoom = (room: Room) => {
     if (currentRoomId === room.id) {
-      setIsSidebarExpanded(prev => !prev);
+      if (window.innerWidth >= 1024) {
+        setIsSidebarExpanded(prev => !prev);
+      }
     } else {
       setIsSidebarExpanded(true);
       setIsSocialOpen(false);
@@ -243,9 +245,11 @@ export default function HomeLayout() {
 
   const handleHomeClick = () => {
     if (isWelcomeMode) {
-      setIsSidebarExpanded(prev => !prev);
+      if (window.innerWidth >= 1024 && window.innerWidth < 1536) {
+        setIsSidebarExpanded(prev => !prev);
+      }
     } else {
-      setIsSidebarExpanded(true);
+      setIsSidebarExpanded(window.innerWidth < 1536);
       setIsSocialOpen(false);
       navigate('/');
     }
@@ -261,9 +265,16 @@ export default function HomeLayout() {
   };
 
   const handleDiscoverRoom = () => {
-    setIsMobileMenuOpen(false);
-    setIsSocialOpen(false);
-    navigate('/discovery');
+    if (isDiscoveryMode) {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarExpanded(prev => !prev);
+      }
+    } else {
+      setIsSidebarExpanded(true);
+      setIsMobileMenuOpen(false);
+      setIsSocialOpen(false);
+      navigate('/discovery');
+    }
   };
 
   const handleCreateRoom = async (name: string, file: File | null) => {
@@ -463,7 +474,7 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isDiscoveryMode || !isSidebarExpanded}
+        isCollapsed={!isSidebarExpanded}
         isDiscoveryMode={isDiscoveryMode}
         isWelcomeMode={isHomeView}
         isHomeDashboard={isWelcomeMode}
