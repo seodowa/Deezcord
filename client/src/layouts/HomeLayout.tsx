@@ -546,7 +546,7 @@ export default function HomeLayout() {
 
         {(
           <>
-            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/40 dark:bg-slate-800/40 md:bg-transparent backdrop-blur-md z-20 sticky top-0 md:h-20`}>
+            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl z-20 sticky top-0 md:h-20`}>
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -659,7 +659,7 @@ export default function HomeLayout() {
           </>
         )}
 
-        <div className={`flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'md:rounded-tl-none border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
+        <div className={`flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
           <Outlet context={outletContext} />
         </div>
       </main>
