@@ -46,7 +46,7 @@ export default function Rail({
   const [socialHovered, setSocialHovered] = useState(false);
 
   return (
-    <div className="relative z-30 w-17 flex flex-col items-center py-4 shrink-0 bg-white dark:bg-slate-900 h-full border-r border-slate-200/30 dark:border-white/5 shadow-xl">
+    <div className="relative z-30 w-17 flex flex-col items-center py-4 shrink-0 bg-transparent h-full border-r border-slate-200/50 dark:border-white/10">
       {/* Brand Mark */}
       <button
         type="button"

@@ -167,7 +167,7 @@ function SidebarComponent({
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex md:relative transition-all duration-300 ease-expo ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 ${isCollapsed ? 'w-17' : 'w-78'} h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/5 shrink-0 overflow-hidden`}
+        } md:translate-x-0 ${isCollapsed ? 'w-17' : 'w-78'} h-full bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-2xl border-r border-slate-200/50 dark:border-white/10 shrink-0 overflow-hidden`}
       >
         {/* ── UNIFIED RAIL (Utility Area) ── */}
         <Rail 
@@ -196,7 +196,7 @@ function SidebarComponent({
           {/* Social Drawer Overlay - Only shown as overlay in Room views */}
           {!isWelcomeMode && (
             <div 
-              className={`absolute inset-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl transition-all duration-500 ease-expo transform ${
+              className={`absolute inset-0 z-20 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-2xl transition-all duration-500 ease-expo transform ${
                 isSocialOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : '-translate-x-full opacity-0 pointer-events-none'
               }`}
             >

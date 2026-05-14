@@ -542,11 +542,11 @@ export default function HomeLayout() {
         onMessageClick={handleMessageClick}
       />
 
-      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
+      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-slate-50 md:dark:bg-slate-950">
 
         {(
           <>
-            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl z-20 sticky top-0 md:h-20`}>
+            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-2xl z-20 sticky top-0 md:h-20`}>
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -659,7 +659,7 @@ export default function HomeLayout() {
           </>
         )}
 
-        <div className={`flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
+        <div className={`flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
           <Outlet context={outletContext} />
         </div>
       </main>
