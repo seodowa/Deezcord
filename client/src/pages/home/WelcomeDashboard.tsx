@@ -107,32 +107,6 @@ const WelcomeDashboard = () => {
                     />
                   )}
                 </section>
-
-                {/* Mobile/Tablet Social Section (Visible < 2xl) */}
-                <section className="2xl:hidden bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl shadow-xl overflow-hidden h-150 flex flex-col mb-8">
-                  <SocialSection 
-                    user={user}
-                    onLogout={onLogout}
-                    onOpenProfile={() => social.setIsUserProfileOpen(true)}
-                    friendsList={social.friendsList}
-                    pendingList={social.pendingList}
-                    isLoadingFriends={social.isLoadingFriends}
-                    onAcceptRequest={social.handleAcceptRequest}
-                    onDeclineRequest={social.handleDeclineRequest}
-                    onUserClick={social.handleUserClick}
-                    onMessageClick={handleMessageClick}
-                    onNavigate={navigate}
-                    activeTab={social.activeSidebarTab}
-                    onTabChange={social.setActiveSidebarTab}
-                    onSearch={social.handleUserSearch}
-                    searchResults={social.searchResults}
-                    isSearching={social.isSearching}
-                    searchQuery={social.searchQuery}
-                    dmList={dms}
-                    isLoadingDMs={isLoadingDMs}
-                    onDMClick={handleDMClick}
-                  />
-                </section>
               </div>
             </div>
           </div>

@@ -160,7 +160,7 @@ function MessageListComponent({
             </>
           ) : currentChannel ? (
             <>
-              <div className="w-20 h-20 rounded-3xl bg-blue-500 flex items-center justify-center text-4xl font-bold text-white mb-4 shadow-xl shadow-blue-500/20 ring-4 ring-white dark:ring-slate-900 overflow-hidden">
+              <div className="w-20 h-20 rounded-[2rem] bg-blue-500 flex items-center justify-center text-4xl font-bold text-white mb-4 shadow-xl shadow-blue-500/20 ring-4 ring-white dark:ring-slate-900 overflow-hidden transition-transform hover:rotate-3">
                 {currentRoom.room_profile ? (
                   <img src={currentRoom.room_profile} alt={`${currentRoom.name} profile`} className="w-full h-full object-cover" />
                 ) : (
@@ -220,14 +220,14 @@ function MessageListComponent({
                         onUserClick({ id: msg.user_id, username: displayName, avatar_url: avatarUrl });
                       }
                     }}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden border border-white/10 ${
-                      onUserClick && msg.user_id ? 'cursor-pointer hover:scale-105 transition-transform' : ''
-                    } ${isOwn ? 'bg-blue-600' : 'bg-slate-500'}`}
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-md overflow-hidden border border-white/20 dark:border-white/10 ${
+                      onUserClick && msg.user_id ? 'cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300' : ''
+                    } ${isOwn ? 'bg-gradient-to-br from-blue-500 to-blue-700' : 'bg-gradient-to-br from-slate-400 to-slate-600'}`}
                   >
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="opacity-80">{displayName.substring(0, 1).toUpperCase()}</span>
+                      <span className="opacity-90">{displayName.substring(0, 1).toUpperCase()}</span>
                     )}
                   </div>
                 </div>
@@ -251,7 +251,7 @@ function MessageListComponent({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l5 5m-5-5l5-5" />
                         </svg>
                       </div>
-                      <div className={`text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 truncate max-w-50 ${isOwn ? 'text-right' : 'text-left'}`}>
+                      <div className={`text-[11px] px-2 py-0.5 rounded-xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-white/5 truncate max-w-50 ${isOwn ? 'text-right' : 'text-left'}`}>
                         <span className="font-bold text-blue-500 mr-1">{msg.parent_message?.username || 'Unknown'}:</span>
                         <span className="text-slate-500 dark:text-slate-400 italic">"{msg.parent_message?.content || 'Original message'}"</span>
                       </div>
@@ -269,10 +269,10 @@ function MessageListComponent({
                   
                   <div className="relative group/content">
                     <div 
-                      className={`px-4 py-2 rounded-2xl shadow-sm text-sm wrap-break-word select-none lg:select-auto ${
+                      className={`px-4 py-2.5 rounded-[1.25rem] shadow-sm text-sm wrap-break-word select-none lg:select-auto transition-all duration-300 ${
                         isOwn 
-                          ? 'bg-blue-500 text-white rounded-tr-none' 
-                          : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200/50 dark:border-white/10 rounded-tl-none'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-tr-none shadow-blue-500/20' 
+                          : 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl text-slate-900 dark:text-slate-50 border border-slate-200/50 dark:border-white/10 rounded-tl-none'
                       }`}
                       style={{ WebkitTouchCallout: 'none' }}
                       onPointerDown={(e) => {
@@ -321,10 +321,10 @@ function MessageListComponent({
                               href={msg.file_url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className={`flex items-center gap-2 p-2 rounded-lg border transition-all duration-300 ${
+                              className={`flex items-center gap-2 p-2 rounded-xl border transition-all duration-300 ${
                                                               isOwn 
-                                                                ? 'bg-white/20 border-white/30 hover:bg-white/30 text-white' 
-                                                                : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-500'
+                                                                ? 'bg-white/20 border-white/30 hover:bg-white/40 text-white' 
+                                                                : 'bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-white/10 hover:bg-white/80 dark:hover:bg-slate-700/80 text-blue-500'
                                                             } cursor-pointer`}
                             >
                               <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

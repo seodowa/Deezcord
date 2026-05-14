@@ -21,7 +21,7 @@ export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(window.innerWidth < 1536);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
@@ -61,6 +61,18 @@ export default function HomeLayout() {
 
   const { dms, createDM, deleteDM, isLoading: isLoadingDMs } = useDMs();
   const social = useSocial();
+
+  // Automatically collapse sidebar when resizing to 2xl+ on Home/Discovery pages
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1536 && (isWelcomeMode || isDiscoveryMode)) {
+        setIsSidebarExpanded(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isWelcomeMode, isDiscoveryMode]);
 
   const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
                       dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
@@ -233,7 +245,9 @@ export default function HomeLayout() {
 
   const handleSelectRoom = (room: Room) => {
     if (currentRoomId === room.id) {
-      setIsSidebarExpanded(prev => !prev);
+      if (window.innerWidth >= 1024) {
+        setIsSidebarExpanded(prev => !prev);
+      }
     } else {
       setIsSidebarExpanded(true);
       setIsSocialOpen(false);
@@ -242,10 +256,8 @@ export default function HomeLayout() {
   };
 
   const handleHomeClick = () => {
-    if (isWelcomeMode) {
-      setIsSidebarExpanded(prev => !prev);
-    } else {
-      setIsSidebarExpanded(true);
+    if (!isWelcomeMode) {
+      setIsSidebarExpanded(false);
       setIsSocialOpen(false);
       navigate('/');
     }
@@ -261,9 +273,15 @@ export default function HomeLayout() {
   };
 
   const handleDiscoverRoom = () => {
-    setIsMobileMenuOpen(false);
-    setIsSocialOpen(false);
-    navigate('/discovery');
+    if (isDiscoveryMode) {
+      // Do nothing to keep it collapsed while on discovery
+      return;
+    } else {
+      setIsSidebarExpanded(false);
+      setIsMobileMenuOpen(false);
+      setIsSocialOpen(false);
+      navigate('/discovery');
+    }
   };
 
   const handleCreateRoom = async (name: string, file: File | null) => {
@@ -463,7 +481,7 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isDiscoveryMode || !isSidebarExpanded}
+        isCollapsed={(isDiscoveryMode && !isSocialOpen) || !isSidebarExpanded}
         isDiscoveryMode={isDiscoveryMode}
         isWelcomeMode={isHomeView}
         isHomeDashboard={isWelcomeMode}
@@ -485,11 +503,15 @@ export default function HomeLayout() {
         // Social Drawer Props
         isSocialOpen={isSocialOpen}
         onToggleSocial={() => {
-          if (!isSidebarExpanded) {
-            setIsSidebarExpanded(true);
-            setIsSocialOpen(true);
+          if (isHomeView) {
+            setIsSidebarExpanded(!isSidebarExpanded);
           } else {
-            setIsSocialOpen(!isSocialOpen);
+            if (!isSidebarExpanded) {
+              setIsSidebarExpanded(true);
+              setIsSocialOpen(true);
+            } else {
+              setIsSocialOpen(!isSocialOpen);
+            }
           }
         }}
         social={social}
@@ -520,11 +542,11 @@ export default function HomeLayout() {
         onMessageClick={handleMessageClick}
       />
 
-      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">
+      <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-slate-50 md:dark:bg-slate-950">
 
         {(
           <>
-            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-white/40 dark:bg-slate-800/40 md:bg-transparent backdrop-blur-md z-20 sticky top-0 md:h-20`}>
+            <header className={`${isWelcomeMode || isDiscoveryMode ? 'md:hidden' : ''} h-16 border-b border-slate-200/50 dark:border-white/10 flex items-center justify-between px-4 md:px-8 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-2xl z-20 sticky top-0 md:h-20`}>
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -637,7 +659,7 @@ export default function HomeLayout() {
           </>
         )}
 
-        <div className={`flex-1 flex flex-col bg-white/50 dark:bg-slate-950/50 md:rounded-tl-[2.5rem] border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'md:rounded-tl-none border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
+        <div className={`flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 border-t border-slate-200/50 dark:border-white/10 md:border-l overflow-hidden min-h-0 ${isWelcomeMode ? 'border-t-0 md:border-l-0 bg-transparent dark:bg-transparent' : ''}`}>
           <Outlet context={outletContext} />
         </div>
       </main>

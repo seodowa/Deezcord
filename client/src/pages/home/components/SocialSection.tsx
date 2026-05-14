@@ -143,7 +143,7 @@ export default function SocialSection({
 
       <div className="flex-1 overflow-hidden">
         {activeTab === 'friends' ? (
-          <div className="h-full overflow-y-auto scrollbar-none p-6 pt-6 space-y-8 animate-in fade-in slide-in-from-right-2 duration-300">
+          <div className="h-full overflow-y-auto scrollbar-none p-6 pt-6 space-y-8 animate-in fade-in slide-in-from-left-2 duration-300">
             {/* Pending Requests Container */}
             {pendingList.length > 0 && (
               <div className="space-y-4 animate-fade-in-up">
