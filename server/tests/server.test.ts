@@ -53,7 +53,7 @@ test('Socket.IO Connection', async (t) => {
         assert.ok(token, 'Should retrieve an auth token');
 
         const socket = Client(SERVER_URL, {
-            auth: { token },
+            auth: { token, deviceId: 'test-device-id' },
             transports: ["websocket", "polling"],
             parser
         });
