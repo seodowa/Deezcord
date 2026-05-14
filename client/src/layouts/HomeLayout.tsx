@@ -244,12 +244,8 @@ export default function HomeLayout() {
   };
 
   const handleHomeClick = () => {
-    if (isWelcomeMode) {
-      if (window.innerWidth >= 1024 && window.innerWidth < 1536) {
-        setIsSidebarExpanded(prev => !prev);
-      }
-    } else {
-      setIsSidebarExpanded(window.innerWidth < 1536);
+    if (!isWelcomeMode) {
+      setIsSidebarExpanded(false);
       setIsSocialOpen(false);
       navigate('/');
     }
@@ -266,11 +262,10 @@ export default function HomeLayout() {
 
   const handleDiscoverRoom = () => {
     if (isDiscoveryMode) {
-      if (window.innerWidth >= 1024) {
-        setIsSidebarExpanded(prev => !prev);
-      }
+      // Do nothing to keep it collapsed while on discovery
+      return;
     } else {
-      setIsSidebarExpanded(true);
+      setIsSidebarExpanded(false);
       setIsMobileMenuOpen(false);
       setIsSocialOpen(false);
       navigate('/discovery');
@@ -474,7 +469,7 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={!isSidebarExpanded}
+        isCollapsed={(isDiscoveryMode && !isSocialOpen) || !isSidebarExpanded}
         isDiscoveryMode={isDiscoveryMode}
         isWelcomeMode={isHomeView}
         isHomeDashboard={isWelcomeMode}
@@ -496,11 +491,15 @@ export default function HomeLayout() {
         // Social Drawer Props
         isSocialOpen={isSocialOpen}
         onToggleSocial={() => {
-          if (!isSidebarExpanded) {
-            setIsSidebarExpanded(true);
-            setIsSocialOpen(true);
+          if (isHomeView) {
+            setIsSidebarExpanded(!isSidebarExpanded);
           } else {
-            setIsSocialOpen(!isSocialOpen);
+            if (!isSidebarExpanded) {
+              setIsSidebarExpanded(true);
+              setIsSocialOpen(true);
+            } else {
+              setIsSocialOpen(!isSocialOpen);
+            }
           }
         }}
         social={social}

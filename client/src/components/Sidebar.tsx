@@ -296,27 +296,25 @@ function SidebarComponent({
           <div className="flex flex-col items-center gap-3 pt-4 border-t border-slate-200/50 dark:border-white/10 w-full mt-auto">
               <>
                 {/* Social Toggle Button */}
-                {!isWelcomeMode && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      ref={socialBtnRef}
-                      onClick={onToggleSocial}
-                      onMouseEnter={() => setSocialHovered(true)}
-                      onMouseLeave={() => setSocialHovered(false)}
-                      className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                                              (isSocialOpen || (isWelcomeMode && !isHomeDashboard))
-                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                                                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white'
-                                            } cursor-pointer`}
-                    >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    </button>
-                    <Tooltip text="Friends & Social" targetRef={socialBtnRef} show={socialHovered} />
-                  </div>
-                )}
+                <div className={`relative ${(isDiscoveryMode || isHomeDashboard) ? '2xl:hidden' : ''}`}>
+                  <button
+                    type="button"
+                    ref={socialBtnRef}
+                    onClick={onToggleSocial}
+                    onMouseEnter={() => setSocialHovered(true)}
+                    onMouseLeave={() => setSocialHovered(false)}
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                                            (isSocialOpen || (isWelcomeMode && !isCollapsed))
+                                              ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white'
+                                          } cursor-pointer`}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </button>
+                  <Tooltip text="Friends & Social" targetRef={socialBtnRef} show={socialHovered} />
+                </div>
                 <div className="relative">
                   <AsyncButton
                     type="button"
