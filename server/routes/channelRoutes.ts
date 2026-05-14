@@ -56,6 +56,11 @@ router.post('/', verifyUser, verifyRoomOwner, async (req: AuthenticatedRequest, 
     return;
   }
 
+  const io = req.app.get('io');
+  if (io) {
+    io.to(roomId).emit('channel_created', channel);
+  }
+
   res.status(201).json(channel);
 });
 
