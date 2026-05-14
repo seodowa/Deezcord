@@ -13,7 +13,7 @@ import { useDMs } from '../hooks/useDMs';
 import { useSocial } from '../hooks/useSocial';
 import { useChat } from '../hooks/useChat';
 import { getChannels, createChannel, deleteChannel } from '../services/roomService';
-import { loadChannels, saveChannels, clearChannelCache } from '../utils/persistence';
+import { loadChannels, saveChannels, clearChannelCache, saveDiscoverRooms, saveRooms } from '../utils/persistence';
 import type { Room, Channel } from '../types/room';
 import { generateSlug } from '../utils/slug';
 
@@ -116,11 +116,17 @@ export default function HomeLayout() {
       const newRoom = data as Room;
       setRooms(prevRooms => {
         if (prevRooms.some(r => r.id === newRoom.id)) return prevRooms;
+        const updated = [...prevRooms, newRoom];
+        saveRooms(updated);
         addToast(`You've been added to the room "${newRoom.name}"!`, 'success');
-        return [...prevRooms, newRoom];
+        return updated;
       });
       // Remove from discovery if it was there
-      setDiscoverRooms(prevDiscover => prevDiscover.filter(r => r.id !== newRoom.id));
+      setDiscoverRooms(prevDiscover => {
+        const updated = prevDiscover.filter(r => r.id !== newRoom.id);
+        saveDiscoverRooms(updated);
+        return updated;
+      });
     });
     return unsubscribe;
   }, [onRoomAdded, setRooms, setDiscoverRooms, addToast]);
@@ -132,7 +138,9 @@ export default function HomeLayout() {
         if (roomToRemove) {
           addToast(`You have been removed from the room "${roomToRemove.name}".`, 'info');
         }
-        return prevRooms.filter(r => r.id !== removedRoomId);
+        const updated = prevRooms.filter(r => r.id !== removedRoomId);
+        saveRooms(updated);
+        return updated;
       });
 
       if (roomId === removedRoomId) {
@@ -177,7 +185,9 @@ export default function HomeLayout() {
         if (!prevRooms.some(r => r.id === newRoom.id)) {
           setDiscoverRooms(prevDiscover => {
             if (prevDiscover.some(r => r.id === newRoom.id)) return prevDiscover;
-            return [...prevDiscover, { ...newRoom, isNew: true }];
+            const updated = [...prevDiscover, { ...newRoom, isNew: true }];
+            saveDiscoverRooms(updated);
+            return updated;
           });
         }
         return prevRooms;
@@ -188,8 +198,16 @@ export default function HomeLayout() {
 
   useEffect(() => {
     const unsubscribe = onRoomDeleted((deletedRoomId: string) => {
-      setRooms(prevRooms => prevRooms.filter(r => r.id !== deletedRoomId));
-      setDiscoverRooms(prevDiscover => prevDiscover.filter(r => r.id !== deletedRoomId));
+      setRooms(prevRooms => {
+        const updated = prevRooms.filter(r => r.id !== deletedRoomId);
+        saveRooms(updated);
+        return updated;
+      });
+      setDiscoverRooms(prevDiscover => {
+        const updated = prevDiscover.filter(r => r.id !== deletedRoomId);
+        saveDiscoverRooms(updated);
+        return updated;
+      });
       
       if (roomId === deletedRoomId) {
         navigate('/');
@@ -332,7 +350,7 @@ export default function HomeLayout() {
     setIsCreatingChannel(true);
     try {
       const newChannel = await createChannel(currentRoom.id, name);
-      setChannels(prev => [...prev, newChannel as Channel]);
+      setChannels(prev => [...prev, { ...(newChannel as Channel), isNew: true }]);
       addToast(`Channel "#${name}" created!`, 'success');
       navigate(`/${generateSlug(currentRoom.name)}/${generateSlug((newChannel as Channel).name)}`, { 
         state: { roomId: currentRoom.id, channelId: (newChannel as Channel).id } 

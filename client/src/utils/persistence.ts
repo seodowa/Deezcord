@@ -4,6 +4,7 @@ import type { Message } from '../types/message';
 const MESSAGE_CACHE_PREFIX = 'deezcord_msg_cache_';
 const CHANNELS_CACHE_PREFIX = 'deezcord_channels_cache_';
 const ROOMS_CACHE_KEY = 'deezcord_rooms_cache';
+const DISCOVER_ROOMS_CACHE_KEY = 'deezcord_discover_rooms_cache';
 const DMS_CACHE_KEY = 'deezcord_dms_cache';
 const FRIENDS_CACHE_KEY = 'deezcord_friends_cache';
 const PENDING_CACHE_KEY = 'deezcord_pending_cache';
@@ -91,6 +92,34 @@ export async function loadRooms(): Promise<unknown[]> {
     return (decrypted as unknown[]) || [];
   } catch (err) {
     console.error('Failed to load rooms from cache:', err);
+    return [];
+  }
+}
+
+/**
+ * Saves discovery rooms to encrypted sessionStorage.
+ */
+export async function saveDiscoverRooms(rooms: unknown[]): Promise<void> {
+  try {
+    const encrypted = await encryptData(rooms);
+    sessionStorage.setItem(DISCOVER_ROOMS_CACHE_KEY, encrypted);
+  } catch (err) {
+    console.error('Failed to save discovery rooms to cache:', err);
+  }
+}
+
+/**
+ * Loads and decrypts discovery rooms from sessionStorage.
+ */
+export async function loadDiscoverRooms(): Promise<unknown[]> {
+  try {
+    const encrypted = sessionStorage.getItem(DISCOVER_ROOMS_CACHE_KEY);
+    if (!encrypted) return [];
+
+    const decrypted = await decryptData(encrypted);
+    return (decrypted as unknown[]) || [];
+  } catch (err) {
+    console.error('Failed to load discovery rooms from cache:', err);
     return [];
   }
 }
@@ -224,6 +253,7 @@ export function clearMessageCache(): void {
       key.startsWith(CHANNELS_CACHE_PREFIX) || 
       key.startsWith(MEMBERS_CACHE_PREFIX) ||
       key === ROOMS_CACHE_KEY ||
+      key === DISCOVER_ROOMS_CACHE_KEY ||
       key === DMS_CACHE_KEY ||
       key === FRIENDS_CACHE_KEY ||
       key === PENDING_CACHE_KEY

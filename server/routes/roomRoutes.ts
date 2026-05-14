@@ -101,7 +101,7 @@ router.post('/', verifyUser, upload.single('file'), async (req: AuthenticatedReq
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('room_created', roomData);
+    io.to('lobby').emit('room_created', roomData);
   }
 
   res.status(201).json(roomData); 
@@ -441,7 +441,13 @@ router.delete('/:roomId/leave', verifyUser, verifyRoomMember, async (req: Authen
 router.delete('/:roomId', verifyUser, verifyRoomOwner, verifyTransactionalMfa, async (req: AuthenticatedRequest, res: Response) => {
   const { roomId } = req.params;
 
-  // 1. Manually delete all room members first (due to ON DELETE NO ACTION constraint)
+  // 1. Fetch members before deleting them so we can notify them individually
+  const { data: members } = await supabase
+    .from('room_members')
+    .select('user_id')
+    .eq('room_id', roomId);
+
+  // 2. Manually delete all room members first (due to ON DELETE NO ACTION constraint)
   const { error: membersError } = await supabase
     .from('room_members')
     .delete()
@@ -452,7 +458,7 @@ router.delete('/:roomId', verifyUser, verifyRoomOwner, verifyTransactionalMfa, a
     return;
   }
 
-  // 2. Delete the room itself (channels and messages will CASCADE)
+  // 3. Delete the room itself (channels and messages will CASCADE)
   const { error: roomError } = await supabase
     .from('rooms')
     .delete()
@@ -463,10 +469,12 @@ router.delete('/:roomId', verifyUser, verifyRoomOwner, verifyTransactionalMfa, a
     return;
   }
 
-  // 3. Emit real-time event to clients
+  // 4. Emit real-time event to each member's personal room
   const io = req.app.get('io');
-  if (io) {
-    io.to(roomId).emit('room_deleted', roomId);
+  if (io && members) {
+    members.forEach(member => {
+      io.to(member.user_id).emit('room_deleted', roomId);
+    });
   }
 
   res.status(200).json({ message: "Room deleted successfully" });

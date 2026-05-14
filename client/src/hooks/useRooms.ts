@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Room } from '../types/room';
 import { getRooms, getDiscoverRooms, createRoom as apiCreateRoom, joinRoom as apiJoinRoom } from '../services/roomService';
 import { useToast } from './useToast';
-import { loadRooms, saveRooms } from '../utils/persistence';
+import { loadRooms, saveRooms, loadDiscoverRooms, saveDiscoverRooms } from '../utils/persistence';
 
 export const useRooms = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -34,6 +34,7 @@ export const useRooms = () => {
     try {
       const data = await getDiscoverRooms();
       setDiscoverRooms(data);
+      saveDiscoverRooms(data);
     } catch (err) {
       console.error('Failed to load discovery rooms:', err);
     } finally {
@@ -99,6 +100,14 @@ export const useRooms = () => {
         fetchRooms(false); // Silent sync
       } else {
         fetchRooms(true); // Full loading
+      }
+    });
+
+    // Try to load discovery rooms from cache
+    loadDiscoverRooms().then(cached => {
+      if (!isMounted) return;
+      if (cached && cached.length > 0) {
+        setDiscoverRooms(cached as Room[]);
       }
     });
 
