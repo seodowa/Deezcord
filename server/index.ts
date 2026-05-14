@@ -130,6 +130,8 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     }
     // Join a personal room to receive direct events (like friend requests)
     socket.join(userId);
+    // Join a lobby room for general broadcasts (like room creation)
+    socket.join('lobby');
   }
 
   // We now know exactly who this is!

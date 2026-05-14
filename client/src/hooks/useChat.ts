@@ -46,6 +46,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     onPresenceUpdate,
     onRoomCreated,
     onRoomDeleted,
+    onRoomAdded,
+    onRoomRemoved,
     onChannelCreated,
     onChannelDeleted
   } = useSocket();
@@ -339,6 +341,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
+    onRoomAdded,
+    onRoomRemoved,
     onChannelCreated,
     onChannelDeleted
   };

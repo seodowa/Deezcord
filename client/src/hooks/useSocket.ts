@@ -175,6 +175,28 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     };
   }, []);
 
+  const onRoomAdded = useCallback((callback: (data: any) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('room_added', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('room_added', callback);
+      }
+    };
+  }, []);
+
+  const onRoomRemoved = useCallback((callback: (roomId: string) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('room_removed', callback);
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('room_removed', callback);
+      }
+    };
+  }, []);
+
   const onChannelCreated = useCallback((callback: (data: unknown) => void) => {
     if (socketRef.current) {
       socketRef.current.on('channel_created', callback);
@@ -259,6 +281,8 @@ const onReactionRemoved = useCallback((callback: (data: { message_id: string; us
     onPresenceUpdate, 
     onRoomCreated, 
     onRoomDeleted, 
+    onRoomAdded,
+    onRoomRemoved,
     onChannelCreated,
     onChannelDeleted,
     onFriendRequestReceived,
