@@ -330,6 +330,11 @@ router.delete('/:roomId/members/:targetUserId', verifyUser, verifyRoomOwner, asy
     return;
   }
 
+  const io = req.app.get('io');
+  if (io) {
+    io.to(targetUserId).emit('room_removed', roomId);
+  }
+
   res.status(200).json({ message: "Member removed successfully" });
 });
 
@@ -381,6 +386,24 @@ router.post('/:roomId/members', verifyUser, verifyRoomOwner, async (req: Authent
     return;
   }
 
+  // Fetch room details to send to the added user via socket
+  const { data: roomData } = await supabase
+    .from('rooms')
+    .select('*')
+    .eq('id', roomId)
+    .single();
+
+  if (roomData) {
+    const io = req.app.get('io');
+    if (io) {
+      io.to(profile.id).emit('room_added', {
+        ...roomData,
+        isMember: true,
+        role: 'member'
+      });
+    }
+  }
+
   res.status(201).json({ message: "Member added successfully" });
 });
 
@@ -404,6 +427,11 @@ router.delete('/:roomId/leave', verifyUser, verifyRoomMember, async (req: Authen
   if (error) {
     res.status(500).json({ error: error.message });
     return;
+  }
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(userId).emit('room_removed', roomId);
   }
 
   res.status(200).json({ message: "Successfully left the room" });

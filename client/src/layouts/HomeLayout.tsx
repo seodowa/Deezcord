@@ -105,9 +105,42 @@ export default function HomeLayout() {
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
+    onRoomAdded,
+    onRoomRemoved,
     onChannelCreated,
     onChannelDeleted
   } = useChat(roomId, channelId, currentRoom?.isMember);
+
+  useEffect(() => {
+    const unsubscribe = onRoomAdded((data: any) => {
+      const newRoom = data as Room;
+      setRooms(prevRooms => {
+        if (prevRooms.some(r => r.id === newRoom.id)) return prevRooms;
+        addToast(`You've been added to the room "${newRoom.name}"!`, 'success');
+        return [...prevRooms, newRoom];
+      });
+      // Remove from discovery if it was there
+      setDiscoverRooms(prevDiscover => prevDiscover.filter(r => r.id !== newRoom.id));
+    });
+    return unsubscribe;
+  }, [onRoomAdded, setRooms, setDiscoverRooms, addToast]);
+
+  useEffect(() => {
+    const unsubscribe = onRoomRemoved((removedRoomId: string) => {
+      setRooms(prevRooms => {
+        const roomToRemove = prevRooms.find(r => r.id === removedRoomId);
+        if (roomToRemove) {
+          addToast(`You have been removed from the room "${roomToRemove.name}".`, 'info');
+        }
+        return prevRooms.filter(r => r.id !== removedRoomId);
+      });
+
+      if (roomId === removedRoomId) {
+        navigate('/');
+      }
+    });
+    return unsubscribe;
+  }, [onRoomRemoved, roomId, setRooms, addToast, navigate]);
 
   useEffect(() => {
     const unsubscribe = onChannelDeleted((data: { roomId: string, channelId: string }) => {
