@@ -197,7 +197,7 @@ function SidebarComponent({
           {!isWelcomeMode && (
             <div 
               className={`absolute inset-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl transition-all duration-500 ease-expo transform ${
-                isSocialOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-12 opacity-0 pointer-events-none'
+                isSocialOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : '-translate-x-full opacity-0 pointer-events-none'
               }`}
             >
               {social && (
