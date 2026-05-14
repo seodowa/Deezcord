@@ -62,6 +62,18 @@ export default function HomeLayout() {
   const { dms, createDM, deleteDM, isLoading: isLoadingDMs } = useDMs();
   const social = useSocial();
 
+  // Automatically collapse sidebar when resizing to 2xl+ on Home/Discovery pages
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1536 && (isWelcomeMode || isDiscoveryMode)) {
+        setIsSidebarExpanded(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isWelcomeMode, isDiscoveryMode]);
+
   const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
                       dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
 
