@@ -101,6 +101,17 @@ export const createChannel = async (roomId: string, name: string, type: string =
   return data;
 };
 
+export const deleteChannel = async (roomId: string, channelId: string): Promise<void> => {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels/${channelId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to delete channel');
+  }
+};
+
 export const getMessages = async (roomId: string, channelId: string): Promise<unknown> => {
   const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels/${channelId}/messages`);
 

@@ -17,12 +17,18 @@ const MAX_ATTEMPTS = 3;
  * Generates a random 6-digit OTP, hashes it, and stores it in the database.
  * Then sends the plain code via email.
  */
-export async function generateEmailOtp(userId: string, email: string, purpose: string) {
-  // 1. Global cleanup of stale codes (Gap 2)
-  await supabase
-    .from('mfa_email_otps')
-    .delete()
-    .lt('expires_at', new Date().toISOString());
+export async function generateEmailOtp(userId: string, email: string, purpose: string, targetEmail?: string) {
+  // 1. Global cleanup of stale codes (fire-and-forget to prevent blocking)
+  (async () => {
+    try {
+      await supabase
+        .from('mfa_email_otps')
+        .delete()
+        .lt('expires_at', new Date().toISOString());
+    } catch (err) {
+      console.error("[MfaService] Cleanup Error:", err);
+    }
+  })();
 
   // 2. Check for cooldown (prevent spamming)
   const { data: existingOtp, error: fetchError } = await supabase
@@ -38,7 +44,9 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
     const diff = (now - lastSent) / 1000;
 
     if (diff < COOLDOWN_SECONDS) {
-      throw new Error(`Please wait ${Math.ceil(COOLDOWN_SECONDS - diff)} seconds before requesting a new code.`);
+      // Instead of throwing an error, return success so the user can re-enter the verification screen
+      // and use the code that was already sent to them.
+      return { message: `A code was already sent recently. Please check your email.` };
     }
   }
 
@@ -48,8 +56,7 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
 
-  // 4. Upsert the new code (Handles Race Condition Gap 1 via UNIQUE constraint)
-  // We use delete + insert to reset attempt counts and timestamps properly
+  // 4. Upsert the new code
   await supabase
     .from('mfa_email_otps')
     .delete()
@@ -63,7 +70,8 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
       code_hash: codeHash,
       expires_at: expiresAt.toISOString(),
       purpose,
-      attempts: 0
+      attempts: 0,
+      ...(targetEmail && { target_email: targetEmail }),
     });
 
   if (insertError) {
@@ -71,14 +79,11 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
     throw new Error("Failed to generate security code. Please try again.");
   }
 
-  // 5. Send Email with rollback on failure (Gap 5)
-  try {
-    await sendMfaEmail(email, code, purpose);
-  } catch (emailError) {
+  // 5. Send Email with rollback on failure (Fire-and-forget to prevent blocking)
+  sendMfaEmail(email, code, purpose).catch(async (emailError) => {
     console.error("[MfaService] Email failure, rolling back OTP record:", emailError);
     await supabase.from('mfa_email_otps').delete().eq('user_id', userId).eq('purpose', purpose);
-    throw new Error("Failed to deliver security email. Please try again later.");
-  }
+  });
 
   return { message: "Security code sent to your email." };
 }
@@ -87,7 +92,7 @@ export async function generateEmailOtp(userId: string, email: string, purpose: s
  * Verifies the provided code against the stored hash.
  * Increments attempt count on failure and deletes on success or exhaustion.
  */
-export async function verifyEmailOtp(userId: string, code: string, purpose: string) {
+export async function verifyEmailOtp(userId: string, code: string, purpose: string, expectedTargetEmail?: string) {
   // 1. Fetch the OTP
   const { data: otpData, error: fetchError } = await supabase
     .from('mfa_email_otps')
@@ -96,7 +101,6 @@ export async function verifyEmailOtp(userId: string, code: string, purpose: stri
     .eq('purpose', purpose)
     .maybeSingle();
 
-  // Gap 3: Sanitize "Not Found" error to avoid leaking state
   if (fetchError || !otpData) {
     throw new Error("Invalid or expired security code. Please request a new one.");
   }
@@ -107,7 +111,12 @@ export async function verifyEmailOtp(userId: string, code: string, purpose: stri
     throw new Error("Invalid or expired security code. Please request a new one.");
   }
 
-  // 3. Verify Code Hash
+  // 3. Verify target email binding
+  if (expectedTargetEmail && otpData.target_email !== expectedTargetEmail) {
+    throw new Error("Invalid or expired security code. Please request a new one.");
+  }
+
+  // 4. Verify Code Hash
   const isValid = await bcrypt.compare(code, otpData.code_hash);
 
   if (!isValid) {
@@ -118,21 +127,84 @@ export async function verifyEmailOtp(userId: string, code: string, purpose: stri
       throw new Error("Too many failed attempts. This code is now invalid. Please request a new one.");
     }
 
-    // Increment attempts
     await supabase
       .from('mfa_email_otps')
       .update({ attempts: newAttempts })
       .eq('id', otpData.id);
 
-    // UX vs Security trade-off: We'll keep the remaining attempts count as it's highly useful for users 
-    // and the risk of brute-forcing 6 digits in 3 attempts is negligible.
     throw new Error(`Invalid security code. ${MAX_ATTEMPTS - newAttempts} attempts remaining.`);
   }
 
-  // 4. Success! Delete the OTP record (single use)
+  // 5. Success! Delete the OTP record (single use)
   await deleteOtp(otpData.id);
 
   return true;
+}
+
+/**
+ * Creates a short-lived (5-min) "Identity Verified" session in the database.
+ * This bridges the gap between the initial MFA unlock and the subsequent account update.
+ */
+export async function createIdentitySession(userId: string) {
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
+
+  // Clear any existing sessions for this user
+  await supabase
+    .from('mfa_email_otps')
+    .delete()
+    .eq('user_id', userId)
+    .eq('purpose', 'identity_verified');
+
+  const { error } = await supabase
+    .from('mfa_email_otps')
+    .insert({
+      user_id: userId,
+      purpose: 'identity_verified',
+      code_hash: 'session_active', // Dummy hash since we don't need to verify a code
+      expires_at: expiresAt.toISOString(),
+      attempts: 0
+    });
+
+  if (error) {
+    console.error("[MfaService] Failed to create identity session:", error);
+    throw new Error(`Security system error: ${error.message}`);
+  }
+}
+
+/**
+ * Checks if a valid identity session exists for the user.
+ * Throws a specific error if the session is invalid or expired.
+ */
+export async function verifyIdentitySession(userId: string) {
+  const { data, error } = await supabase
+    .from('mfa_email_otps')
+    .select('id, expires_at')
+    .eq('user_id', userId)
+    .eq('purpose', 'identity_verified')
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Identity verification required. Please unlock your security settings first.");
+  }
+
+  if (new Date(data.expires_at) < new Date()) {
+    await deleteOtp(data.id);
+    throw new Error("Identity verification required. Please unlock your security settings first.");
+  }
+
+  return true;
+}
+
+/**
+ * Consumes the identity session to prevent reuse.
+ */
+export async function consumeIdentitySession(userId: string) {
+  await supabase
+    .from('mfa_email_otps')
+    .delete()
+    .eq('user_id', userId)
+    .eq('purpose', 'identity_verified');
 }
 
 /**
@@ -144,14 +216,19 @@ async function deleteOtp(id: string) {
 
 /**
  * Template for MFA Email
+ * Handles different purposes including 'email_change'
  */
 async function sendMfaEmail(toEmail: string, code: string, purpose: string) {
   const subject = purpose === 'setup' 
-    ? "Verify your Deezcord MFA Setup" 
+    ? "Verify your Deezcord MFA Setup"
+    : purpose === 'email_change'
+    ? "Verify Your New Email Address"
     : "Your Deezcord Security Code";
 
   const actionText = purpose === 'setup'
     ? "completing your MFA setup"
+    : purpose === 'email_change'
+    ? "verifying your new email address"
     : "authorizing a sensitive action";
 
   const html = `

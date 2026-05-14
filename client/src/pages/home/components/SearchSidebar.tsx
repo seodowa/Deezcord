@@ -69,8 +69,8 @@ export default function SearchSidebar({
                   onClick={() => onUserClick({ id: user.id, username: user.username, avatar_url: user.avatar_url })}
                   className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                 >
-                  <div className="relative flex-shrink-0">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden ${user.isOnline ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-slate-400 to-slate-600'}`}>
+                  <div className="relative shrink-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden ${user.isOnline ? 'bg-linear-to-br from-emerald-400 to-emerald-600' : 'bg-linear-to-br from-slate-400 to-slate-600'}`}>
                       {user.avatar_url ? (
                         <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
                       ) : (
@@ -97,7 +97,7 @@ export default function SearchSidebar({
 
         {/* Bottom Tip Section - Not a footer, but pushed to bottom of content flow */}
         <div className="mt-auto pt-6">
-          <div className="p-4 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/10">
+          <div className="p-4 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
             <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Pro Tip</p>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
               Send friend requests to users you meet in public rooms to keep the conversation going!

@@ -12,19 +12,20 @@ import { useRooms } from '../hooks/useRooms';
 import { useDMs } from '../hooks/useDMs';
 import { useSocial } from '../hooks/useSocial';
 import { useChat } from '../hooks/useChat';
-import { getChannels, createChannel } from '../services/roomService';
-import { loadChannels, saveChannels } from '../utils/persistence';
+import { getChannels, createChannel, deleteChannel } from '../services/roomService';
+import { loadChannels, saveChannels, clearChannelCache } from '../utils/persistence';
 import type { Room, Channel } from '../types/room';
 import { generateSlug } from '../utils/slug';
 
 export default function HomeLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,11 +59,21 @@ export default function HomeLayout() {
     joinExistingRoom 
   } = useRooms();
 
-  const { dms, createDM, isLoading: isLoadingDMs } = useDMs();
+  const { dms, createDM, deleteDM, isLoading: isLoadingDMs } = useDMs();
   const social = useSocial();
 
   const currentRoom = rooms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug) || 
                       dms.find((r: Room) => stateRoomId ? r.id === stateRoomId : generateSlug(r.name) === roomSlug);
+
+  const currentRoomId = currentRoom?.id || null;
+
+  // Sync loading state when room changes to avoid race conditions and premature redirects
+  if (currentRoomId !== activeRoomId) {
+    setActiveRoomId(currentRoomId);
+    setIsLoadingChannels(!!currentRoomId);
+    setChannels([]);
+  }
+
   const roomId = currentRoom?.id;
   const currentChannel = channels.find(c => stateChannelId ? c.id === stateChannelId : generateSlug(c.name) === channelSlug);
   const channelId = currentChannel?.id;
@@ -82,8 +93,37 @@ export default function HomeLayout() {
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   } = useChat(roomId, channelId, currentRoom?.isMember);
+
+  useEffect(() => {
+    const unsubscribe = onChannelDeleted((data: { roomId: string, channelId: string }) => {
+      if (currentRoom?.id === data.roomId) {
+        // Clear message cache for the deleted channel
+        clearChannelCache(data.channelId);
+
+        setChannels(prev => {
+          const updated = prev.filter(c => c.id !== data.channelId);
+          
+          // Update room's channels cache
+          saveChannels(data.roomId, updated);
+
+          // If the deleted channel was the current one, redirect
+          if (channelId === data.channelId && updated.length > 0) {
+            navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(updated[0].name)}`, { 
+              replace: true,
+              state: { roomId: currentRoom.id, channelId: updated[0].id }
+            });
+            addToast('The channel you were in has been deleted.', 'info');
+          }
+          
+          return updated;
+        });
+      }
+    });
+    return unsubscribe;
+  }, [onChannelDeleted, currentRoom?.id, currentRoom?.name, channelId, navigate, addToast]);
 
   useEffect(() => {
     const unsubscribe = onRoomCreated((data: unknown) => {
@@ -192,9 +232,23 @@ export default function HomeLayout() {
   }, [onChannelCreated, currentRoom?.id]);
 
   const handleSelectRoom = (room: Room) => {
-    setIsMobileMenuOpen(false);
-    setIsSocialOpen(false);
-    navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
+    if (currentRoomId === room.id) {
+      setIsSidebarExpanded(prev => !prev);
+    } else {
+      setIsSidebarExpanded(true);
+      setIsSocialOpen(false);
+      navigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } });
+    }
+  };
+
+  const handleHomeClick = () => {
+    if (isWelcomeMode) {
+      setIsSidebarExpanded(prev => !prev);
+    } else {
+      setIsSidebarExpanded(true);
+      setIsSocialOpen(false);
+      navigate('/');
+    }
   };
 
   const handleSelectChannel = (channel: Channel) => {
@@ -240,13 +294,60 @@ export default function HomeLayout() {
     }
   };
 
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!currentRoom) return;
+    try {
+      await deleteChannel(currentRoom.id, channelId);
+      
+      // Clear message cache for the deleted channel
+      clearChannelCache(channelId);
+
+      setChannels(prev => {
+        const updated = prev.filter(c => c.id !== channelId);
+        
+        // Update room's channels cache
+        saveChannels(currentRoom.id, updated);
+        
+        return updated;
+      });
+
+      addToast('Channel deleted successfully.', 'success');
+      
+      // If we deleted the channel we were currently in, redirect (redundant with socket but good for UX)
+      if (channelId === stateChannelId) {
+        const remaining = channels.filter(c => c.id !== channelId);
+        if (remaining.length > 0) {
+          navigate(`/${generateSlug(currentRoom.name)}/${generateSlug(remaining[0].name)}`, { 
+            state: { roomId: currentRoom.id, channelId: remaining[0].id } 
+          });
+        }
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      addToast(error.message || 'Failed to delete channel', 'error');
+    }
+  };
+
   const handleLogout = useCallback(async () => {
     logout();
     addToast('You have been signed out.', 'info');
     navigate('/login');
   }, [logout, addToast, navigate]);
 
-  const handleMessageClick = async (u: { id: string; username: string; avatar_url?: string | null }) => {
+  const handleDeleteDM = useCallback(async (roomId: string) => {
+    const success = await deleteDM(roomId);
+    if (success) {
+      // If we're currently viewing this DM, navigate home
+      if (currentRoom?.id === roomId) {
+        navigate('/');
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }, [deleteDM, currentRoom?.id, navigate]);
+
+  const handleMessageClick = useCallback(async (u: { id: string; username: string; avatar_url?: string | null }) => {
     try {
       const result = await createDM(u.id);
       if (result) {
@@ -260,14 +361,14 @@ export default function HomeLayout() {
     } catch {
       addToast('An error occurred.', 'error');
     }
-  };
+  }, [createDM, navigate, addToast]);
 
-  const handleDMClick = (dm: Room) => {
+  const handleDMClick = useCallback((dm: Room) => {
     setIsSocialOpen(false);
     navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
       state: { roomId: dm.id, channelId: dm.defaultChannelId } 
     });
-  };
+  }, [navigate]);
 
   const outletContext = useMemo(() => ({
     currentRoom,
@@ -301,7 +402,8 @@ export default function HomeLayout() {
     dms,
     isLoadingDMs,
     handleMessageClick,
-    handleDMClick
+    handleDMClick,
+    handleDeleteDM
   }), [
     currentRoom, 
     currentChannel, 
@@ -333,7 +435,8 @@ export default function HomeLayout() {
     dms,
     isLoadingDMs,
     handleMessageClick,
-    handleDMClick
+    handleDMClick,
+    handleDeleteDM
   ]);
 
   // Show a full-page loading screen until both user and initial rooms are loaded
@@ -346,10 +449,10 @@ export default function HomeLayout() {
   }
 
   return (
-    <div className="h-screen flex bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
+    <div className="h-[100dvh] flex bg-linear-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
-      <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
-      <div className="absolute bottom-[10%] right-[20%] w-[350px] h-[350px] bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-[10%] left-[20%] w-100 h-100 bg-blue-500/30 dark:bg-blue-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
+      <div className="absolute bottom-[10%] right-[20%] w-87.5 h-87.5 bg-purple-500/30 dark:bg-purple-500/15 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
 
       <Sidebar 
         rooms={rooms}
@@ -360,38 +463,35 @@ export default function HomeLayout() {
         isDarkMode={isDarkMode}
         mounted={mounted}
         isOpen={isMobileMenuOpen}
-        isCollapsed={isDiscoveryMode || isWelcomeMode}
+        isCollapsed={isDiscoveryMode || !isSidebarExpanded}
         isDiscoveryMode={isDiscoveryMode}
         isWelcomeMode={isHomeView}
         isHomeDashboard={isWelcomeMode}
         onToggleTheme={toggleTheme}
         onLogout={handleLogout}
         onClose={() => setIsMobileMenuOpen(false)}
-        onHomeClick={() => {
-          setIsMobileMenuOpen(false);
-          setIsSocialOpen(false);
-          navigate('/');
-        }}
+        onHomeClick={handleHomeClick}
         onSelectRoom={handleSelectRoom}
         onSelectChannel={handleSelectChannel}
-        onSelectDM={(dm) => {
-          setIsMobileMenuOpen(false);
-          setIsSocialOpen(false);
-          navigate(`/${generateSlug(dm.name)}/${generateSlug('chat')}`, { 
-            state: { roomId: dm.id, channelId: dm.defaultChannelId } 
-          });
-        }}
         onCreateRoom={() => setIsCreateModalOpen(true)}
         onCreateChannel={handleCreateChannel}
+        onDeleteChannel={handleDeleteChannel}
         onDiscoverRoom={handleDiscoverRoom}
-        onOpenProfile={() => setIsUserProfileOpen(true)}
+        onOpenProfile={() => social.setIsUserProfileOpen(true)}
         isLoadingRooms={isLoadingRooms}
         isCreatingRoom={isCreatingRoom}
         isCreatingChannel={isCreatingChannel}
         userRole={currentRoom?.role || null}
         // Social Drawer Props
         isSocialOpen={isSocialOpen}
-        onToggleSocial={() => setIsSocialOpen(!isSocialOpen)}
+        onToggleSocial={() => {
+          if (!isSidebarExpanded) {
+            setIsSidebarExpanded(true);
+            setIsSocialOpen(true);
+          } else {
+            setIsSocialOpen(!isSocialOpen);
+          }
+        }}
         social={social}
         isLoadingDMs={isLoadingDMs}
         onMessageClick={handleMessageClick}
@@ -406,8 +506,8 @@ export default function HomeLayout() {
       />
 
       <UserProfileModal
-        isOpen={isUserProfileOpen}
-        onClose={() => setIsUserProfileOpen(false)}
+        isOpen={social.isUserProfileOpen}
+        onClose={() => social.setIsUserProfileOpen(false)}
       />
 
       <MemberProfileModal
@@ -417,6 +517,7 @@ export default function HomeLayout() {
           social.handleRefreshFriends();
         }}
         user={social.selectedFriendProfile}
+        onMessageClick={handleMessageClick}
       />
 
       <main className="flex-1 relative flex flex-col z-10 w-full md:w-auto md:bg-white/40 md:dark:bg-slate-800/40 md:backdrop-blur-md">

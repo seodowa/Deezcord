@@ -46,7 +46,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     onPresenceUpdate,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   } = useSocket();
 
   const fetchMembers = useCallback(async (id: string) => {
@@ -243,10 +244,20 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     return unsubscribe;
   }, [onPresenceUpdate]);
 
-  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => {
+  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null, fileWidth?: number, fileHeight?: number) => {
     if (roomId && channelId && isMember) {
       const tempId = `temp-${crypto.randomUUID()}`;
-      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId, temp_id: tempId });
+      socketSendMessage({ 
+        room_id: roomId, 
+        channel_id: channelId, 
+        content, 
+        file_url: fileUrl, 
+        file_name: fileName, 
+        file_width: fileWidth,
+        file_height: fileHeight,
+        parent_id: parentId, 
+        temp_id: tempId 
+      });
       
       const parentMessage = parentId ? messages.find(m => m.id === parentId) : null;
       const newMessage: Message = {
@@ -260,6 +271,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         avatar_url: user?.avatar_url,
         file_url: fileUrl,
         file_name: fileName,
+        file_width: fileWidth,
+        file_height: fileHeight,
         parent_id: parentId,
         parent_message: parentMessage ? {
           username: parentMessage.username,
@@ -326,6 +339,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   };
 };

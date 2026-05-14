@@ -6,8 +6,6 @@ import { generateSlug } from '../../utils/slug';
 import type { Room } from '../../types/room';
 import type { User } from '../../types/user';
 import SocialSection from './components/SocialSection';
-import MemberProfileModal from '../../components/MemberProfileModal';
-import UserProfileModal from '../../components/UserProfileModal';
 
 interface HomeContextType {
   user: User | null;
@@ -155,20 +153,6 @@ export default function DiscoveryPage() {
           onDMClick={handleDMClick}
         />
       </aside>
-
-      <MemberProfileModal
-        isOpen={social.isFriendProfileOpen}
-        onClose={() => {
-          social.setIsFriendProfileOpen(false);
-          social.handleRefreshFriends();
-        }}
-        user={social.selectedFriendProfile}
-      />
-
-      <UserProfileModal
-        isOpen={social.isUserProfileOpen}
-        onClose={() => social.setIsUserProfileOpen(false)}
-      />
     </div>
   );
 }

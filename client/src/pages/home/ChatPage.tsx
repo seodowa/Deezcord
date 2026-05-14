@@ -20,7 +20,7 @@ interface HomeContextType {
   typingUsers: string[];
   isLoadingMessages: boolean;
   toggleReaction: (messageId: string, emoji: string) => void;
-  sendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => void;
+  sendMessage: (content: string, fileUrl?: string, fileName?: string, parentId?: string | null, fileWidth?: number, fileHeight?: number) => void;
   unsendMessage: (messageId: string) => void;
   startTyping: () => void;
   stopTyping: () => void;
@@ -139,8 +139,8 @@ export default function ChatPage() {
         currentChannel={currentChannel}
       />
       <MessageInput 
-        onSendMessage={(content, fileUrl, fileName, parentId) => {
-          sendMessage(content, fileUrl, fileName, parentId);
+        onSendMessage={(content, fileUrl, fileName, parentId, fileWidth, fileHeight) => {
+          sendMessage(content, fileUrl, fileName, parentId, fileWidth, fileHeight);
           setReplyTo(null);
         }} 
         onStartTyping={startTyping}

@@ -12,9 +12,10 @@ interface MemberProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  onMessageClick?: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void> | void;
 }
 
-export default function MemberProfileModal({ isOpen, onClose, user }: MemberProfileModalProps) {
+export default function MemberProfileModal({ isOpen, onClose, user, onMessageClick }: MemberProfileModalProps) {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const { createDM } = useDMs();
@@ -74,6 +75,12 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
   const handleMessage = async () => {
     setIsMessageLoading(true);
     try {
+      if (onMessageClick) {
+        await onMessageClick({ id: user.id, username: user.username, avatar_url: user.avatar_url });
+        onClose();
+        return;
+      }
+
       const result = await createDM(user.id);
       if (result) {
         onClose();
@@ -125,7 +132,7 @@ export default function MemberProfileModal({ isOpen, onClose, user }: MemberProf
       maxWidth="max-w-sm"
     >
       <div className="flex flex-col items-center space-y-6">
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
+        <div className="w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 overflow-hidden shrink-0">
           {user.avatar_url ? (
             <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
           ) : (

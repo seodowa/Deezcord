@@ -186,7 +186,10 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
         )}
 
         {(step === 'verify' || step === 'email-verify') && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <form 
+            onSubmit={(e) => { e.preventDefault(); step === 'verify' ? handleVerifyTOTP() : handleVerifyEmail(); }}
+            className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300"
+          >
             <div className="text-center">
               <p className="text-slate-500 dark:text-slate-400 text-sm">
                 {step === 'verify' 
@@ -213,6 +216,7 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
             </div>
 
             <AsyncButton
+              type="submit"
               onClick={step === 'verify' ? handleVerifyTOTP : handleVerifyEmail}
               className={`w-full p-4 ${step === 'verify' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 cursor-pointer`}
             >
@@ -220,12 +224,13 @@ export default function MFASetupModal({ isOpen, onClose, onSuccess }: MFASetupMo
             </AsyncButton>
 
             <button
+              type="button"
               onClick={() => setStep('choice')}
               className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
             >
               Change method
             </button>
-          </div>
+          </form>
         )}
 
         {step === 'success' && (

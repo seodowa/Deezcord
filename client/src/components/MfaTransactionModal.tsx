@@ -30,6 +30,8 @@ export default function MfaTransactionModal({
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const mfaPreference = user?.app_metadata?.mfa_preference || 'none';
+  // Fallback: Treat 'none' as 'email' for transactional challenges
+  const effectiveMfa = mfaPreference === 'none' ? 'email' : mfaPreference;
 
   const handleResendEmail = useCallback(async () => {
     if (resendCooldown > 0) return;
@@ -60,12 +62,12 @@ export default function MfaTransactionModal({
     }
   }, [resendCooldown]);
 
-  // Automatically request email code if preference is email
+  // Automatically request email code if effective method is email
   useEffect(() => {
-    if (isOpen && mfaPreference === 'email') {
+    if (isOpen && effectiveMfa === 'email') {
       handleResendEmail();
     }
-  }, [isOpen, mfaPreference, handleResendEmail]);
+  }, [isOpen, effectiveMfa, handleResendEmail]);
 
   const handleConfirm = async () => {
     if (code.length !== 6) {
@@ -79,14 +81,14 @@ export default function MfaTransactionModal({
       setCode('');
     } catch (err: any) {
       if (err.message.includes("INVALID_MFA_CODE") || err.message.includes("incorrect") || err.message.includes("Invalid security code")) {
-        setError(err.message || "Invalid code. Please try again.");
+        setError("Invalid code. Please try again.");
       } else {
-        setError(err.message || "Something went wrong.");
+        setError("Something went wrong.");
       }
     }
   };
 
-  const defaultDescription = mfaPreference === 'email' 
+  const defaultDescription = effectiveMfa === 'email' 
     ? "Please enter the 6-digit code we sent to your email." 
     : "Please enter your 6-digit MFA code from your authenticator app.";
 
@@ -101,7 +103,7 @@ export default function MfaTransactionModal({
       <div className="space-y-6">
         <div className="text-center">
           <div className="w-20 h-20 bg-blue-500/10 dark:bg-blue-400/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            {mfaPreference === 'email' ? (
+            {effectiveMfa === 'email' ? (
               <svg viewBox="0 0 24 24" fill="none" className="w-10 h-10 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 8L10.8906 13.2604C11.5624 13.7083 12.4376 13.7083 13.1094 13.2604L21 8M5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V17C3 18.1046 3.89543 19 5 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -113,56 +115,64 @@ export default function MfaTransactionModal({
           </div>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            maxLength={6}
-            placeholder="000000"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            autoFocus
-            disabled={isSendingEmail}
-            className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono bg-white/50 dark:bg-slate-900/50 border-2 border-slate-200 dark:border-white/10 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none disabled:opacity-50"
-          />
-          {isSendingEmail && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/20 dark:bg-black/20 rounded-2xl">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          )}
-          {error && (
-            <p className="mt-2 text-red-500 text-xs font-bold text-center animate-shake">
-              {error}
-            </p>
-          )}
-        </div>
+        <form 
+          onSubmit={(e) => { e.preventDefault(); handleConfirm(); }}
+          className="space-y-6"
+        >
+          <div className="relative">
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="000000"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              autoFocus
+              disabled={isSendingEmail}
+              className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono bg-white/50 dark:bg-slate-900/50 border-2 border-slate-200 dark:border-white/10 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none disabled:opacity-50"
+            />
+            {isSendingEmail && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/20 dark:bg-black/20 rounded-2xl">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+            {error && (
+              <p className="mt-2 text-red-500 text-xs font-bold text-center animate-shake">
+                {error}
+              </p>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-3">
-          <AsyncButton
-            onClick={handleConfirm}
-            loadingText="Authorizing..."
-            disabled={isSendingEmail}
-            className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
-          >
-            {actionLabel}
-          </AsyncButton>
-
-          {mfaPreference === 'email' && (
-            <button
-              onClick={handleResendEmail}
-              disabled={resendCooldown > 0 || isSendingEmail}
-              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          <div className="flex flex-col gap-3">
+            <AsyncButton
+              type="submit"
+              onClick={handleConfirm}
+              loadingText="Authorizing..."
+              disabled={isSendingEmail}
+              className="w-full p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 cursor-pointer"
             >
-              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
-            </button>
-          )}
+              {actionLabel}
+            </AsyncButton>
 
-          <button
-            onClick={handleClose}
-            className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
+            {effectiveMfa === 'email' && (
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                disabled={resendCooldown > 0 || isSendingEmail}
+                className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive a code? Resend"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleClose}
+              className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm font-bold transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </Modal>
   );

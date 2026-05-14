@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { updateProfile } from '../services/userService';
+import { updateProfile, getCurrentUser } from '../services/userService';
 import { mfaListFactors, mfaUnenroll } from '../services/authService';
 import { getToken, getAAL } from '../utils/auth';
 import AsyncButton from './AsyncButton';
@@ -43,8 +43,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
     setIsCheckingMFA(true);
     try {
+      const freshUser = await getCurrentUser();
+      setUser(freshUser);
+
       // 1. Check local user metadata (covers both, especially Email)
-      const preference = user?.app_metadata?.mfa_preference || 'none';
+      const preference = freshUser?.app_metadata?.mfa_preference || 'none';
       
       if (preference === 'email') {
         setIsMFAEnabled(true);
@@ -69,7 +72,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     } finally {
       setIsCheckingMFA(false);
     }
-  }, [user]);
+  }, [setUser]);
 
   const handleDisableMFA = async (verificationCode?: string) => {
     setIsDisablingMFA(true);
@@ -167,8 +170,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 cursor-pointer group overflow-hidden shrink-0"
+              onClick={() => !isUpdatingProfile && fileInputRef.current?.click()}
+              className={`relative w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/20 group overflow-hidden shrink-0 ${isUpdatingProfile ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
@@ -190,7 +193,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               accept="image/*"
             />
             
-            <div className="flex-1 w-full space-y-4">
+            <form 
+              className="flex-1 w-full space-y-4"
+              onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}
+            >
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">USERNAME</label>
                 <input
@@ -202,13 +208,14 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                 />
               </div>
               <AsyncButton
+                type="submit"
                 onClick={handleUpdateProfile}
                 isLoading={isUpdatingProfile}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-3 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300"
               >
                 Save Profile
               </AsyncButton>
-            </div>
+            </form>
           </div>
         </section>
 

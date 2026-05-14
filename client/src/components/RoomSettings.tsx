@@ -16,9 +16,11 @@ interface RoomSettingsProps {
   onRoomUpdate: (updatedRoom: Room) => void;
   onMemberChange: () => void;
   onLeave: () => void;
+  onDeleteDM?: (roomId: string) => Promise<boolean>;
+  onMessageClick?: (u: { id: string; username: string; avatar_url?: string | null }) => Promise<void> | void;
 }
 
-export default function RoomSettings({ room, members, onRoomUpdate, onMemberChange, onLeave }: RoomSettingsProps) {
+export default function RoomSettings({ room, members, onRoomUpdate, onMemberChange, onLeave, onDeleteDM, onMessageClick }: RoomSettingsProps) {
   const { user } = useAuth();
   const [roomName, setRoomName] = useState(room.name);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -43,6 +45,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
   const { addToast } = useToast();
 
   const isOwner = room.role === 'owner';
+  const isDM = room.is_dm;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -107,19 +110,28 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
   };
 
   const handleLeaveRoom = async () => {
-    if (isOwner) {
+    if (isOwner && !isDM) {
       addToast('Owners cannot leave. Transfer ownership first (coming soon).', 'error');
       return;
     }
 
     setIsLeaving(true);
     try {
-      await leaveRoom(room.id);
-      addToast('You have left the room', 'info');
-      setConfirmAction(null);
-      onLeave();
+      if (isDM && onDeleteDM) {
+        const success = await onDeleteDM(room.id);
+        if (success) {
+          addToast('Left conversation successfully', 'info');
+          setConfirmAction(null);
+          onLeave();
+        }
+      } else {
+        await leaveRoom(room.id);
+        addToast('You have left the room', 'info');
+        setConfirmAction(null);
+        onLeave();
+      }
     } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Failed to leave room', 'error');
+      addToast(err instanceof Error ? err.message : (isDM ? 'Failed to leave conversation' : 'Failed to leave room'), 'error');
     } finally {
       setIsLeaving(false);
     }
@@ -206,7 +218,10 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                     accept="image/*"
                   />
                   
-                  <div className="flex-1 w-full space-y-4">
+                  <form 
+                    className="flex-1 w-full space-y-4"
+                    onSubmit={(e) => { e.preventDefault(); if (isOwner) handleUpdateRoom(); }}
+                  >
                     <div>
                       <label className="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Room Name</label>
                       <input
@@ -220,6 +235,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                     </div>
                     {isOwner && (
                       <AsyncButton
+                        type="submit"
                         onClick={handleUpdateRoom}
                         isLoading={isUpdating}
                         className="w-full md:w-auto px-8 bg-blue-500 hover:bg-blue-600 text-white rounded-xl py-2.5 font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 cursor-pointer"
@@ -227,7 +243,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
                         Save Changes
                       </AsyncButton>
                     )}
-                  </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -350,17 +366,21 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
           </h3>
           
           <div className="space-y-6">
-            {!isOwner ? (
+            {!isOwner || isDM ? (
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-50">Leave Room</h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">You will no longer be able to see messages or participate in this community.</p>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-50">{isDM ? 'Leave Conversation' : 'Leave Room'}</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {isDM 
+                      ? 'This conversation will be hidden from your list until you receive a new message or search for the user again.' 
+                      : 'You will no longer be able to see messages or participate in this community.'}
+                  </p>
                 </div>
                 <button
                   onClick={() => setConfirmAction('leave_room')}
                   className="bg-red-500 hover:bg-red-600 text-white rounded-xl px-8 py-2.5 font-bold shadow-lg shadow-red-500/30 transition-all duration-300 active:scale-95 whitespace-nowrap cursor-pointer"
                 >
-                  Leave Room
+                  {isDM ? 'Leave Conversation' : 'Leave Room'}
                 </button>
               </div>
             ) : (
@@ -420,12 +440,12 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         </div>
       </Modal>
 
-      {/* Leave Room Modal */}
+      {/* Leave Room/Conversation Modal */}
       <Modal
         isOpen={confirmAction === 'leave_room'}
         onClose={() => setConfirmAction(null)}
-        title="Leave Room"
-        description={`Are you sure you want to leave "${room.name}"?`}
+        title={isDM ? 'Leave Conversation' : 'Leave Room'}
+        description={`Are you sure you want to leave ${isDM ? 'the conversation with ' + room.name : '"' + room.name + '"'}?`}
         maxWidth="max-w-md"
         isLoading={isLeaving}
         footer={
@@ -440,20 +460,22 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
             <AsyncButton
               onClick={handleLeaveRoom}
               isLoading={isLeaving}
-              loadingText="Leaving..."
+              loadingText={isDM ? 'Leaving...' : 'Leaving...'}
               className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-500/30 transition-all cursor-pointer"
             >
-              Leave Room
+              {isDM ? 'Leave Conversation' : 'Leave Room'}
             </AsyncButton>
           </>
         }
       >
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-3xl">
-            🚪
+            {isDM ? '💬' : '🚪'}
           </div>
           <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-            You will lose access to all channels and messages in this room. You'll need an invite or find the room in discovery to join again.
+            {isDM 
+              ? 'This will hide the conversation from your sidebar. It will reappear if you receive a new message or search for the user again.'
+              : "You will lose access to all channels and messages in this room. You'll need an invite or find the room in discovery to join again."}
           </p>
         </div>
       </Modal>
@@ -501,6 +523,7 @@ export default function RoomSettings({ room, members, onRoomUpdate, onMemberChan
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         user={selectedProfile}
+        onMessageClick={onMessageClick}
       />
 
       {/* MFA Transaction Modal for Room Deletion */}

@@ -171,6 +171,29 @@ export const mfaVerifyEmail = async (token: string, code: string, purpose: 'setu
   return data;
 };
 
+/**
+ * Universal MFA verification for 'unlocking' UI or authorizing sensitive actions.
+ * Handles both TOTP (via Supabase list/challenge/verify flow in backend) and Email (via custom flow).
+ */
+export const verifyMfaCode = async (code: string, token?: string) => {
+  const response = await fetch(`${API_URL}/api/auth/mfa/challenge-verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(token),
+      'x-mfa-code': code,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Identity verification failed');
+  }
+
+  return data;
+};
+
 export const mfaRequestEmail = async (purpose: string = 'transactional', token?: string) => {
   const response = await fetch(`${API_URL}/api/auth/mfa/email/request`, {
     method: 'POST',

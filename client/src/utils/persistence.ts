@@ -208,6 +208,13 @@ export async function loadMembers(roomId: string): Promise<unknown[]> {
 }
 
 /**
+ * Removes cached data for a specific channel.
+ */
+export function clearChannelCache(channelId: string): void {
+  sessionStorage.removeItem(`${MESSAGE_CACHE_PREFIX}${channelId}`);
+}
+
+/**
  * Clears all cached messages (e.g., on logout).
  */
 export function clearMessageCache(): void {

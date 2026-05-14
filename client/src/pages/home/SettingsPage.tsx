@@ -10,10 +10,11 @@ interface HomeContextType {
   fetchMembers: (roomId: string) => Promise<void>;
   setRooms: React.Dispatch<React.SetStateAction<Room[]>>;
   navigate: NavigateFunction;
+  handleDeleteDM: (roomId: string) => Promise<boolean>;
 }
 
 export default function SettingsPage() {
-  const { currentRoom, members, fetchMembers, setRooms, navigate } = useOutletContext<HomeContextType>();
+  const { currentRoom, members, fetchMembers, setRooms, navigate, handleDeleteDM } = useOutletContext<HomeContextType>();
 
   if (!currentRoom || !currentRoom.isMember) {
     return <Navigate to={currentRoom ? `/${generateSlug(currentRoom.name)}` : '/'} replace state={currentRoom ? { roomId: currentRoom.id } : undefined} />;
@@ -35,7 +36,10 @@ export default function SettingsPage() {
       onRoomUpdate={handleRoomUpdate}
       onMemberChange={() => fetchMembers(currentRoom.id)}
       onLeave={handleLeaveRoom}
+      onDeleteDM={handleDeleteDM}
     />
   );
 }
+
+
 

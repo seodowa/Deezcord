@@ -4,6 +4,7 @@ import type { Room } from '../../../types/room';
 import AsyncButton from '../../../components/AsyncButton';
 import SearchSidebar from './SearchSidebar';
 import { useTheme } from '../../../hooks/useTheme';
+import { useState } from 'react';
 
 interface SocialSectionProps {
   user: User | null;
@@ -15,7 +16,7 @@ interface SocialSectionProps {
   onAcceptRequest: (id: string) => Promise<void>;
   onDeclineRequest: (id: string) => Promise<void>;
   onUserClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
-  onMessageClick: (user: { id: string; username: string; avatar_url?: string | null }) => void;
+  onMessageClick: (user: { id: string; username: string; avatar_url?: string | null }) => Promise<void> | void;
   onNavigate: (path: string, options?: NavigateOptions) => void;
   activeTab: 'friends' | 'search';
   onTabChange: (tab: 'friends' | 'search') => void;
@@ -28,6 +29,7 @@ interface SocialSectionProps {
   dmList: Room[];
   isLoadingDMs: boolean;
   onDMClick: (dm: Room) => void;
+  onClose?: () => void;
 }
 
 export default function SocialSection({
@@ -50,9 +52,11 @@ export default function SocialSection({
   searchQuery,
   dmList,
   isLoadingDMs,
-  onDMClick
+  onDMClick,
+  onClose
 }: SocialSectionProps) {
   const { isDarkMode, toggleTheme } = useTheme();
+  const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
 
   // Unified List Logic
   // 1. Limit to the 3 most recent active conversations (must have messages)
@@ -64,19 +68,37 @@ export default function SocialSection({
   const onlineFriends = friendsList.filter(f => f.isOnline);
   const offlineFriends = friendsList.filter(f => !f.isOnline);
 
+  const handleMessageClick = async (u: { id: string; username: string; avatar_url?: string | null }) => {
+    setMessagingUserId(u.id);
+    try {
+      await onMessageClick(u);
+    } finally {
+      setMessagingUserId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sidebar Header */}
-      <div className="shrink-0 p-4 pb-2">
-        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex justify-center items-center gap-2">
+      <div className="shrink-0 p-4 h-16 md:h-20 flex items-center justify-between border-b border-slate-200/50 dark:border-white/10">
+        <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 uppercase flex items-center gap-2">
           Social
         </h2>
+        {onClose && (
+          <div className="flex items-center gap-1 md:hidden">
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Top Section - Toggles */}
-      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/5 p-3 pt-0">
+      <div className="shrink-0 border-b border-slate-200/50 dark:border-white/10 p-3">
         {/* Tab Header - Switch Style (Narrower Width) */}
-        <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-[260px] mx-auto">
+        <div className="relative flex p-1 bg-slate-200/50 dark:bg-slate-900/50 rounded-2xl max-w-65 mx-auto">
           {/* Sliding Background Indicator */}
           <div 
             className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-[calc(1rem-2px)] transition-all duration-300 ease-out shadow-sm ${
@@ -133,7 +155,7 @@ export default function SocialSection({
                   {pendingList.map(request => (
                     <div key={request.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 shadow-sm">
                       <div 
-                        className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden cursor-pointer shrink-0"
+                        className="w-10 h-10 rounded-xl bg-linear-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden cursor-pointer shrink-0"
                         onClick={() => onUserClick({ id: request.id, username: request.username, avatar_url: request.avatar_url })}
                       >
                         {request.avatar_url ? (
@@ -186,13 +208,13 @@ export default function SocialSection({
                         onClick={() => onDMClick(dm)}
                         className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                       >
-                        <div className="relative flex-shrink-0">
+                        <div className="relative shrink-0">
                           <div 
                             onClick={(e) => {
                               e.stopPropagation();
                               onUserClick({ id: target.id, username: target.username, avatar_url: target.avatar_url });
                             }}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-slate-400 to-slate-600'} cursor-pointer`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden hover:opacity-80 transition-opacity ${target.isOnline ? 'bg-linear-to-br from-emerald-400 to-emerald-600' : 'bg-linear-to-br from-slate-400 to-slate-600'} cursor-pointer`}
                           >
                             {target.avatar_url ? (
                               <img src={target.avatar_url} alt={target.username} className="w-full h-full object-cover" />
@@ -229,8 +251,8 @@ export default function SocialSection({
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
                       className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                     >
-                      <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-gradient-to-br from-emerald-400 to-emerald-600">
+                      <div className="relative shrink-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-linear-to-br from-emerald-400 to-emerald-600">
                           {friend.avatar_url ? (
                             <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
                           ) : (
@@ -246,13 +268,21 @@ export default function SocialSection({
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
+                          handleMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
                         }}
-                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white cursor-pointer"
+                        disabled={messagingUserId === friend.id}
+                        className={`w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 ${messagingUserId === friend.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all hover:bg-blue-500 hover:text-white cursor-pointer`}
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
+                        {messagingUserId === friend.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   ))}
@@ -273,8 +303,8 @@ export default function SocialSection({
                       onClick={() => onUserClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url })}
                       className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-700/40 transition-all cursor-pointer group border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
                     >
-                      <div className="relative flex-shrink-0 grayscale group-hover:grayscale-0 transition-all">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-gradient-to-br from-slate-400 to-slate-600">
+                      <div className="relative shrink-0 grayscale group-hover:grayscale-0 transition-all">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden bg-linear-to-br from-slate-400 to-slate-600">
                           {friend.avatar_url ? (
                             <img src={friend.avatar_url} alt={friend.username} className="w-full h-full object-cover" />
                           ) : (
@@ -290,13 +320,21 @@ export default function SocialSection({
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
+                          handleMessageClick({ id: friend.id, username: friend.username, avatar_url: friend.avatar_url });
                         }}
-                        className="w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white cursor-pointer"
+                        disabled={messagingUserId === friend.id}
+                        className={`w-8 h-8 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-400 ${messagingUserId === friend.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all hover:bg-blue-500 hover:text-white cursor-pointer`}
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
+                        {messagingUserId === friend.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   ))}
@@ -336,8 +374,8 @@ export default function SocialSection({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-slate-200/50 dark:border-white/5 px-3 py-4">
-        <div className="flex items-center justify-between p-3 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-white/40 dark:border-white/5 shadow-sm group/profile">
+      <div className="shrink-0 py-3 px-4 bg-slate-50/30 dark:bg-black/10">
+        <div className="flex items-center justify-between px-3 py-2 rounded-[1.25rem] bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-white/5 shadow-sm group/profile">
           <AsyncButton 
             onClick={onOpenProfile}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity text-left min-w-0 flex-1 justify-start cursor-pointer"
