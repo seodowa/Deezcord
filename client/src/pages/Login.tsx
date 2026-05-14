@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AsyncButton from '../components/AsyncButton';
+import Logo from '../components/Logo';
 import { useToast } from '../hooks/useToast';
-import { loginUser } from '../services/authService';
+import { loginUser, mfaListFactors } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useMFAChallenge } from '../hooks/useMFAChallenge';
+import MFAChallengeModal from '../components/MFAChallengeModal';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -14,20 +17,41 @@ export default function LoginPage() {
 
   const { isDarkMode, toggleTheme, mounted } = useTheme();
   const { login } = useAuth();
+  const { isChallengeOpen, factorId, overrideToken, mfaMethod, startChallenge, closeChallenge, handleVerified } = useMFAChallenge();
 
   const navigate = useNavigate();
   const { addToast } = useToast();
+
+  const completeLogin = async (token: string, refreshToken: string) => {
+    await login(token, refreshToken, rememberMe);
+    addToast('Successfully signed in!', 'success');
+    navigate('/');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const data = await loginUser(identifier, password);
-      addToast('Successfully signed in!', 'success');
       
-      await login(data.token, rememberMe);
+      // Check if user has MFA enabled (either TOTP factor or Email preference)
+      const factors = await mfaListFactors(data.token);
+      const verifiedFactor = factors.all?.find((f: any) => f.status === 'verified');
+      const mfaPreference = data.user?.app_metadata?.mfa_preference;
       
-      navigate('/');
+      if (verifiedFactor) {
+        // Trigger TOTP MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'totp');
+      } else if (mfaPreference === 'email') {
+        // Trigger Email MFA challenge
+        startChallenge((newToken, newRefreshToken) => {
+          completeLogin(newToken, newRefreshToken || data.refreshToken);
+        }, data.token, 'email');
+      } else {
+        await completeLogin(data.token, data.refreshToken);
+      }
     } catch (error: unknown) {
       const err = error as Error;
       addToast(err.message || 'Login failed', 'error');
@@ -37,7 +61,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50">
       
       {/* Deezcord Server Status Feature - Top Left */}
       <div className="absolute top-6 left-6 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200/50 dark:border-white/10 text-slate-900 dark:text-slate-50 px-4 py-2 rounded-full flex items-center gap-2.5 z-50 shadow-sm transition-colors duration-500">
@@ -78,7 +102,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full mx-5 max-w-[25rem] min-w-[20rem] bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 shadow-2xl animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/Logo.png" alt="Deezcord" className="w-16 h-16 object-contain rounded-2xl" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">Welcome Back</h1>
           <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 m-0">Enter your details to access your account</p>
@@ -129,7 +153,7 @@ export default function LoginPage() {
               />
               <span className="group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-200">Remember me</span>
             </label>
-            <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+            <Link to="/forgot-password" className="text-sm text-blue-500 dark:text-blue-400 font-semibold transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
               Forgot password?
             </Link>
           </div>
@@ -146,11 +170,21 @@ export default function LoginPage() {
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Don't have an account? 
-          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline">
+          <Link to="/register" className="text-blue-500 dark:text-blue-400 font-semibold ml-1 transition-colors duration-200 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer">
             Sign up for free
           </Link>
         </div>
       </div>
+
+      <MFAChallengeModal 
+        isOpen={isChallengeOpen}
+        factorId={factorId || ''}
+        token={overrideToken || undefined}
+        mfaMethod={mfaMethod}
+        onClose={closeChallenge}
+        onSuccess={handleVerified}
+      />
+
     </div>
   );
 }

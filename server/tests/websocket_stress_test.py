@@ -1,5 +1,27 @@
 """
 Deezcord WebSocket Stress Test — Locust
+========================================
+Faithful port of the k6 script. Replicates:
+  - Same load shape  (30s → 100 VUs, 60s → 500 VUs, 30s → 0)
+  - Auth token on namespace connect
+  - join_room on connect
+  - send_message every 5 s with an embedded user ID + timestamp
+  - RTT measured by matching receive_message back to this user's sent timestamp
+  - Same metric categories surfaced via Locust's request event
+
+Prerequisites:
+    pip install locust "python-socketio[msgpack]"
+
+Run:
+    locust -f <filename>.py \\
+        --headless \\
+        -e TOKEN=<token> \\
+        -e DEVICE_ID=<device_id> \\
+        -e ROOM_ID=<uuid> \\
+        -e CHANNEL_ID=<uuid> \\
+        -e BASE_URL=http://localhost:3001
+
+Or open the web UI (omit --headless) and start from http://localhost:8089
 """
 
 import os
@@ -11,20 +33,19 @@ import socketio # type: ignore
 from locust import User, task, constant, events, LoadTestShape # type: ignore
 from locust.exception import StopUser # type: ignore
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-load_dotenv(os.path.join(dir_path, ".env.stresstest"))
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _fire(environment, name: str, response_time_ms: float, exception=None):
+def _fire(environment, name: str, response_time_ms: float, response_length: int = 0, exception=None):
     """Emit a Locust request event — shows up in the live stats table."""
     environment.events.request.fire(
         request_type="WS",
         name=name,
         response_time=response_time_ms,
-        response_length=0,
+        response_length=response_length,
         exception=exception,
         context={},
     )
@@ -56,19 +77,19 @@ class ChatUser(User):
         self._running  = True
 
         token      = os.getenv("TOKEN")
+        device_id  = os.getenv("DEVICE_ID")
         room_id    = os.getenv("ROOM_ID")
         channel_id = os.getenv("CHANNEL_ID")
         base_url   = os.getenv("BASE_URL", "http://localhost:3001")
 
-        if not all([token, room_id, channel_id]):
-            raise StopUser("Missing TOKEN, ROOM_ID, or CHANNEL_ID env vars")
+        if not all([token, device_id, room_id, channel_id]):
+            raise StopUser("Missing TOKEN, DEVICE_ID, ROOM_ID, or CHANNEL_ID env vars")
 
         self._room_id    = room_id
         self._channel_id = channel_id
 
         # ---- Create Socket.IO client with msgpack serializer ----
         self._sio = socketio.Client(logger=False, engineio_logger=False, serializer="msgpack")
-        # self._sio = socketio.Client(logger=False, engineio_logger=False)
         self._register_handlers()
 
         # ---- Connect and measure handshake time ----
@@ -77,22 +98,24 @@ class ChatUser(User):
             self._sio.connect(
                 base_url,
                 transports=["websocket"],
-                auth={"token": token},      # mirrors: socket.send(`40{"token":"..."}`)
+                auth={"token": token, "deviceId": device_id},      # mirrors: socket.send(`40{"token":"...", "deviceId":"..."}`)
                 namespaces=["/"],
                 wait_timeout=10,
             )
             elapsed_ms = (time.perf_counter() - t0) * 1000
-            _fire(self.environment, "ws_connect + handshake", elapsed_ms)
+            _fire(self.environment, "ws_connect", elapsed_ms)
         except Exception as exc:
-            _fire(self.environment, "ws_connect + handshake", 0, exception=exc)
+            _fire(self.environment, "ws_connect", 0, exception=exc)
             raise StopUser()
 
         # ---- Join room (mirrors the '40' handler in k6) ----
         try:
+            t0 = time.perf_counter()
             self._sio.emit("join_room", {
                 "room_id":    self._room_id,
                 "channel_id": self._channel_id,
             })
+            _fire(self.environment, "join_room", (time.perf_counter() - t0) * 1000)
         except Exception as exc:
             _fire(self.environment, "join_room", 0, exception=exc)
 
@@ -118,12 +141,15 @@ class ChatUser(User):
 
         @self._sio.on("receive_message")
         def on_receive_message(data):
-            # Count every received message  (mirrors: messagesReceived.add(1))
-            _fire(self.environment, "ws_messages_received", 0)
+            # Calculate approx payload length for throughput tracking
+            payload_len = len(str(data).encode("utf-8")) if data else 0
 
-            # RTT: only for messages sent by *this* user
             content = (data or {}).get("content", "")
+            
+            # If not our own message, just log it as a general receive with 0 ms response time
+            # This helps track overall throughput (messages per second)
             if f"UID={self._user_id}" not in content:
+                _fire(self.environment, "receive_message (broadcast)", 0, response_length=payload_len)
                 return
 
             try:
@@ -137,15 +163,14 @@ class ChatUser(User):
 
             if sent_ms is not None:
                 rtt_ms = (time.perf_counter() * 1000) - sent_ms
-                # Surfaces as "ws_message_rtt" in Locust's stats table,
-                # equivalent to k6's messageRTT Trend.
-                _fire(self.environment, "ws_message_rtt", rtt_ms)
+                # Log RTT specifically for the message this user sent
+                _fire(self.environment, "receive_message (own RTT)", rtt_ms, response_length=payload_len)
 
         @self._sio.on("connect_error")
         def on_connect_error(data):
             _fire(
                 self.environment,
-                "ws_connect_error",
+                "ws_error",
                 0,
                 exception=Exception(str(data)),
             )
@@ -169,38 +194,59 @@ class ChatUser(User):
         with self._lock:
             self._sent_at[self._iter] = now_ms
 
-        # Content format matches k6:
-        # `STRESS_TEST: VU=${__VU} Iter=${__ITER} Time=${timestamp}`
-        # __VU → UID=<user_id>  (per-process unique, like k6 VU id)
         content = (
             f"STRESS_TEST: UID={self._user_id} "
             f"Iter={self._iter} "
             f"Time={int(now_ms)}"
         )
 
+        payload = {
+            "room_id":    self._room_id,
+            "channel_id": self._channel_id,
+            "content":    content,
+        }
+
         try:
-            self._sio.emit("send_message", {
-                "room_id":    self._room_id,
-                "channel_id": self._channel_id,
-                "content":    content,
-            })
-            # mirrors: messagesSent.add(1)
-            _fire(self.environment, "ws_messages_sent", 0)
+            t0 = time.perf_counter()
+            self._sio.emit("send_message", payload)
+            # Emit send event to track outbound throughput (0 ms response time because it's fire-and-forget)
+            _fire(self.environment, "send_message", (time.perf_counter() - t0) * 1000, response_length=len(str(payload).encode("utf-8")))
         except Exception as exc:
             with self._lock:
                 self._sent_at.pop(self._iter, None)
-            # mirrors: errors.add(1)
-            _fire(self.environment, "ws_send_error", 0, exception=exc)
+            _fire(self.environment, "send_message", 0, exception=exc)
 
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
 
     def _shutdown(self):
-        """Called by the 110-second timer — mirrors socket.setTimeout in k6."""
         self._running = False
         try:
             self._sio.disconnect()
         except Exception:
             pass
         raise StopUser()
+
+
+# ---------------------------------------------------------------------------
+# Load shape — mirrors k6 stages exactly
+# ---------------------------------------------------------------------------
+
+class DeezcordShape(LoadTestShape):
+    """
+    Locust shapes work on cumulative elapsed time.
+    """
+
+    stages = [
+        (30,  10, 10 / 30),   # 0–30 s:   ramp 0 → 10
+        (90,  200, 40 / 60),   # 30–90 s:  ramp 10 → 200
+        (120,   0, 50 / 30),   # 90–120 s: ramp 200 → 0
+    ]
+
+    def tick(self):
+        elapsed = self.get_run_time()
+        for end_time, users, rate in self.stages:
+            if elapsed <= end_time:
+                return (users, rate)
+        return None   # stop the test

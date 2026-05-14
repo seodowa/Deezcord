@@ -5,7 +5,9 @@ import { useAuth } from './hooks/useAuth';
 import LoadingScreen from './components/LoadingScreen';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import VerifyPage from './pages/Verify';
 import ForgotPasswordPage from './pages/ForgotPassword';
+import ResetPasswordPage from './pages/ResetPassword';
 import HomeLayout from './layouts/HomeLayout';
 import WelcomeDashboard from './pages/home/WelcomeDashboard';
 import DiscoveryPage from './pages/home/DiscoveryPage';
@@ -46,7 +48,9 @@ const AppRoutes = () => {
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify" element={<VerifyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

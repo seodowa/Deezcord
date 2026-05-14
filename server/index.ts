@@ -14,6 +14,7 @@ import friendRoutes from './routes/friendRoutes';
 import userRoutes from './routes/userRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
+import dmRoutes from './routes/dmRoutes';
 import { ReceiveMessagePayload } from './types/socket';
 import { addUser, removeUser } from './utils/presence';
 
@@ -21,7 +22,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 // Determine if we are running from the compiled 'dist' folder or the root 'server' folder
 const clientDistPath = __dirname.endsWith('dist') 
   ? path.join(__dirname, '../../client/dist') 
@@ -35,13 +35,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/dms', dmRoutes);
 
 // Redirect root to /rooms
 app.get('/api', (req: Request, res: Response) => {
   res.redirect('/api/rooms');
 });
 
-app.get('/{*splat}', (req, res) => {
+app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
@@ -61,6 +62,10 @@ app.set('io', io);
 // Create custom socket interface extending standard Socket
 interface AuthenticatedSocket extends Socket {
   user?: any;
+  profile?: {
+    username: string;
+    avatar_url: string | null;
+  };
 }
 
 // 3. Socket.io Authentication Middleware (The Bouncer)
@@ -68,9 +73,14 @@ io.use(async (socket: AuthenticatedSocket, next) => {
   try {
     // The frontend must pass the token when initializing the socket connection
     const token = socket.handshake.auth?.token;
+    const deviceId = socket.handshake.auth?.deviceId;
 
     if (!token) {
       return next(new Error("Unauthorized: No token provided"));
+    }
+
+    if (!deviceId) {
+      return next(new Error("Unauthorized: No device ID provided"));
     }
 
     // Verify the token with Supabase
@@ -80,8 +90,26 @@ io.use(async (socket: AuthenticatedSocket, next) => {
       return next(new Error("Unauthorized: Invalid token"));
     }
 
+    // Fingerprint Check
+    const registeredDevices = user.app_metadata?.devices || [];
+    if (!registeredDevices.includes(deviceId)) {
+      return next(new Error("Unauthorized: Device not recognized"));
+    }
+
     // Attach the verified user object to the socket for future use
     socket.user = user;
+
+    // Fetch and attach user profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', user.id)
+      .single();
+
+    if (profile) {
+      socket.profile = profile;
+    }
+
     next(); // Allow the connection to proceed
   } catch (error) {
     console.error("Socket Authentication Error:", error);
@@ -161,19 +189,12 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     try {
       const email = socket.user?.email;
       const userId = socket.user?.id;
-      const senderName = email ? email.split('@')[0] : "Unknown User"; 
+      const senderName = socket.profile?.username || (email ? email.split('@')[0] : "Unknown User"); 
 
       // type check for data.room_id
       if (typeof data.room_id !== 'string' || typeof data.content !== 'string' || typeof data.channel_id !== 'string') {
         throw new Error("Invalid payload: Must be strings");
       }
-
-      // Fetch user profile to get avatar
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', userId)
-        .single();
 
       // Fetch parent message if exists for broadcasting
       let parentMessage = null;
@@ -197,16 +218,27 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           room_id: data.room_id,
           channel_id: data.channel_id,
           user_id: userId, // Persistent UUID
-          username: profile?.username || senderName, // Still store username for legacy/snapshot purposes
+          username: senderName, // Still store username for legacy/snapshot purposes
           content: data.content,
           file_url: data.file_url, // Store optional file URL
           file_name: data.file_name, // Store optional file name
+          file_width: data.file_width, // Store optional image width
+          file_height: data.file_height, // Store optional image height
           parent_id: data.parent_id // Store parent_id for replies
         }])
         .select()
         .single();
 
       if (error) throw error;
+
+      // Automatically unhide DM conversation for all members when a message is sent
+      const { data: roomInfo } = await supabase.from('rooms').select('is_dm').eq('id', data.room_id).single();
+      if (roomInfo?.is_dm) {
+        await supabase
+          .from('room_members')
+          .update({ is_hidden: false })
+          .eq('room_id', data.room_id);
+      }
 
       // Broadcast the message to EVERYONE in the channel including the sender
       const broadcastData: ReceiveMessagePayload = {
@@ -215,11 +247,13 @@ io.on('connection', (socket: AuthenticatedSocket) => {
           room_id: data.room_id,
           channel_id: data.channel_id,
           content: data.content,
-          username: profile?.username || senderName,
+          username: senderName,
           created_at: insertedData.created_at,
-          avatar_url: profile?.avatar_url,
+          avatar_url: socket.profile?.avatar_url,
           file_url: data.file_url,
           file_name: data.file_name,
+          file_width: data.file_width,
+          file_height: data.file_height,
           parent_id: data.parent_id,
           parent_message: parentMessage,
           temp_id: data.temp_id
@@ -298,13 +332,6 @@ io.on('connection', (socket: AuthenticatedSocket) => {
       const userId = socket.user?.id;
       if (!userId || !data.message_id || !data.emoji || !data.channel_id) return;
 
-      // Fetch user profile to get username
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', userId)
-        .single();
-
       // Insert reaction and fetch the inserted row
       const { data: insertedReaction, error } = await supabase
         .from('message_reactions')
@@ -326,7 +353,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
             message_id: data.message_id,
             user_id: userId,
             emoji: data.emoji,
-            username: profile?.username
+            username: socket.profile?.username
           }
         });
       }
@@ -363,7 +390,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     const room_id = typeof data === 'string' ? data : data?.room_id;
     const channel_id = typeof data === 'object' ? data?.channel_id : null;
     const target = channel_id ? `channel:${channel_id}` : room_id;
-    const username = socket.user?.email?.split('@')[0] || "Unknown User";
+    const username = socket.profile?.username || socket.user?.email?.split('@')[0] || "Unknown User";
     socket.to(target).emit('user_typing', { room_id, channel_id, userId, username, isTyping: true });
   });
 
@@ -371,7 +398,7 @@ io.on('connection', (socket: AuthenticatedSocket) => {
     const room_id = typeof data === 'string' ? data : data?.room_id;
     const channel_id = typeof data === 'object' ? data?.channel_id : null;
     const target = channel_id ? `channel:${channel_id}` : room_id;
-    const username = socket.user?.email?.split('@')[0] || "Unknown User";
+    const username = socket.profile?.username || socket.user?.email?.split('@')[0] || "Unknown User";
     socket.to(target).emit('user_typing', { room_id, channel_id, userId, username, isTyping: false });
   });
 

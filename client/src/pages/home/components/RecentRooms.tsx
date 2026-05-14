@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
+import type { NavigateOptions } from 'react-router-dom';
 import type { Room } from '../../../types/room';
 import { generateSlug } from '../../../utils/slug';
 
 interface RecentRoomsProps {
   rooms: Room[];
   isLoading: boolean;
-  onNavigate: (path: string, state?: any) => void;
+  onNavigate: (path: string, options?: NavigateOptions) => void;
 }
 
 export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoomsProps) {
@@ -51,7 +52,7 @@ export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoom
         {showLeftArrow && (
           <button 
             onClick={() => scroll('left')}
-            className="absolute left-2 top-[calc(50%-12px)] -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-110 active:scale-95 transition-all"
+            className="absolute left-2 top-[calc(50%-12px)] -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-110 active:scale-95 transition-all cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -62,7 +63,7 @@ export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoom
         {showRightArrow && recentRooms.length > 0 && (
           <button 
             onClick={() => scroll('right')}
-            className="absolute right-2 top-[calc(50%-12px)] -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-110 active:scale-95 transition-all"
+            className="absolute right-2 top-[calc(50%-12px)] -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-110 active:scale-95 transition-all cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -83,7 +84,7 @@ export default function RecentRooms({ rooms, isLoading, onNavigate }: RecentRoom
               <button
                 key={room.id}
                 onClick={() => onNavigate(`/${generateSlug(room.name)}`, { state: { roomId: room.id } })}
-                className="group relative w-48 h-48 shrink-0 flex flex-col justify-end p-6 rounded-[2.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-sm hover:shadow-2xl hover:bg-white dark:hover:bg-slate-800 hover:-translate-y-2 transition-all duration-500 text-left overflow-hidden snap-start"
+                className="group relative w-48 h-48 shrink-0 flex flex-col justify-end p-6 rounded-[2.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-sm hover:shadow-2xl hover:bg-white dark:hover:bg-slate-800 hover:-translate-y-2 transition-all duration-500 text-left overflow-hidden snap-start cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 group-hover:from-blue-500/10 group-hover:to-indigo-500/10 transition-colors"></div>
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>

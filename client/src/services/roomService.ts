@@ -1,17 +1,10 @@
-import { getToken } from '../utils/auth';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import type { Room } from '../types/room';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const getRooms = async (): Promise<Room[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/rooms`);
 
   const data = await response.json();
 
@@ -23,14 +16,7 @@ export const getRooms = async (): Promise<Room[]> => {
 };
 
 export const getDiscoverRooms = async (): Promise<Room[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/discover`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/discover`);
 
   const data = await response.json();
 
@@ -42,22 +28,14 @@ export const getDiscoverRooms = async (): Promise<Room[]> => {
 };
 
 export const createRoom = async (name: string, file: File | null): Promise<Room> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
   const formData = new FormData();
   formData.append('name', name);
   if (file) {
     formData.append('file', file);
   }
 
-  const response = await fetch(`${API_URL}/api/rooms`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      // Note: Don't set Content-Type header when using FormData; 
-      // the browser will set it automatically with the boundary.
-    },
     body: formData,
   });
 
@@ -71,14 +49,8 @@ export const createRoom = async (name: string, file: File | null): Promise<Room>
 };
 
 export const joinRoom = async (roomId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/join`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -88,14 +60,7 @@ export const joinRoom = async (roomId: string): Promise<void> => {
 };
 
 export const getRoomMembers = async (roomId: string): Promise<unknown[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/members`);
 
   const data = await response.json();
 
@@ -107,14 +72,7 @@ export const getRoomMembers = async (roomId: string): Promise<unknown[]> => {
 };
 
 export const getChannels = async (roomId: string): Promise<unknown[]> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels`);
 
   const data = await response.json();
 
@@ -126,13 +84,9 @@ export const getChannels = async (roomId: string): Promise<unknown[]> => {
 };
 
 export const createChannel = async (roomId: string, name: string, type: string = 'text'): Promise<unknown> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ name, type }),
@@ -147,15 +101,19 @@ export const createChannel = async (roomId: string, name: string, type: string =
   return data;
 };
 
-export const getMessages = async (roomId: string, channelId: string): Promise<unknown> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/channels/${channelId}/messages`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+export const deleteChannel = async (roomId: string, channelId: string): Promise<void> => {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels/${channelId}`, {
+    method: 'DELETE',
   });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to delete channel');
+  }
+};
+
+export const getMessages = async (roomId: string, channelId: string): Promise<unknown> => {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/channels/${channelId}/messages`);
 
   const data = await response.json();
 
@@ -167,18 +125,12 @@ export const getMessages = async (roomId: string, channelId: string): Promise<un
 };
 
 export const updateRoom = async (roomId: string, name?: string, file?: File | null): Promise<Room> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
   const formData = new FormData();
   if (name) formData.append('name', name);
   if (file) formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}`, {
     method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
     body: formData,
   });
 
@@ -192,13 +144,9 @@ export const updateRoom = async (roomId: string, name?: string, file?: File | nu
 };
 
 export const addMember = async (roomId: string, email: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/members`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ email }),
@@ -211,14 +159,8 @@ export const addMember = async (roomId: string, email: string): Promise<void> =>
 };
 
 export const kickMember = async (roomId: string, userId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/members/${userId}`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/members/${userId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -228,14 +170,8 @@ export const kickMember = async (roomId: string, userId: string): Promise<void> 
 };
 
 export const leaveRoom = async (roomId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}/leave`, {
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}/leave`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   if (!response.ok) {
@@ -244,20 +180,26 @@ export const leaveRoom = async (roomId: string): Promise<void> => {
   }
 };
 
-export const deleteRoom = async (roomId: string): Promise<void> => {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
+export const deleteRoom = async (roomId: string, mfaCode?: string): Promise<void> => {
+  const headers: Record<string, string> = {};
 
-  const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
+  if (mfaCode) {
+    headers['x-mfa-code'] = mfaCode;
+  }
+
+  const response = await fetchWithAuth(`${API_URL}/api/rooms/${roomId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers,
   });
 
   if (!response.ok) {
     const data = await response.json();
-    throw new Error(data.error || 'Failed to delete room');
+    const error = new Error(data.error || 'Failed to delete room');
+    // Attach error code for transactional MFA interception
+    if (data.error === 'MFA_REQUIRED_TRANSACTIONAL') {
+      (error as any).code = 'MFA_REQUIRED_TRANSACTIONAL';
+    }
+    throw error;
   }
 };
 

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function NotFoundPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden font-sans text-slate-900 dark:text-slate-50 transition-colors duration-500">
       
       {/* Background Blobs for Visual Aesthetics */}
       <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] bg-red-500/20 dark:bg-red-500/10 rounded-full blur-[80px] z-0 animate-pulse pointer-events-none"></div>
@@ -27,7 +28,7 @@ export default function NotFoundPage() {
       <div className="relative z-10 w-full max-w-[420px] bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-3xl p-10 md:p-12 text-center shadow-2xl animate-fade-in-up">
         
         <div className="flex justify-center mb-8">
-          <img src="/Logo.png" alt="Deezcord" className="w-24 h-24 object-contain opacity-50 grayscale contrast-125" />
+          <Logo className="w-24 h-24 opacity-50 grayscale contrast-125" />
         </div>
         
         <h1 className="text-4xl md:text-5xl font-extrabold mb-2 tracking-tight text-slate-900 dark:text-slate-50">

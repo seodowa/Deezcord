@@ -4,13 +4,31 @@ import type { Member } from '../types/room';
 import { getRoomMembers, getMessages } from '../services/roomService';
 import { useSocket } from './useSocket';
 import { useAuth } from './useAuth';
+import { loadMessages, saveMessages, loadMembers, saveMembers } from '../utils/persistence';
 
 export const useChat = (roomId: string | undefined, channelId: string | undefined, isMember: boolean | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  // Start loading if we have IDs, otherwise we'll wait for the effect
+  const [isLoadingMessages, setIsLoadingMessages] = useState(!!(roomId && channelId && isMember));
   const { user } = useAuth();
+
+  // Handle immediate state reset when roomId or channelId changes to prevent flickering
+  const [prevIds, setPrevIds] = useState({ roomId, channelId });
+  if (prevIds.roomId !== roomId || prevIds.channelId !== channelId) {
+    setPrevIds({ roomId, channelId });
+    if (roomId && channelId && isMember) {
+      setIsLoadingMessages(true);
+      setMessages([]);
+      setMembers([]);
+    } else {
+      setIsLoadingMessages(false);
+      setMessages([]);
+      setMembers([]);
+    }
+  }
+
   const { 
     joinRoom: socketJoinRoom, 
     leaveRoom: socketLeaveRoom,
@@ -28,25 +46,33 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     onPresenceUpdate,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   } = useSocket();
 
   const fetchMembers = useCallback(async (id: string) => {
     try {
       const data = await getRoomMembers(id);
-      setMembers(data as Member[]);
+      const memberData = data as Member[];
+      setMembers(memberData);
+      saveMembers(id, memberData);
     } catch (err) {
       console.error('Failed to load members:', err);
     }
   }, []);
 
-  const fetchMessages = useCallback(async (rId: string, cId: string) => {
-    setIsLoadingMessages(true);
+  const fetchMessages = useCallback(async (rId: string, cId: string, showLoading = false) => {
+    if (showLoading) {
+      setIsLoadingMessages(true);
+    }
+
     try {
       const data = await getMessages(rId, cId);
       const messageData = data as Message[];
-      console.log(`[Debug] Fetched ${messageData.length} messages. Messages with avatars:`, messageData.filter((m) => m.avatar_url).length);
+      
       setMessages(messageData);
+      // Update cache
+      if (cId) saveMessages(cId, messageData);
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
@@ -55,19 +81,48 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (roomId && isMember) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchMembers(roomId);
+      // Try to load members from cache first
+      loadMembers(roomId).then(cached => {
+        if (!isMounted) return;
+        if (cached && cached.length > 0) {
+          setMembers(cached as Member[]);
+        }
+        fetchMembers(roomId);
+      });
+
       if (channelId) {
+        // Reset state for new channel
+        setIsLoadingMessages(true);
         setMessages([]);
-        fetchMessages(roomId, channelId);
+
+        // Try to load from cache first
+        loadMessages(channelId).then(cached => {
+          if (!isMounted) return;
+          if (cached && cached.length > 0) {
+            setMessages(cached as Message[]);
+            setIsLoadingMessages(false);
+            fetchMessages(roomId, channelId, false); // Silent sync
+          } else {
+            fetchMessages(roomId, channelId, true); // Full loading
+          }
+        });
         socketJoinRoom({ room_id: roomId, channel_id: channelId });
       } else {
+        setIsLoadingMessages(false);
+        setMessages([]);
         socketJoinRoom({ room_id: roomId });
       }
-      setTypingUsers([]);
+      
+      queueMicrotask(() => {
+        if (!isMounted) return;
+        setTypingUsers([]);
+      });
       
       return () => {
+        isMounted = false;
         if (channelId) {
           socketLeaveRoom({ room_id: roomId, channel_id: channelId });
         } else {
@@ -75,9 +130,14 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         }
       };
     } else {
-      setMembers([]);
-      setMessages([]);
-      setTypingUsers([]);
+      queueMicrotask(() => {
+        if (!isMounted) return;
+        setMembers([]);
+        setMessages([]);
+        setTypingUsers([]);
+        setIsLoadingMessages(false);
+      });
+      return () => { isMounted = false; };
     }
   }, [roomId, channelId, isMember, fetchMembers, fetchMessages, socketJoinRoom, socketLeaveRoom]);
 
@@ -101,10 +161,12 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
             ...newMessage,
             id: newMessage.id,
             created_at: newMessage.created_at
-          }];
+          }].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-          // Ensure sorted by creation time
-          return updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          // Update cache with the new message
+          if (channelId) saveMessages(channelId, updated);
+          
+          return updated;
         });
       }
     });
@@ -114,7 +176,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
   useEffect(() => {
     const unsubscribe = onMessageDeleted((data) => {
       if (data.channel_id === channelId) {
-        setMessages(prev => prev.filter(m => m.id !== data.message_id));
+        setMessages(prev => {
+          const updated = prev.filter(m => m.id !== data.message_id);
+          if (channelId) saveMessages(channelId, updated);
+          return updated;
+        });
       }
     });
     return unsubscribe;
@@ -178,10 +244,20 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     return unsubscribe;
   }, [onPresenceUpdate]);
 
-  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null) => {
+  const sendMessage = useCallback((content: string, fileUrl?: string, fileName?: string, parentId?: string | null, fileWidth?: number, fileHeight?: number) => {
     if (roomId && channelId && isMember) {
       const tempId = `temp-${crypto.randomUUID()}`;
-      socketSendMessage({ room_id: roomId, channel_id: channelId, content, file_url: fileUrl, file_name: fileName, parent_id: parentId, temp_id: tempId });
+      socketSendMessage({ 
+        room_id: roomId, 
+        channel_id: channelId, 
+        content, 
+        file_url: fileUrl, 
+        file_name: fileName, 
+        file_width: fileWidth,
+        file_height: fileHeight,
+        parent_id: parentId, 
+        temp_id: tempId 
+      });
       
       const parentMessage = parentId ? messages.find(m => m.id === parentId) : null;
       const newMessage: Message = {
@@ -195,6 +271,8 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         avatar_url: user?.avatar_url,
         file_url: fileUrl,
         file_name: fileName,
+        file_width: fileWidth,
+        file_height: fileHeight,
         parent_id: parentId,
         parent_message: parentMessage ? {
           username: parentMessage.username,
@@ -202,7 +280,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
         } : null,
         temp_id: tempId
       };
-      setMessages(prev => [...prev, newMessage]);
+      setMessages(prev => {
+        const updated = [...prev, newMessage];
+        if (channelId) saveMessages(channelId, updated);
+        return updated;
+      });
       socketStopTyping({ room_id: roomId, channel_id: channelId });
     }
   }, [roomId, channelId, isMember, socketSendMessage, user, socketStopTyping, messages]);
@@ -211,7 +293,11 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     if (roomId && channelId && isMember) {
       socketUnsendMessage({ message_id: messageId, channel_id: channelId });
       // Optimistic update
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setMessages(prev => {
+        const updated = prev.filter(m => m.id !== messageId);
+        if (channelId) saveMessages(channelId, updated);
+        return updated;
+      });
     }
   }, [roomId, channelId, isMember, socketUnsendMessage]);
 
@@ -253,6 +339,7 @@ export const useChat = (roomId: string | undefined, channelId: string | undefine
     fetchMembers,
     onRoomCreated,
     onRoomDeleted,
-    onChannelCreated
+    onChannelCreated,
+    onChannelDeleted
   };
 };

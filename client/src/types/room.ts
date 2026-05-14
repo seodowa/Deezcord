@@ -14,6 +14,16 @@ export interface Room {
   isMember?: boolean;
   role?: string | null;
   isNew?: boolean;
+  is_dm?: boolean;
+  targetUser?: {
+    id: string;
+    username: string;
+    email: string;
+    avatar_url?: string | null;
+    isOnline?: boolean;
+  } | null;
+  defaultChannelId?: string;
+  last_message_at?: string | null;
 }
 
 export interface Member {

@@ -170,4 +170,56 @@ router.post('/:channelId/messages/upload', verifyUser, verifyRoomMember, upload.
   }
 });
 
+// DELETE /:channelId - Delete a channel (OWNER ONLY)
+router.delete('/:channelId', verifyUser, verifyRoomOwner, async (req: AuthenticatedRequest, res: Response) => {
+  const { roomId, channelId } = req.params;
+
+  try {
+    // 1. Verify that the channel belongs to the room and exists
+    const { data: channel, error: findError } = await supabase
+      .from('channels')
+      .select('id, name')
+      .eq('id', channelId)
+      .eq('room_id', roomId)
+      .single();
+
+    if (findError || !channel) {
+      res.status(404).json({ error: "Channel not found in this room" });
+      return;
+    }
+
+    // 2. Prevent deleting the last channel in a room (Requirement: rooms must have at least one channel)
+    const { count, error: countError } = await supabase
+      .from('channels')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId);
+
+    if (countError) throw countError;
+
+    if (count !== null && count <= 1) {
+      res.status(400).json({ error: "Cannot delete the last channel in a room. A room must have at least one channel." });
+      return;
+    }
+
+    // 3. Delete the channel (Associated messages will CASCADE)
+    const { error: deleteError } = await supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId);
+
+    if (deleteError) throw deleteError;
+
+    // 4. Notify clients via Socket.io
+    const io = req.app.get('io');
+    if (io) {
+      io.to(roomId).emit('channel_deleted', { roomId, channelId });
+    }
+
+    res.status(200).json({ message: `Channel '#${channel.name}' deleted successfully` });
+  } catch (error: any) {
+    console.error('Channel deletion error:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete channel' });
+  }
+});
+
 export default router;

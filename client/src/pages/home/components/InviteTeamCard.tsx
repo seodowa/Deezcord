@@ -15,7 +15,7 @@ export default function InviteTeamCard({ onAction }: InviteTeamCardProps) {
         </div>
         <button 
           onClick={onAction}
-          className="w-full py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-xl font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
+          className="w-full py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-xl font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl cursor-pointer"
         >
           Create a Room
         </button>

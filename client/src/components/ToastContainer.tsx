@@ -58,7 +58,7 @@ function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: () => voi
 
       <button 
         onClick={onClose}
-        className="flex-shrink-0 ml-4 opacity-50 hover:opacity-100 transition-opacity focus:outline-none"
+        className="flex-shrink-0 ml-4 opacity-50 hover:opacity-100 transition-opacity focus:outline-none cursor-pointer"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

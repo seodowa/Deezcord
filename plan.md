@@ -1,63 +1,32 @@
-# Impeccable Design Brief: Welcome Dashboard Redesign
+# Frictionless Double Verification Flow
 
-`IMPECCABLE_PREFLIGHT: context=pass product=pass command_reference=pass shape=pass image_gate=skipped:plan-mode mutation=open`
+## Objective
+Refine the email change process from a redundant 4-step flow to a streamlined 2-step verification process:
+1. **Identity Check (Unlock):** User proves identity using their *current* channel (MFA code).
+2. **Ownership Check (Execute):** User proves ownership of the *new* channel (OTP code).
 
-## 1. Architectural Summary
-Refactor the initial landing experience (`WelcomePage.tsx`) from a static hero banner into a dynamic, personalized "Dashboard". Crucially, when the user is on this dashboard, the primary `Sidebar.tsx` will collapse to display *only* the unified rail (room icons), allowing the dashboard to take over the entire remaining viewport.
+## Scope & Impact
+- **Backend:** Remove the redundant `verifyTransactionalMfa` middleware from `POST /email/request-otp` and `PATCH /email`. The security is now enforced by the fact that the frontend "Vault" must be unlocked (Identity) to reach these routes, and the routes themselves enforce Ownership (OTP). To prevent API-level bypassing, we will implement an "AAL2" check to ensure the session was recently elevated during the unlock step.
+- **Frontend:** Remove the `mfaCode` parameter from the email update services and handlers. The UI will only prompt for the MFA code during the initial "Unlock" stage.
 
-## 2. Primary User Action
-Serve as mission control immediately after login. Users can check their friend statuses, manage pending requests, search for new users, and review recent activity, all before deep-linking into specific room communications.
+## Implementation Steps
 
-## 3. Design Direction & Register
-- **Register:** Product. This is an operational dashboard.
-- **Theme via Scene:** A user firing up Deezcord for the day, needing a quick snapshot of who is online, who wants to connect, and what happened recently.
-- **Color Strategy:** Restrained. Heavy reliance on tinted glass (`bg-white/40 dark:bg-slate-800/40`), intense background blur (`backdrop-blur-xl`), and squircle geometry (`rounded-[2.5rem]`). Active calls-to-action and primary metrics will leverage the electric blue/indigo brand gradients.
-- **Structural Integrity:** Everything must be containerized. No floating elements. Each functional section (Friends, Requests, Activity) lives within its own glass "card" with consistent padding and inner rhythm.
+### 1. Backend Routes (`server/routes/userRoutes.ts`)
+- **`POST /email/request-otp`:** 
+  - Remove `verifyTransactionalMfa`.
+  - Add a manual check: If the user has MFA enabled (`mfa_preference !== 'none'`), ensure their current session is `aal2` (meaning they successfully unlocked the vault recently).
+- **`PATCH /email`:**
+  - Remove `verifyTransactionalMfa`.
+  - The route now relies solely on `verifyEmailOtp` (which verifies the OTP sent to the new email). The `aal2` check in the request-otp step ensures only authorized sessions can get a code in the first place.
 
-## 4. Scope
-- **Fidelity:** Production-ready UI overhaul.
-- **Component 1 (`Sidebar.tsx`):** Conditionally render the secondary panel (`w-[312px]`) so it hides when on the root path `/`, leaving only the `68px` rail.
-- **Component 2 (`HomeLayout.tsx`):** Ensure the layout gracefully expands the `<main>` container when the sidebar collapses.
-- **Component 3 (`WelcomePage.tsx`):** Complete structural rewrite using CSS Grid to organize the required modules:
-  - Personalized Greeting Header
-  - Global User Search Bar
-  - Friends List (transferred from Sidebar)
-  - Pending Requests (transferred from Sidebar)
-  - Recent Activity Feed
+### 2. Frontend Services (`client/src/services/userService.ts`)
+- Modify `requestEmailChangeOtp` and `updateEmail` to remove the `mfaCode` parameter entirely.
 
-## 5. Structural Strategy
+### 3. Frontend UI (`client/src/components/SecuritySettings.tsx`)
+- Remove the `lastMfaCode` state.
+- Update `executeSendCode` and `executeVerifyAndUpdate` to no longer pass or expect an `mfaCode`.
+- Ensure the MFA modal is only triggered for the `unlock_email` pending action.
 
-### The Dynamic Grid (`WelcomePage.tsx`)
-We will utilize a responsive asymmetric grid (e.g., `grid-cols-1 lg:grid-cols-3`):
-
-1. **Header & Search (Top Full-Width):**
-   - **Greeting:** Time-aware ("Good Morning, [Name]") with prominent typography.
-   - **Search Bar:** A prominent, containerized input centered or aligned right, specifically dedicated to looking up other users to send friend requests.
-
-2. **Main Feed Column (`lg:col-span-2`):**
-   - **Recent Activity Container:** A glass card displaying a timeline or grid of recently visited rooms (using the existing `rooms` data or a cached history).
-
-3. **Social Column (`lg:col-span-1`):**
-   - **Friends List Container:** A scrollable glass list showing friends categorized by Online/Offline. Avatar, name, and quick-action buttons.
-   - **Pending Requests Container:** Distinct cards for inbound/outbound friend requests with immediate Accept/Decline actions.
-
-## 6. Migration Plan
-
-### Phase 1: Layout & Sidebar Collapse
-1. Modify `client/src/components/Sidebar.tsx` to detect if `currentRoomId` is null (or if we are on the root route). If so, apply CSS classes to collapse the secondary channel/friends panel (`w-0`, `opacity-0`).
-2. Adjust `client/src/layouts/HomeLayout.tsx` to ensure smooth width transitions for the `<main>` content area.
-
-### Phase 2: Logic Relocation
-1. Extract the `friendsList`, `pendingList`, and related fetching/accept/decline logic currently residing in `Sidebar.tsx`.
-2. Re-implement this state and logic inside `WelcomePage.tsx`.
-
-### Phase 3: Dashboard Implementation
-1. Construct the grid layout in `WelcomePage.tsx`.
-2. Build the **Header & Search Bar** component.
-3. Build the containerized **Friends List** and **Pending Requests** sections.
-4. Build the **Recent Activity** placeholder/feed.
-
-### Phase 4: Polish
-1. Apply the "Unified Glass" styling (blurs, specific rounded corners, subtle borders).
-2. Ensure animations (like `animate-fade-in-up`) trigger correctly on page load.
-3. Verify responsive stacking on mobile devices.
+## Verification
+- Confirm that the email change flow requires exactly two codes: one to unlock, one from the new email.
+- Confirm that an API call to `request-otp` without an `aal2` session (for MFA users) is rejected, preventing bypass attacks.
